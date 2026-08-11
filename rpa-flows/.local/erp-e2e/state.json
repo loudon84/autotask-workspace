@@ -1,0 +1,9 @@
+{
+  "flow_version_id": "89ca0ffe-cd87-4f00-9f6f-c16974aa437f",
+  "flow_checksum": "sha256:ae0b4a5a7ef585cc4986ed74580e69576b87aed38ed97f3ca9897583a01dd47b",
+  "portal_id": "b182630d-5023-45c3-ac9c-6b022765b7e1",
+  "portal_url": "http://192.168.102.247:3000",
+  "template_id": "63db75da-0c26-4f68-ad17-7f4a836ffa45",
+  "binding_id": "0a0b5beb-a2cd-449b-9003-b723b3e65bfd",
+  "task_id": "8193cea4-6b57-4ed2-ac3e-187797e7bf4a"
+}

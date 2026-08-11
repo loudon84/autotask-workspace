@@ -1,0 +1,30 @@
+---
+description: Restrict project code scanning and edits to the five AutoTask integration code roots
+alwaysApply: true
+---
+
+# Allowed Code Roots
+
+When scanning, searching, reading, or editing **project source code**, stay inside these five roots only (workspace-relative):
+
+1. `copilot-autotask/`
+2. `nodeskclaw/nodeskclaw-task/`
+3. `nodeskclaw-rpa-engine/`
+4. `rpa-flows/`
+5. `rpa-authoring/`
+
+## Hard boundaries
+
+- Do **not** Grep, Glob, semantic-search, or browse other application code under this workspace (for example other `nodeskclaw/*` packages, `离职交接/`, or unrelated trees).
+- Scope every code search with an explicit `path` / working directory under one of the five roots. Prefer one root per search; do not start from the workspace root for code discovery.
+- Do not open or modify code outside the five roots unless the user explicitly names that path in the current request.
+
+## Still allowed (non-code / control plane)
+
+These are **not** project code roots, but agents may read/update them for session control:
+
+- `AGENTS.md`, `WORKSPACE.md`
+- `project-docs/` (especially `PROJECT_CONTROL.md`)
+- `.cursor/rules/` and other Cursor workspace config
+
+If a task needs code outside the five roots, stop and ask the user before scanning further.

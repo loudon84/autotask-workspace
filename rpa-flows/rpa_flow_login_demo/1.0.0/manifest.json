@@ -1,0 +1,11 @@
+{
+  "rpaFlowId": "rpa_flow_login_demo",
+  "name": "SRM Login Demo",
+  "version": "1.0.0",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": ["srm_login_demo"],
+  "supportedPortalTypes": ["MOCK_SRM"],
+  "inputSchema": [],
+  "capabilities": ["screenshot"]
+}
