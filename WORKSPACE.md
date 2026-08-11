@@ -6,8 +6,9 @@ This directory is the root workspace for AutoTask product development. Open this
 
 | Directory | Responsibility | Source Control |
 | --- | --- | --- |
-| `copilot-autotask` | Electron Client | Existing Git repository |
-| `nodeskclaw-rpa-engine` | RPA Engine and Worker implementation | Reserved; repository not initialized |
+| `app` | Electron Client（原 `AutoTask-studio` / `copilot-autotask`；package `name` 仍为 `AutoTask-studio`） | Existing Git repository |
+| `service` | Task 业务 API（原 `nodeskclaw/nodeskclaw-task`；package `nodeskclaw-task`） | Existing project tree |
+| `rpa-engine` | RPA Engine and Worker implementation | Existing nested Git repository |
 | `rpa-flows` | Versioned Flow source packages and examples | Repository decision pending |
 | `rpa-authoring\uipath` | UiPath authoring source used for translation/reference | Repository decision pending |
 | `project-docs` | Product control, decisions, designs, and operations records | Documentation workspace |

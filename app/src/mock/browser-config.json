@@ -1,0 +1,15 @@
+{
+  "defaultBrowserType": "chrome",
+  "chromeExecutablePath": "",
+  "edgeExecutablePath": "",
+  "chromiumExecutablePath": "",
+  "profileRootPath": "",
+  "remoteDebuggingAddress": "127.0.0.1",
+  "portStrategy": "random",
+  "minPort": 45000,
+  "maxPort": 55000,
+  "defaultOpenMode": "new_window",
+  "allowResetProfile": true,
+  "allowOpenProfileFolder": true,
+  "downloadsRootPath": ""
+}

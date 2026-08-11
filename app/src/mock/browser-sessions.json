@@ -1,0 +1,19 @@
+[
+  {
+    "id": "browser_sess_001",
+    "portalId": "portal_001",
+    "portalName": "客户A SRM生产环境",
+    "customerName": "客户A",
+    "profileId": "profile_portal_001",
+    "profilePath": "C:\\Users\\demo\\AppData\\Roaming\\AutoTaskStudio\\browser-profiles\\user_001\\portal_001",
+    "browserType": "chrome",
+    "launchMode": "manual_open",
+    "pid": 28810,
+    "cdpPort": 49231,
+    "cdpEndpoint": "http://127.0.0.1:49231",
+    "targetUrl": "https://srm.customer-a.com",
+    "status": "OPENED",
+    "startedAt": "2026-07-02 13:45:00",
+    "lastActiveAt": "2026-07-02 14:10:00"
+  }
+]

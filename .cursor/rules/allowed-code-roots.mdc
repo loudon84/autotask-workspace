@@ -7,15 +7,16 @@ alwaysApply: true
 
 When scanning, searching, reading, or editing **project source code**, stay inside these five roots only (workspace-relative):
 
-1. `copilot-autotask/`
-2. `nodeskclaw/nodeskclaw-task/`
-3. `nodeskclaw-rpa-engine/`
+1. `app/`（Client；原 `copilot-autotask/`）
+2. `service/`（Task 服务；原 `nodeskclaw/nodeskclaw-task/`）
+3. `rpa-engine/`
 4. `rpa-flows/`
 5. `rpa-authoring/`
 
 ## Hard boundaries
 
-- Do **not** Grep, Glob, semantic-search, or browse other application code under this workspace (for example other `nodeskclaw/*` packages, `离职交接/`, or unrelated trees).
+- Do **not** Grep, Glob, semantic-search, browse, or edit any `nodeskclaw` project tree. This workspace no longer depends on `nodeskclaw/*` source; Task code lives in `service/` only.
+- Do **not** scan other non-root application trees under this workspace (for example `离职交接/` or unrelated directories).
 - Scope every code search with an explicit `path` / working directory under one of the five roots. Prefer one root per search; do not start from the workspace root for code discovery.
 - Do not open or modify code outside the five roots unless the user explicitly names that path in the current request.
 

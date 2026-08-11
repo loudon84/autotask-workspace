@@ -1,0 +1,12 @@
+[
+  {
+    "id": "human_001",
+    "taskId": "task_002",
+    "portalId": "portal_002",
+    "type": "manual_upload",
+    "targetUrl": "https://vendor.customer-b.com/upload/packing-list",
+    "instruction": "请上传客户B装箱单 PK-883，完成后回到 AutoTask 点击确认。",
+    "status": "PENDING",
+    "createdAt": "2026-07-02 15:20:00"
+  }
+]

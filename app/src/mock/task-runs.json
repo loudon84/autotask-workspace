@@ -1,0 +1,98 @@
+[
+  {
+    "id": "run_001",
+    "taskId": "task_001",
+    "taskTitle": "获取客户A采购订单 PO-20260629-001",
+    "workflowTemplateName": "SRM 获取采购订单",
+    "workerId": "worker_01",
+    "status": "RUNNING",
+    "currentStepId": "step_search_po",
+    "startedAt": "2026-06-29 09:25:00",
+    "stepRuns": [
+      { "id": "sr_001", "stepId": "step_login", "stepName": "登录客户 SRM", "stepType": "srm.login", "status": "SUCCESS", "startedAt": "2026-06-29 09:25:00", "endedAt": "2026-06-29 09:26:30" },
+      { "id": "sr_002", "stepId": "step_search_po", "stepName": "搜索采购订单", "stepType": "srm.search_po", "status": "RUNNING", "startedAt": "2026-06-29 09:26:35", "message": "正在搜索 PO-20260629-001" }
+    ],
+    "logs": [
+      { "id": "log_001", "level": "INFO", "message": "Worker worker_01 开始执行任务", "timestamp": "2026-06-29 09:25:00" },
+      { "id": "log_002", "level": "INFO", "message": "步骤 [登录客户 SRM] 开始执行", "timestamp": "2026-06-29 09:25:01" },
+      { "id": "log_003", "level": "INFO", "message": "步骤 [登录客户 SRM] 执行成功", "timestamp": "2026-06-29 09:26:30" },
+      { "id": "log_004", "level": "INFO", "message": "步骤 [搜索采购订单] 开始执行", "timestamp": "2026-06-29 09:26:35" },
+      { "id": "log_005", "level": "DEBUG", "message": "输入参数: po_no=PO-20260629-001", "timestamp": "2026-06-29 09:26:36" }
+    ]
+  },
+  {
+    "id": "run_002",
+    "taskId": "task_002",
+    "taskTitle": "上传客户B装箱单 PK-883",
+    "workflowTemplateName": "SRM 上传装箱单",
+    "workerId": "worker_02",
+    "status": "WAITING_HUMAN",
+    "currentStepId": "step_upload",
+    "startedAt": "2026-06-29 10:12:00",
+    "stepRuns": [
+      { "id": "sr_003", "stepId": "step_login", "stepName": "登录客户 SRM", "stepType": "srm.login", "status": "SUCCESS", "startedAt": "2026-06-29 10:12:00", "endedAt": "2026-06-29 10:13:00" },
+      { "id": "sr_004", "stepId": "step_navigate", "stepName": "导航到装箱单页面", "stepType": "page.click", "status": "SUCCESS", "startedAt": "2026-06-29 10:13:05", "endedAt": "2026-06-29 10:14:00" },
+      { "id": "sr_005", "stepId": "step_upload", "stepName": "上传装箱单", "stepType": "file.upload", "status": "WAITING_HUMAN", "startedAt": "2026-06-29 10:14:05", "message": "需要人工输入验证码" }
+    ],
+    "logs": [
+      { "id": "log_006", "level": "INFO", "message": "Worker worker_02 开始执行任务", "timestamp": "2026-06-29 10:12:00" },
+      { "id": "log_007", "level": "WARN", "message": "检测到验证码，等待人工介入", "timestamp": "2026-06-29 10:14:10" }
+    ]
+  },
+  {
+    "id": "run_003",
+    "taskId": "task_003",
+    "taskTitle": "客户C确认交货 DN-20260628-102",
+    "workflowTemplateName": "SRM 确认交货",
+    "workerId": "worker_01",
+    "status": "FAILED",
+    "currentStepId": "step_confirm",
+    "startedAt": "2026-06-28 14:05:00",
+    "endedAt": "2026-06-28 14:20:00",
+    "durationSeconds": 900,
+    "stepRuns": [
+      { "id": "sr_006", "stepId": "step_login", "stepName": "登录", "stepType": "srm.login", "status": "SUCCESS", "startedAt": "2026-06-28 14:05:00", "endedAt": "2026-06-28 14:06:00" },
+      { "id": "sr_007", "stepId": "step_search", "stepName": "搜索交货单", "stepType": "srm.search_delivery", "status": "SUCCESS", "startedAt": "2026-06-28 14:06:05", "endedAt": "2026-06-28 14:10:00" },
+      { "id": "sr_008", "stepId": "step_confirm", "stepName": "提交确认", "stepType": "page.click", "status": "FAILED", "startedAt": "2026-06-28 14:10:05", "endedAt": "2026-06-28 14:20:00", "message": "元素未找到: #confirm-btn" }
+    ],
+    "logs": [
+      { "id": "log_008", "level": "ERROR", "message": "步骤 [提交确认] 执行失败: 元素未找到 #confirm-btn", "timestamp": "2026-06-28 14:20:00" }
+    ]
+  },
+  {
+    "id": "run_004",
+    "taskId": "task_005",
+    "taskTitle": "获取客户D采购订单 PO-20260629-088",
+    "workflowTemplateName": "SRM 获取采购订单",
+    "workerId": "worker_03",
+    "status": "SUCCESS",
+    "startedAt": "2026-06-29 07:35:00",
+    "endedAt": "2026-06-29 08:40:00",
+    "durationSeconds": 3900,
+    "stepRuns": [
+      { "id": "sr_009", "stepId": "step_login", "stepName": "登录客户 SRM", "stepType": "srm.login", "status": "SUCCESS", "startedAt": "2026-06-29 07:35:00", "endedAt": "2026-06-29 07:36:00" },
+      { "id": "sr_010", "stepId": "step_search_po", "stepName": "搜索采购订单", "stepType": "srm.search_po", "status": "SUCCESS", "startedAt": "2026-06-29 07:36:05", "endedAt": "2026-06-29 08:00:00" },
+      { "id": "sr_011", "stepId": "step_download_contract", "stepName": "下载采购合同", "stepType": "file.download", "status": "SUCCESS", "startedAt": "2026-06-29 08:00:05", "endedAt": "2026-06-29 08:35:00" },
+      { "id": "sr_012", "stepId": "step_save_evidence", "stepName": "保存截图证据", "stepType": "evidence.screenshot", "status": "SUCCESS", "startedAt": "2026-06-29 08:35:05", "endedAt": "2026-06-29 08:40:00" }
+    ],
+    "logs": [
+      { "id": "log_009", "level": "INFO", "message": "任务执行完成", "timestamp": "2026-06-29 08:40:00" }
+    ]
+  },
+  {
+    "id": "run_005",
+    "taskId": "task_007",
+    "taskTitle": "客户A采购订单 PO-20260629-002",
+    "workflowTemplateName": "SRM 获取采购订单",
+    "workerId": "worker_01",
+    "status": "RUNNING",
+    "currentStepId": "step_login",
+    "startedAt": "2026-06-29 11:46:00",
+    "stepRuns": [
+      { "id": "sr_013", "stepId": "step_login", "stepName": "登录客户 SRM", "stepType": "srm.login", "status": "RUNNING", "startedAt": "2026-06-29 11:46:00" }
+    ],
+    "logs": [
+      { "id": "log_010", "level": "INFO", "message": "开始登录客户A SRM", "timestamp": "2026-06-29 11:46:01" }
+    ]
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "AutoTask: Debug Main / IPC",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "preLaunchTask": "electron:debug-main",
+      "restart": true,
+      "timeout": 30000,
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceFolder}/.vite/build/**/*.js",
+        "${workspaceFolder}/.vite/build/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**"
+      ]
+    }
+  ]
+}

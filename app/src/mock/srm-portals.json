@@ -1,0 +1,100 @@
+[
+  {
+    "id": "portal_001",
+    "customerName": "客户A",
+    "name": "客户A SRM生产环境",
+    "url": "https://srm.customer-a.com",
+    "loginType": "username_password",
+    "status": "enabled",
+    "clientOpenMode": "webcontents",
+    "clientSessionPartition": "persist:srm:portal_001",
+    "serverRpaProfileId": "server_profile_portal_001",
+    "loginState": "valid",
+    "lastOpenedAt": "2026-07-02 13:45:00",
+    "lastLoginCheckedAt": "2026-07-02 13:50:00",
+    "mfaPolicy": "manual",
+    "loginPageUrl": "https://srm.customer-a.com/login",
+    "locatorProfile": {
+      "username_input": "#username",
+      "password_input": "#password",
+      "login_button": "button[type=submit]",
+      "po_menu": "nav >> text=采购订单",
+      "po_search_input": "#po-search",
+      "po_search_button": "#search-btn",
+      "download_button": "a.download-contract"
+    },
+    "fieldMapping": { "po_no": "purchaseOrderNo", "contract_no": "contractNo" },
+    "createdAt": "2026-01-15 10:00:00",
+    "updatedAt": "2026-06-20 14:00:00"
+  },
+  {
+    "id": "portal_002",
+    "customerName": "客户B",
+    "name": "客户B 供应商平台",
+    "url": "https://vendor.customer-b.com",
+    "loginType": "sso",
+    "status": "enabled",
+    "clientOpenMode": "webcontents",
+    "clientSessionPartition": "persist:srm:portal_002",
+    "serverRpaProfileId": "server_profile_portal_002",
+    "loginState": "unknown",
+    "lastOpenedAt": "2026-06-28 16:30:00",
+    "mfaPolicy": "none",
+    "loginPageUrl": "https://vendor.customer-b.com/sso",
+    "locatorProfile": {
+      "username_input": "input[name=email]",
+      "password_input": "input[name=password]",
+      "login_button": ".login-submit",
+      "po_menu": ".menu-packing",
+      "upload_button": "#file-upload"
+    },
+    "fieldMapping": { "delivery_no": "deliveryNumber" },
+    "createdAt": "2026-02-10 09:00:00",
+    "updatedAt": "2026-06-15 11:00:00"
+  },
+  {
+    "id": "portal_003",
+    "customerName": "客户C",
+    "name": "客户C 协同门户",
+    "url": "https://collab.customer-c.com",
+    "loginType": "manual",
+    "status": "enabled",
+    "clientOpenMode": "webcontents",
+    "clientSessionPartition": "persist:srm:portal_003",
+    "serverRpaProfileId": "server_profile_portal_003",
+    "loginState": "expired",
+    "lastOpenedAt": "2026-06-10 09:00:00",
+    "lastLoginCheckedAt": "2026-06-10 09:15:00",
+    "mfaPolicy": "sms",
+    "loginPageUrl": "https://collab.customer-c.com/auth",
+    "locatorProfile": {
+      "username_input": "#user",
+      "password_input": "#pass",
+      "login_button": "#btn-login",
+      "confirm_button": "#confirm-delivery"
+    },
+    "createdAt": "2026-03-05 08:00:00",
+    "updatedAt": "2026-06-10 16:00:00"
+  },
+  {
+    "id": "portal_004",
+    "customerName": "客户D",
+    "name": "客户D 采购平台",
+    "url": "https://procure.customer-d.com",
+    "loginType": "username_password",
+    "status": "disabled",
+    "clientOpenMode": "system_browser",
+    "clientSessionPartition": "persist:srm:portal_004",
+    "serverRpaProfileId": "server_profile_portal_004",
+    "loginState": "unknown",
+    "mfaPolicy": "none",
+    "loginPageUrl": "https://procure.customer-d.com/login",
+    "locatorProfile": {
+      "username_input": "#login-user",
+      "password_input": "#login-pwd",
+      "login_button": ".btn-primary"
+    },
+    "createdAt": "2026-04-01 10:00:00",
+    "updatedAt": "2026-05-20 09:00:00"
+  }
+]

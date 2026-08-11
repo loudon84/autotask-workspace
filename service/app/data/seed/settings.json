@@ -1,0 +1,4 @@
+{
+  "defaultPriority": "NORMAL",
+  "leaseTtlSeconds": 120
+}

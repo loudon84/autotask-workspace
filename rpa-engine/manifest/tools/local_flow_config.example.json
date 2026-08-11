@@ -1,0 +1,18 @@
+{
+  "portalUrl": "http://127.0.0.1:3000",
+  "input": {
+    "po_no": "PO-DEMO-000001"
+  },
+  "credentials": {
+    "username": "local-demo-user",
+    "password": "not-a-real-password"
+  },
+  "browserSession": {
+    "mode": "MANAGED",
+    "headless": true,
+    "channel": "chromium",
+    "profileRef": null,
+    "cdpEndpointRef": null,
+    "closePolicy": "CLOSE_ON_FINISH"
+  }
+}

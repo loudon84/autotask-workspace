@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-10
+最后更新：2026-08-11
 
 ## 1. 用途
 
@@ -20,16 +20,16 @@
 | 项目 | 位置 | 状态 |
 | --- | --- | --- |
 | AutoTask 产品工作区 | 本仓库根（Cursor workspace） | 活跃工作区 |
-| AutoTask Client | `copilot-autotask/` | 开发中；允许扫描的代码根 |
-| nodeskclaw-task | `nodeskclaw/nodeskclaw-task/`；测试服务 `http://192.168.102.247:4520` | 允许扫描的代码根；测试服务器可达 |
-| nodeskclaw-rpa-engine | `nodeskclaw-rpa-engine/` | 允许扫描的代码根；测试基线可运行 |
+| AutoTask Client | `app/`（原 `AutoTask-studio/` / `copilot-autotask/`；package `name` 仍为 `AutoTask-studio`） | 开发中；允许扫描的代码根 |
+| nodeskclaw-task | `service/`（原 `nodeskclaw/nodeskclaw-task/`）；测试服务 `http://192.168.102.247:4520` | 允许扫描的代码根；代码已迁移到 `service/`；测试服务器可达 |
+| rpa-engine（原 nodeskclaw-rpa-engine） | `rpa-engine/` | 允许扫描的代码根；目录已从 `nodeskclaw-rpa-engine` 重命名；测试基线可运行 |
 | RPA Flow 工作区 | `rpa-flows/` | 允许扫描的代码根 |
 | RPA authoring | `rpa-authoring/`（含 `uipath/login_demo`） | 允许扫描的代码根；登录演示已完成 |
 | nodeskclaw-backend | `http://192.168.102.247:4510` | 测试服务器可达；**不在**本工作区允许代码扫描根内 |
 
 ## 3. 当前架构决策
 
-1. `nodeskclaw-rpa-engine` 是独立的服务和项目。
+1. `rpa-engine`（工作区目录；Python 包/服务标识仍为 `nodeskclaw_rpa_engine` / `nodeskclaw-rpa-engine`）是独立的服务和项目。
 2. Worker Pool 是 RPA Engine 的内部模块，不是另一个服务。
 3. RPA Engine 负责 Flow Registry、Flow Package 元数据、Worker Pool、Runtime、浏览器会话管理器、Artifact 记录器、错误处理器和回调客户端。
 4. `nodeskclaw-task` 负责任务业务、WorkflowBinding、RpaRun、RunEvent、StepRun、Artifact 元数据、HumanAction 和 RunCommand 发布。
@@ -187,7 +187,7 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 仅在满足以下全部条件后，才能开始数据库操作：
 
-1. `nodeskclaw-rpa-engine` 仓库已存在。
+1. `rpa-engine` 仓库目录已存在（原名 `nodeskclaw-rpa-engine`）。
 2. 设计和 DDL 已通过评审并获批准。
 3. PostgreSQL 版本、数据库主机、备份策略和密钥注入方式已确认。
 4. 经授权的管理员在不提交凭据的前提下提供连接方式。
@@ -212,6 +212,30 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-08-11
+
+#### Client 代码根迁移：`AutoTask-studio` → `app`
+
+- 确认 Client 源码已迁移到工作区根目录 `app/`（`package.json` 的 `name` 仍为 `AutoTask-studio`，`productName` 仍为 `SMC-Copilot`）。
+- 更新允许扫描代码根：`.cursor/rules/allowed-code-roots.mdc`、`AGENTS.md`、`WORKSPACE.md` 与本文「项目位置」表；原路径 `AutoTask-studio/` 不再作为对接代码根。未改动业务源码，未连接数据库或执行 DDL。
+
+#### Task 服务代码根迁移：`nodeskclaw/nodeskclaw-task` → `service`
+
+- 确认 Task 服务源码已迁移到工作区根目录 `service/`（`pyproject.toml` 包名仍为 `nodeskclaw-task`）。
+- 更新允许扫描代码根：`.cursor/rules/allowed-code-roots.mdc`、`AGENTS.md`、`WORKSPACE.md` 与本文「项目位置」表；原路径 `nodeskclaw/nodeskclaw-task/` 不再作为对接代码根。未改动业务源码，未连接数据库或执行 DDL。
+
+#### 工作区 Client 目录重命名：`copilot-autotask` → `AutoTask-studio`
+
+- 按 `package.json` 的 app `name`（`AutoTask-studio`；`productName` 仍为 `SMC-Copilot`）将工作区 Client 目录从 `copilot-autotask` 重命名为 `AutoTask-studio`；嵌套 Git 仓库内容完整。
+- 同步更新允许扫描代码根：`AGENTS.md`、`.cursor/rules/allowed-code-roots.mdc`、`WORKSPACE.md`、`AutoTask-studio/AGENTS.md` 及交接/部署文档中的本地路径；GitHub 远程仓库名 `copilot-autotask` 未改。
+- 未改动 Client 业务源码与配置契约，未连接数据库或执行 DDL。
+
+#### 工作区 Engine 目录重命名：`nodeskclaw-rpa-engine` → `rpa-engine`
+
+- 将工作区项目目录从 `nodeskclaw-rpa-engine` 重命名为 `rpa-engine`；嵌套 Git 仓库内容完整（含 `.git`、`.venv`、`src`、`manifest`、`scripts`）。
+- 同步更新允许扫描代码根：`AGENTS.md`、`.cursor/rules/allowed-code-roots.mdc`、`WORKSPACE.md`、Client `AGENTS.md`，以及 `local_flow_runner` 默认 Engine 路径（`rpa-engine/manifest/tools` 与 `rpa-flows/tools`）。
+- Python 包名 `nodeskclaw_rpa_engine`、应用名/服务标识 `nodeskclaw-rpa-engine` 未改。因 Cursor 占用，空的旧目录壳 `nodeskclaw-rpa-engine/` 可能仍残留，需关闭相关标签后手动删除。未连接数据库、未执行 DDL。
 
 ### 2026-08-10
 

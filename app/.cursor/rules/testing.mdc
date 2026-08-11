@@ -1,0 +1,36 @@
+---
+description: 测试规范
+globs: src/tests/**,src/**/*.test.ts,src/**/*.test.tsx
+alwaysApply: false
+---
+
+# Testing Rule
+
+## 测试框架
+
+- 单元测试：Vitest + React Testing Library（`src/tests/unit/`）
+- E2E 测试：Playwright（`src/tests/e2e/`）
+
+## 必须加测试的场景
+
+修改以下模块时，至少增加一个测试：
+
+- `services/` — mock-api 或新 API service
+- `stores/` — Zustand store 逻辑
+- `ipc/` — handler 业务逻辑
+- `features/` — 复杂交互或状态流转
+
+## 运行命令
+
+```bash
+npm run test          # vitest run
+npm run test:watch    # vitest watch
+npm run test:e2e      # playwright test
+npm run test:all      # 全部
+```
+
+## 测试原则
+
+- 测试真实行为，不测试实现细节
+- Mock 外部依赖（IPC、fetch），不 mock 被测逻辑本身
+- 优先测 service 层和纯函数，再测组件交互

@@ -1,0 +1,152 @@
+"""Domain enums."""
+
+from enum import StrEnum
+
+
+class EntityType(StrEnum):
+    CUSTOMER = "CUSTOMER"
+    SUPPLIER = "SUPPLIER"
+    BOTH = "BOTH"
+
+
+class PortalAccountStatus(StrEnum):
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class ClientOpenMode(StrEnum):
+    WEBCONTENTS = "webcontents"
+    SYSTEM_BROWSER = "system_browser"
+
+
+class GrantSubjectType(StrEnum):
+    USER = "USER"
+    ROLE = "ROLE"
+    DEPARTMENT = "DEPARTMENT"
+
+
+class PortalPermission(StrEnum):
+    PORTAL_VIEW = "PORTAL_VIEW"
+    PORTAL_EDIT = "PORTAL_EDIT"
+    PORTAL_OPEN_WEB = "PORTAL_OPEN_WEB"
+    PORTAL_USE_CREDENTIAL = "PORTAL_USE_CREDENTIAL"
+    PORTAL_MANAGE_PERMISSION = "PORTAL_MANAGE_PERMISSION"
+    PORTAL_BIND_WORKFLOW = "PORTAL_BIND_WORKFLOW"
+    PORTAL_VIEW_TASKS = "PORTAL_VIEW_TASKS"
+
+
+class WorkflowTemplateStatus(StrEnum):
+    DRAFT = "DRAFT"
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class BindingStatus(StrEnum):
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class TaskStatus(StrEnum):
+    DRAFT = "DRAFT"
+    READY = "READY"
+    QUEUED = "QUEUED"
+    LEASED = "LEASED"
+    RUNNING = "RUNNING"
+    WAITING_HUMAN = "WAITING_HUMAN"
+    HUMAN_OPERATING = "HUMAN_OPERATING"
+    SUCCESS = "SUCCESS"
+    SUCCESS_MANUAL = "SUCCESS_MANUAL"
+    PARTIAL_SUCCESS = "PARTIAL_SUCCESS"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class TaskPriority(StrEnum):
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
+
+
+class RunStatus(StrEnum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    WAITING_HUMAN = "WAITING_HUMAN"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class RunEventType(StrEnum):
+    RUN_STARTED = "RUN_STARTED"
+    STEP_STARTED = "STEP_STARTED"
+    STEP_SUCCEEDED = "STEP_SUCCEEDED"
+    STEP_FAILED = "STEP_FAILED"
+    STEP_WAITING_HUMAN = "STEP_WAITING_HUMAN"
+    SCREENSHOT_SAVED = "SCREENSHOT_SAVED"
+    ARTIFACT_SAVED = "ARTIFACT_SAVED"
+    WAITING_HUMAN = "WAITING_HUMAN"
+    FLOW_LOG = "FLOW_LOG"
+    RUNTIME_INFO = "RUNTIME_INFO"
+    RUNTIME_WARN = "RUNTIME_WARN"
+    RUNTIME_ERROR = "RUNTIME_ERROR"
+    RUN_SUCCEEDED = "RUN_SUCCEEDED"
+    RUN_FAILED = "RUN_FAILED"
+    RUN_CANCELLED = "RUN_CANCELLED"
+
+
+class RunEventLevel(StrEnum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+
+
+class ArtifactType(StrEnum):
+    SCREENSHOT = "SCREENSHOT"
+    DOWNLOAD = "DOWNLOAD"
+    UPLOAD = "UPLOAD"
+    TRACE = "TRACE"
+    DOM_SNAPSHOT = "DOM_SNAPSHOT"
+    LOG = "LOG"
+
+
+class HumanActionType(StrEnum):
+    CAPTCHA = "CAPTCHA"
+    MFA = "MFA"
+    CAPTCHA_OR_MFA = "CAPTCHA_OR_MFA"
+    MANUAL_CONFIRM = "MANUAL_CONFIRM"
+    MANUAL_PORTAL_OPERATION = "MANUAL_PORTAL_OPERATION"
+    APPROVE_SUBMIT = "APPROVE_SUBMIT"
+
+
+class HumanActionStatus(StrEnum):
+    PENDING = "PENDING"
+    OPENED = "OPENED"
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
+class WorkerType(StrEnum):
+    LOCAL_AGENT = "LOCAL_AGENT"
+    SERVER_WORKER = "SERVER_WORKER"
+
+
+class WorkerStatus(StrEnum):
+    ONLINE = "ONLINE"
+    BUSY = "BUSY"
+    OFFLINE = "OFFLINE"
+    ERROR = "ERROR"
+
+
+class RpaEngineType(StrEnum):
+    PLAYWRIGHT_CDP = "PLAYWRIGHT_CDP"
+
+
+class SuccessorJobStatus(StrEnum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    RETRYING = "RETRYING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"

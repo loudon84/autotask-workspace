@@ -1,0 +1,13 @@
+[
+  {
+    "id": "server-worker-001",
+    "workerType": "SERVER_WORKER",
+    "deviceName": "rpa-engine-worker-01",
+    "userId": null,
+    "status": "ONLINE",
+    "capabilities": ["PLAYWRIGHT_CDP", "BROWSER_SESSION_MANAGED"],
+    "appVersion": "0.3.0",
+    "agentVersion": "0.2.0",
+    "os": "Linux"
+  }
+]

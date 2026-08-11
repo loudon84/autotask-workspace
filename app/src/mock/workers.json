@@ -1,0 +1,42 @@
+[
+  {
+    "id": "worker_01",
+    "name": "Worker-01 (主节点)",
+    "status": "busy",
+    "currentTaskCount": 2,
+    "browserCount": 2,
+    "cpuUsage": "45%",
+    "memoryUsage": "2.1 GB",
+    "lastHeartbeat": "2026-06-29 11:55:00"
+  },
+  {
+    "id": "worker_02",
+    "name": "Worker-02",
+    "status": "busy",
+    "currentTaskCount": 1,
+    "browserCount": 1,
+    "cpuUsage": "32%",
+    "memoryUsage": "1.5 GB",
+    "lastHeartbeat": "2026-06-29 11:54:30"
+  },
+  {
+    "id": "worker_03",
+    "name": "Worker-03",
+    "status": "online",
+    "currentTaskCount": 0,
+    "browserCount": 0,
+    "cpuUsage": "8%",
+    "memoryUsage": "512 MB",
+    "lastHeartbeat": "2026-06-29 11:55:10"
+  },
+  {
+    "id": "worker_04",
+    "name": "Worker-04 (备用)",
+    "status": "offline",
+    "currentTaskCount": 0,
+    "browserCount": 0,
+    "cpuUsage": "0%",
+    "memoryUsage": "0 MB",
+    "lastHeartbeat": "2026-06-29 08:00:00"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "wf-template-001",
+    "tenantId": "seed-tenant-001",
+    "name": "SRM 拉取采购订单",
+    "code": "srm_fetch_po",
+    "description": "从客户 Mock SRM 门户拉取 PO",
+    "entityType": "CUSTOMER",
+    "category": "procurement",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "po_no", "label": "PO 编号", "type": "string", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.search_po", "name": "搜索采购订单"},
+      {"id": "srm.fetch_po", "name": "拉取 PO 详情"}
+    ],
+    "createdBy": "seed-user-001"
+  }
+]

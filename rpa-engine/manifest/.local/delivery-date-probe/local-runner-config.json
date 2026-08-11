@@ -1,0 +1,28 @@
+{
+  "portalUrl": "http://192.168.102.247:3000/",
+  "input": {
+    "po_no": "POJS2607130002",
+    "order_lines": [
+      {"line_number": "10", "material_number": "1B.30040.020262", "expected_delivery_date": "2026-08-10"},
+      {"line_number": "20", "material_number": "1B.30040.020255", "expected_delivery_date": "2026-08-12"},
+      {"line_number": "30", "material_number": "1B.30040.020257", "expected_delivery_date": "2026-08-13"},
+      {"line_number": "40", "material_number": "1B.30040.020260", "expected_delivery_date": "2026-08-14"},
+      {"line_number": "50", "material_number": "1B.30040.020258", "expected_delivery_date": "2026-08-15"},
+      {"line_number": "60", "material_number": "1B.30040.020259", "expected_delivery_date": "2026-08-16"},
+      {"line_number": "70", "material_number": "1B.30040.020256", "expected_delivery_date": "2026-08-17"},
+      {"line_number": "80", "material_number": "1B.30040.020261", "expected_delivery_date": "2026-08-18"}
+    ]
+  },
+  "credentials": {
+    "username": "validation-only",
+    "password": "validation-only"
+  },
+  "browserSession": {
+    "mode": "MANAGED",
+    "headless": true,
+    "channel": "chrome",
+    "profileRef": null,
+    "cdpEndpointRef": null,
+    "closePolicy": "CLOSE_ON_FINISH"
+  }
+}

@@ -1,0 +1,51 @@
+---
+description: React Feature 模块开发规范
+globs: src/features/**,src/routes/**
+alwaysApply: false
+---
+
+# React Feature Rule
+
+## 新增业务功能
+
+必须创建：
+
+```
+features/<module>/
+├── <module>-list.tsx    # 或 index.tsx
+├── components/          # 模块私有组件（可选）
+├── hooks/               # 模块私有 hooks（可选）
+└── types.ts             # 模块私有类型（可选）
+```
+
+同时注册：
+
+1. `src/routes/<module>/` — 文件路由（薄层，仅 import feature）
+2. `src/components/layout/data/sidebar-data.ts` — 导航项
+
+## 路由规范
+
+```typescript
+// routes/tasks/index.tsx — 正确：薄层
+import { createFileRoute } from '@tanstack/react-router';
+import { TasksListPage } from '@/features/tasks/tasks-list';
+
+export const Route = createFileRoute('/tasks/')({
+  component: TasksListPage,
+});
+```
+
+## 禁止
+
+- 页面文件超过本模块业务范围
+- 一个组件承担多个领域职责
+- 跨模块引用其他 feature 内部实现
+- 页面直接 import `mock/*.json`
+- 页面直接调用 `ipc.client`
+
+## UI 规范
+
+- 优先使用 `components/ui/`（shadcn）
+- 跨模块业务组件放 `components/business/`
+- 通用 UI 放 `components/common/`
+- 使用 `PageHeader`、`DataTable`、`EmptyState`、`MockLoading` 等已有组件

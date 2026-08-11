@@ -1,0 +1,16 @@
+{
+  "stats": {
+    "pending": 12,
+    "running": 5,
+    "waitingHuman": 3,
+    "failed": 2,
+    "completedToday": 28,
+    "successRate": 93.3
+  },
+  "taskTypeDistribution": [
+    { "taskType": "srm_fetch_po", "label": "获取采购订单", "count": 18 },
+    { "taskType": "srm_upload_packing_list", "label": "上传装箱单", "count": 12 },
+    { "taskType": "srm_confirm_delivery", "label": "确认交货", "count": 8 },
+    { "taskType": "srm_invoice_submit", "label": "提交发票", "count": 6 }
+  ]
+}

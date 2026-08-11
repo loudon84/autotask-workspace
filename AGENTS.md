@@ -11,15 +11,15 @@
 
 Allowed **project code** roots for agent scanning and edits (only these five):
 
-- Client: `copilot-autotask/`
-- Task service: `nodeskclaw/nodeskclaw-task/`
-- RPA Engine: `nodeskclaw-rpa-engine/`
+- Client: `app/`（原 / `copilot-autotask/`；package `name` 仍可为 `AutoTask-studio`）
+- Task service: `service/`（原 `nodeskclaw/nodeskclaw-task/`；包名仍可为 `nodeskclaw-task`）
+- RPA Engine: `rpa-engine/`
 - RPA Flow packages: `rpa-flows/`
 - RPA authoring (UiPath etc.): `rpa-authoring/`
 
 Product records and designs (not a code root; read/update for control): `project-docs/`
 
-Do not place Engine code, Flow packages, UiPath projects, Task service code, or product-wide records inside the Client repository. Do not scan other `nodeskclaw/*` packages unless the user explicitly requests a named path.
+Do not place Engine code, Flow packages, UiPath projects, Task service code, or product-wide records inside the Client repository. Do not scan any `nodeskclaw` project tree; this workspace no longer uses `nodeskclaw/*` source. Stay inside the five roots unless the user explicitly requests a named path.
 
 ## Windows And Chinese Text Encoding
 

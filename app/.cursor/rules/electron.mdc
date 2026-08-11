@@ -1,0 +1,48 @@
+---
+description: Electron IPC 与进程隔离约束
+globs: src/ipc/**,src/actions/**,src/main.ts,src/preload.ts
+alwaysApply: false
+---
+
+# Electron IPC Rule
+
+## 三层职责
+
+| 层 | 路径 | 职责 |
+|----|------|------|
+| Main | `src/ipc/` | oRPC handler、WebContentsView、系统能力 |
+| Preload | `src/preload.ts` | MessagePort 转发、事件桥接 |
+| Renderer | `src/actions/` | Feature 调用 IPC 的唯一入口 |
+
+## 新增 IPC 流程
+
+```
+1. src/ipc/<feature>/handlers.ts   — oRPC handler（os.input().handler()）
+2. src/ipc/<feature>/schemas.ts    — Zod input schema
+3. src/ipc/<feature>/index.ts      — 导出模块
+4. src/ipc/router.ts               — 注册到 router
+5. src/actions/<feature>.ts        — Renderer 封装
+```
+
+## Renderer 禁止
+
+- `window.require()`
+- 直接 `ipcRenderer` 调用
+- `fs` / `path` / 任何 Node API
+
+## Renderer 正确调用
+
+```typescript
+// Feature 层
+import { setTheme } from '@/actions/theme';
+await setTheme('dark');
+
+// 不要
+import { ipc } from '@/ipc/manager';
+await ipc.client.theme.setThemeMode('dark');
+```
+
+## 参考
+
+- IPC 契约：`docs/IPC_CONTRACT.md`
+- 现有模块：`ipc/theme`, `ipc/window`, `ipc/app`, `ipc/shell`, `ipc/web-workspace`

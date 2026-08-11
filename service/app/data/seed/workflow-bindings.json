@@ -1,0 +1,25 @@
+[
+  {
+    "id": "binding-001",
+    "portalAccountId": "portal-001",
+    "workflowTemplateId": "wf-template-001",
+    "workflowTemplateVersion": "1.0.0",
+    "rpaEngineType": "PLAYWRIGHT_CDP",
+    "rpaFlowId": "rpa_flow_mock_srm_fetch_po",
+    "rpaFlowVersion": "1.0.0",
+    "rpaFlowVersionId": "flow-version-mock-srm-001",
+    "flowChecksumSnapshot": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "status": "ENABLED",
+    "config": {
+      "browserSession": {
+        "mode": "MANAGED",
+        "headless": true,
+        "channel": "chrome",
+        "profileRef": null,
+        "cdpEndpointRef": null,
+        "closePolicy": "CLOSE_ON_FINISH"
+      }
+    },
+    "createdBy": "seed-user-001"
+  }
+]

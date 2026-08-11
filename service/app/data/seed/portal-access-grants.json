@@ -1,0 +1,50 @@
+[
+  {
+    "id": "grant-001",
+    "portalAccountId": "portal-001",
+    "subjectType": "USER",
+    "subjectId": "seed-user-001",
+    "permissions": [
+      "PORTAL_VIEW",
+      "PORTAL_EDIT",
+      "PORTAL_OPEN_WEB",
+      "PORTAL_USE_CREDENTIAL",
+      "PORTAL_MANAGE_PERMISSION",
+      "PORTAL_BIND_WORKFLOW",
+      "PORTAL_VIEW_TASKS"
+    ],
+    "grantedBy": "seed-user-001"
+  },
+  {
+    "id": "grant-002",
+    "portalAccountId": "portal-002",
+    "subjectType": "USER",
+    "subjectId": "seed-user-001",
+    "permissions": [
+      "PORTAL_VIEW",
+      "PORTAL_EDIT",
+      "PORTAL_OPEN_WEB",
+      "PORTAL_USE_CREDENTIAL",
+      "PORTAL_MANAGE_PERMISSION",
+      "PORTAL_BIND_WORKFLOW",
+      "PORTAL_VIEW_TASKS"
+    ],
+    "grantedBy": "seed-user-001"
+  },
+  {
+    "id": "grant-003",
+    "portalAccountId": "portal-003",
+    "subjectType": "USER",
+    "subjectId": "seed-user-001",
+    "permissions": [
+      "PORTAL_VIEW",
+      "PORTAL_EDIT",
+      "PORTAL_OPEN_WEB",
+      "PORTAL_USE_CREDENTIAL",
+      "PORTAL_MANAGE_PERMISSION",
+      "PORTAL_BIND_WORKFLOW",
+      "PORTAL_VIEW_TASKS"
+    ],
+    "grantedBy": "seed-user-001"
+  }
+]

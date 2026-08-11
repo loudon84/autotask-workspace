@@ -1,0 +1,11 @@
+[
+  {
+    "id": "audit-001",
+    "tenantId": "seed-tenant-001",
+    "actorId": "seed-user-001",
+    "action": "task.created",
+    "resourceType": "automation_task",
+    "resourceId": "task-phase5-success",
+    "details": {"title": "Mock SRM 拉取 PO 成功"}
+  }
+]

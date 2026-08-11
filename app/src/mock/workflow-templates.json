@@ -1,0 +1,104 @@
+[
+  {
+    "id": "wf_srm_fetch_po",
+    "name": "SRM 获取采购订单",
+    "code": "srm_fetch_po",
+    "description": "登录客户 SRM，按 PO 编号搜索采购订单并下载合同或订单附件。",
+    "category": "采购订单",
+    "version": "1.0.0",
+    "status": "enabled",
+    "target": "web",
+    "inputSchema": [
+      { "name": "po_no", "label": "PO 编号", "type": "string", "required": true },
+      { "name": "contract_no", "label": "合同编号", "type": "string", "required": false }
+    ],
+    "steps": [
+      { "id": "step_login", "name": "登录客户 SRM", "type": "srm.login", "timeout": 60, "retry": 1, "onError": "wait_human" },
+      { "id": "step_search_po", "name": "搜索采购订单", "type": "srm.search_po", "input": { "po_no": "{{task.input.po_no}}" }, "timeout": 30, "retry": 2, "onError": "fail" },
+      { "id": "step_download_contract", "name": "下载采购合同", "type": "file.download", "timeout": 60, "retry": 2, "onError": "wait_human" },
+      { "id": "step_save_evidence", "name": "保存截图证据", "type": "evidence.screenshot", "timeout": 10, "retry": 0, "onError": "ignore" }
+    ],
+    "createdAt": "2026-06-29 08:00:00",
+    "updatedAt": "2026-06-29 08:00:00"
+  },
+  {
+    "id": "wf_upload_packing_list",
+    "name": "SRM 上传装箱单",
+    "code": "srm_upload_packing_list",
+    "description": "登录 SRM 门户，上传装箱单文件并提交确认。",
+    "category": "物流交货",
+    "version": "1.1.0",
+    "status": "enabled",
+    "target": "web",
+    "inputSchema": [
+      { "name": "delivery_no", "label": "交货单号", "type": "string", "required": true },
+      { "name": "packing_file", "label": "装箱单文件", "type": "file", "required": true }
+    ],
+    "steps": [
+      { "id": "step_login", "name": "登录客户 SRM", "type": "srm.login", "timeout": 60, "retry": 1, "onError": "wait_human" },
+      { "id": "step_navigate", "name": "导航到装箱单页面", "type": "page.click", "timeout": 30, "retry": 2, "onError": "retry" },
+      { "id": "step_upload", "name": "上传装箱单", "type": "file.upload", "timeout": 120, "retry": 1, "onError": "wait_human" },
+      { "id": "step_submit", "name": "提交确认", "type": "page.click", "timeout": 30, "retry": 2, "onError": "fail" }
+    ],
+    "createdAt": "2026-06-20 10:00:00",
+    "updatedAt": "2026-06-25 14:30:00"
+  },
+  {
+    "id": "wf_confirm_delivery",
+    "name": "SRM 确认交货",
+    "code": "srm_confirm_delivery",
+    "description": "在 SRM 门户确认交货信息。",
+    "category": "物流交货",
+    "version": "1.0.0",
+    "status": "enabled",
+    "target": "web",
+    "inputSchema": [
+      { "name": "delivery_no", "label": "交货单号", "type": "string", "required": true }
+    ],
+    "steps": [
+      { "id": "step_login", "name": "登录", "type": "srm.login", "timeout": 60, "retry": 1, "onError": "wait_human" },
+      { "id": "step_search", "name": "搜索交货单", "type": "srm.search_delivery", "timeout": 30, "retry": 2, "onError": "retry" },
+      { "id": "step_confirm", "name": "提交确认", "type": "page.click", "timeout": 30, "retry": 2, "onError": "fail" }
+    ],
+    "createdAt": "2026-06-15 09:00:00",
+    "updatedAt": "2026-06-15 09:00:00"
+  },
+  {
+    "id": "wf_invoice_submit",
+    "name": "SRM 提交发票",
+    "code": "srm_invoice_submit",
+    "description": "在 SRM 门户提交电子发票。",
+    "category": "财务结算",
+    "version": "2.0.0",
+    "status": "enabled",
+    "target": "web",
+    "inputSchema": [
+      { "name": "invoice_no", "label": "发票编号", "type": "string", "required": true }
+    ],
+    "steps": [
+      { "id": "step_login", "name": "登录", "type": "srm.login", "timeout": 60, "retry": 1, "onError": "wait_human" },
+      { "id": "step_fill", "name": "填写发票信息", "type": "page.fill", "timeout": 60, "retry": 1, "onError": "retry" },
+      { "id": "step_submit", "name": "提交发票", "type": "page.click", "timeout": 30, "retry": 2, "onError": "fail" }
+    ],
+    "createdAt": "2026-06-10 08:00:00",
+    "updatedAt": "2026-06-22 16:00:00"
+  },
+  {
+    "id": "wf_legacy_po",
+    "name": "旧版 PO 获取（已禁用）",
+    "code": "legacy_fetch_po",
+    "description": "旧版采购订单获取流程，已停用。",
+    "category": "采购订单",
+    "version": "0.9.0",
+    "status": "disabled",
+    "target": "web",
+    "inputSchema": [
+      { "name": "po_no", "label": "PO 编号", "type": "string", "required": true }
+    ],
+    "steps": [
+      { "id": "step_login", "name": "登录", "type": "srm.login", "timeout": 60, "retry": 1, "onError": "fail" }
+    ],
+    "createdAt": "2025-12-01 08:00:00",
+    "updatedAt": "2026-03-01 10:00:00"
+  }
+]

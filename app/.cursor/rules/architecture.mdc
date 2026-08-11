@@ -1,0 +1,34 @@
+---
+description: AutoTask Studio 整体架构约束
+alwaysApply: true
+---
+
+# Architecture Rule
+
+你正在维护 AutoTask Studio（Electron + React SRM 自动化桌面工作台）。
+
+## 必须遵守
+
+1. 保持 Electron Main / Preload / Renderer 三层分离。
+2. Renderer 不允许直接访问 Node API（`fs`、`path`、`electron`）。
+3. Native 能力必须通过 IPC（oRPC）→ `actions/` → Feature。
+4. 新功能优先增加 `features/<module>`，而不是修改公共组件。
+5. 修改前先读 `docs/CODEBASE.md` 和 `docs/CURSOR_CONTEXT.md`，只扫描目标目录。
+
+## 禁止
+
+- 全局重构 `src/`
+- 修改 `components/ui/` 下的 shadcn 生成组件
+- 修改 `ipc/manager.ts`、`ipc/handler.ts` 引导逻辑（除非明确要求）
+- 引入新的状态管理方案（已有 TanStack Query + Zustand）
+- 跨 feature 直接 import 其他 feature 的内部文件
+
+## 目录职责
+
+- `routes/` — 路由定义，仅 import feature 组件
+- `features/` — 业务页面逻辑
+- `services/` — 数据访问
+- `actions/` — IPC 封装
+- `ipc/` — Main 进程 oRPC 路由
+- `components/business/` — 跨模块共享业务组件
+- `components/ui/` — shadcn 基础组件（勿改）

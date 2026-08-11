@@ -1,0 +1,7 @@
+[
+  { "id": "audit_001", "taskId": "task_001", "action": "任务创建", "operator": "张三", "detail": "创建自动化任务", "createdAt": "2026-06-29 09:20:00" },
+  { "id": "audit_002", "taskId": "task_001", "action": "开始执行", "operator": "系统", "detail": "任务状态变更为 RUNNING", "createdAt": "2026-06-29 09:25:00" },
+  { "id": "audit_003", "taskId": "task_002", "action": "人工介入", "operator": "李四", "detail": "等待验证码输入", "createdAt": "2026-06-29 10:14:10" },
+  { "id": "audit_004", "taskId": "task_003", "action": "执行失败", "operator": "系统", "detail": "步骤 [提交确认] 失败: 元素未找到", "createdAt": "2026-06-28 14:20:00" },
+  { "id": "audit_005", "taskId": "task_005", "action": "任务完成", "operator": "系统", "detail": "任务状态变更为 SUCCESS", "createdAt": "2026-06-29 08:40:00" }
+]

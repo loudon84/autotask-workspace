@@ -1,0 +1,33 @@
+{
+  "rpaFlowId": "rpa_flow_supplier_portal_update_delivery_dates",
+  "name": "Supplier Portal Update Expected Delivery Dates",
+  "version": "1.2.0",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_update_expected_delivery_dates"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "po_no",
+      "type": "string",
+      "required": true,
+      "description": "Customer purchase order number to update"
+    },
+    {
+      "name": "order_lines",
+      "type": "array",
+      "required": true,
+      "description": "All order lines with line_number, material_number and expected_delivery_date (YYYY-MM-DD)"
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

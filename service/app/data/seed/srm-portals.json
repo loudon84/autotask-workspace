@@ -1,0 +1,47 @@
+[
+  {
+    "id": "portal-001",
+    "tenantId": "seed-tenant-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-001",
+    "erpEntityName": "示例客户 A",
+    "portalName": "客户 SRM 门户",
+    "portalUrl": "https://portal.example.com/srm",
+    "loginAccount": "buyer@example.com",
+    "credentialRef": "credential-ref-mock-srm",
+    "clientOpenMode": "webcontents",
+    "clientSessionPartition": "persist:portal-001",
+    "status": "ENABLED",
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "portal-002",
+    "tenantId": "seed-tenant-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-002",
+    "erpEntityName": "示例客户 B",
+    "portalName": "客户 B SRM 生产环境",
+    "portalUrl": "https://portal.example.com/srm-b",
+    "loginAccount": "buyer-b@example.com",
+    "credentialRef": "credential-ref-mock-srm-b",
+    "clientOpenMode": "webcontents",
+    "clientSessionPartition": "persist:portal-002",
+    "status": "ENABLED",
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "portal-003",
+    "tenantId": "seed-tenant-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-003",
+    "erpEntityName": "示例客户 C",
+    "portalName": "客户 C SRM 测试环境",
+    "portalUrl": "https://portal.example.com/srm-c",
+    "loginAccount": "buyer-c@example.com",
+    "credentialRef": "credential-ref-mock-srm-c",
+    "clientOpenMode": "system_browser",
+    "clientSessionPartition": "persist:portal-003",
+    "status": "ENABLED",
+    "createdBy": "seed-user-001"
+  }
+]

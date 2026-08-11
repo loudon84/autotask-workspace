@@ -1,0 +1,98 @@
+[
+  {
+    "id": "art_001",
+    "taskId": "task_001",
+    "runId": "run_001",
+    "customerName": "客户A",
+    "taskTitle": "获取客户A采购订单 PO-20260629-001",
+    "name": "login_success.png",
+    "type": "screenshot",
+    "filePath": "/artifacts/run_001/login_success.png",
+    "sizeText": "245 KB",
+    "createdAt": "2026-06-29 09:26:30"
+  },
+  {
+    "id": "art_002",
+    "taskId": "task_001",
+    "runId": "run_001",
+    "customerName": "客户A",
+    "taskTitle": "获取客户A采购订单 PO-20260629-001",
+    "name": "search_po.png",
+    "type": "screenshot",
+    "filePath": "/artifacts/run_001/search_po.png",
+    "sizeText": "312 KB",
+    "createdAt": "2026-06-29 09:35:00"
+  },
+  {
+    "id": "art_003",
+    "taskId": "task_005",
+    "runId": "run_004",
+    "customerName": "客户D",
+    "taskTitle": "获取客户D采购订单 PO-20260629-088",
+    "name": "PO-20260629-088.pdf",
+    "type": "download",
+    "filePath": "/artifacts/run_004/PO-20260629-088.pdf",
+    "sizeText": "1.2 MB",
+    "createdAt": "2026-06-29 08:35:00"
+  },
+  {
+    "id": "art_004",
+    "taskId": "task_005",
+    "runId": "run_004",
+    "customerName": "客户D",
+    "taskTitle": "获取客户D采购订单 PO-20260629-088",
+    "name": "trace.zip",
+    "type": "trace",
+    "filePath": "/artifacts/run_004/trace.zip",
+    "sizeText": "5.8 MB",
+    "createdAt": "2026-06-29 08:40:00"
+  },
+  {
+    "id": "art_005",
+    "taskId": "task_003",
+    "runId": "run_003",
+    "customerName": "客户C",
+    "taskTitle": "客户C确认交货 DN-20260628-102",
+    "name": "error_page.dom",
+    "type": "dom_snapshot",
+    "filePath": "/artifacts/run_003/error_page.dom",
+    "sizeText": "89 KB",
+    "createdAt": "2026-06-28 14:20:00"
+  },
+  {
+    "id": "art_006",
+    "taskId": "task_002",
+    "runId": "run_002",
+    "customerName": "客户B",
+    "taskTitle": "上传客户B装箱单 PK-883",
+    "name": "execution.log",
+    "type": "log",
+    "filePath": "/artifacts/run_002/execution.log",
+    "sizeText": "12 KB",
+    "createdAt": "2026-06-29 10:14:10"
+  },
+  {
+    "id": "art_007",
+    "taskId": "task_002",
+    "runId": "run_002",
+    "customerName": "客户B",
+    "taskTitle": "上传客户B装箱单 PK-883",
+    "name": "captcha_screen.png",
+    "type": "screenshot",
+    "filePath": "/artifacts/run_002/captcha_screen.png",
+    "sizeText": "198 KB",
+    "createdAt": "2026-06-29 10:14:05"
+  },
+  {
+    "id": "art_008",
+    "taskId": "task_001",
+    "runId": "run_001",
+    "customerName": "客户A",
+    "taskTitle": "获取客户A采购订单 PO-20260629-001",
+    "name": "packing_list_upload.xlsx",
+    "type": "upload",
+    "filePath": "/artifacts/run_001/packing_list_upload.xlsx",
+    "sizeText": "56 KB",
+    "createdAt": "2026-06-29 09:30:00"
+  }
+]

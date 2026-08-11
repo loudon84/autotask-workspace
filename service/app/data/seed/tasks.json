@@ -1,0 +1,50 @@
+[
+  {
+    "id": "task-phase5-success",
+    "tenantId": "seed-tenant-001",
+    "title": "Mock SRM 拉取 PO 成功",
+    "taskType": "srm_fetch_po",
+    "portalAccountId": "portal-001",
+    "workflowBindingId": "binding-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-001",
+    "erpEntityName": "示例客户 A",
+    "status": "QUEUED",
+    "priority": "NORMAL",
+    "input": {"po_no": "PO-20260708-001"},
+    "progress": 0,
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "task-phase5-failed",
+    "tenantId": "seed-tenant-001",
+    "title": "Mock SRM 拉取 PO 失败",
+    "taskType": "srm_fetch_po",
+    "portalAccountId": "portal-001",
+    "workflowBindingId": "binding-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-001",
+    "erpEntityName": "示例客户 A",
+    "status": "QUEUED",
+    "priority": "NORMAL",
+    "input": {"po_no": "PO-NOT-FOUND"},
+    "progress": 0,
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "task-phase5-manual",
+    "tenantId": "seed-tenant-001",
+    "title": "Mock SRM 拉取 PO 人工",
+    "taskType": "srm_fetch_po",
+    "portalAccountId": "portal-001",
+    "workflowBindingId": "binding-001",
+    "entityType": "CUSTOMER",
+    "erpEntityCode": "CUST-001",
+    "erpEntityName": "示例客户 A",
+    "status": "QUEUED",
+    "priority": "NORMAL",
+    "input": {"po_no": "PO-MANUAL-001"},
+    "progress": 0,
+    "createdBy": "seed-user-001"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "defaultBrowserType": "chrome",
+  "defaultRunMode": "headed",
+  "saveScreenshots": true,
+  "enableTrace": true,
+  "artifactPath": "C:\\AutoTask\\artifacts",
+  "logLevel": "INFO",
+  "themeMode": "system",
+  "mockDelayMs": 300,
+  "defaultOpenMode": "webcontents",
+  "allowResetSession": true,
+  "allowClearAllCache": true,
+  "chromeExecutablePath": "",
+  "edgeExecutablePath": "",
+  "chromiumExecutablePath": "",
+  "profileRootPath": "C:\\Users\\demo\\AppData\\Roaming\\AutoTaskStudio\\browser-profiles",
+  "downloadsRootPath": "C:\\Users\\demo\\AppData\\Roaming\\AutoTaskStudio\\downloads",
+  "remoteDebuggingAddress": "127.0.0.1",
+  "minPort": 45000,
+  "maxPort": 55000,
+  "allowResetProfile": true,
+  "allowOpenProfileFolder": true
+}

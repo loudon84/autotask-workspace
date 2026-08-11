@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "electron:debug-main",
+      "type": "npm",
+      "script": "start:debug:brk",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "electron-forge",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Debugger listening on|Launched Electron app"
+        }
+      }
+    }
+  ]
+}

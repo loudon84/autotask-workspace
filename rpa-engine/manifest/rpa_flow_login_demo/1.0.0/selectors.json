@@ -1,0 +1,10 @@
+{
+  "login_username": "[data-rpa='login-username']",
+  "login_password": "[data-rpa='login-password']",
+  "login_captcha": "[data-rpa='login-captcha']",
+  "login_captcha_image": "img[data-rpa='login-captcha-image']",
+  "login_agreement": "[data-rpa='login-agreement'] input[type='checkbox']",
+  "login_submit": "button[data-rpa='login-submit']",
+  "login_error": ".el-message--error",
+  "login_success": "[data-rpa='portal-env-tag']"
+}

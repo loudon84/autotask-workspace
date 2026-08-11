@@ -1,0 +1,13 @@
+[
+  {
+    "id": "human_checkpoint_001",
+    "taskId": "task_002",
+    "stepId": "step_login_mfa",
+    "portalId": "portal_002",
+    "targetUrl": "https://vendor.customer-b.com/login/mfa",
+    "reason": "mfa",
+    "instruction": "请在浏览器中完成验证码或 MFA 验证。完成后回到 AutoTask Studio 点击【确认已完成】。",
+    "confirmButtonText": "确认已完成",
+    "status": "WAITING"
+  }
+]

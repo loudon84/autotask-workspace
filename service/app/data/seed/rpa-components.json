@@ -1,0 +1,9 @@
+[
+  {
+    "id": "component-001",
+    "name": "Playwright Chromium",
+    "type": "browser",
+    "config": {"engine": "chromium"},
+    "description": "默认浏览器组件"
+  }
+]
