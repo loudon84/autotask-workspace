@@ -215,6 +215,11 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-11
 
+#### rpa-engine 启动入口与误依赖清理
+
+- 纠正本地 uvicorn 入口为 `nodeskclaw_rpa_engine.main:app`（不是 `app.main:app`）。`pyproject.toml` 误加的 `myapplication` 已移除并 `uv lock`/`uv sync`，避免 Flask `app` 包抢占模块名。
+- 正确导入已验证；若 `.env` 中 `WORKER_ENABLED=true` 且 Task（4520）不可达，应用 lifespan 会在 Worker 注册时失败并退出。README 已补充 uvicorn 与调试器下勿开 `--reload` 说明。
+
 #### Client 代码根迁移：`AutoTask-studio` → `app`
 
 - 确认 Client 源码已迁移到工作区根目录 `app/`（`package.json` 的 `name` 仍为 `AutoTask-studio`，`productName` 仍为 `SMC-Copilot`）。

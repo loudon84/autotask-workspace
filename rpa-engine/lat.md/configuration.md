@@ -33,6 +33,15 @@ controls cache/work directories, timeout, retries, trace mode, and output size.
   requires all `MOCK_SRM_*` settings.
 - `RUNTIME_CACHE_DIR` and `RUNTIME_WORK_DIR` must be different paths.
 
+## Package Identity
+
+The installable project name is `rpa-engine`; the importable Python package remains
+`nodeskclaw_rpa_engine`. Local uvicorn must target `nodeskclaw_rpa_engine.main:app`.
+
+Do not add unrelated PyPI packages to `pyproject.toml` dependencies. A mistaken
+`myapplication` dependency previously installed a Flask `app` package that collided
+with the uvicorn target `app.main:app`.
+
 ## External Dependency Policy
 
 PostgreSQL and MinIO/S3 are disabled by default.

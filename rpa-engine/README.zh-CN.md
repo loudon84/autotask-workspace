@@ -49,11 +49,19 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m nodeskclaw_rpa_engine
 ```
 
+或用 uvicorn（ASGI 入口必须是 Python 包路径，不要写成 `app.main:app`）：
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn nodeskclaw_rpa_engine.main:app --host 0.0.0.0 --port 4610
+```
+
 如果 Python 安装在其他位置，第一条命令可以改为：
 
 ```powershell
 py -3.12 -m venv .venv
 ```
+
+在 IDE 调试器下请去掉 `--reload`（reload 会再拉起子进程，多数调试会话会因此挂住或看不到真正异常）。
 
 服务默认监听 `127.0.0.1:4610`：
 

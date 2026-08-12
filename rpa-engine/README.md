@@ -41,8 +41,15 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m nodeskclaw_rpa_engine
 ```
 
+Or with uvicorn (ASGI target must be the Python package, not `app.main`):
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn nodeskclaw_rpa_engine.main:app --host 0.0.0.0 --port 4610
+```
+
 If Python is installed elsewhere, use `py -3.12 -m venv .venv` for the first
-command.
+command. Under a debugger, omit `--reload` (reload spawns a child process that
+breaks most IDE debug sessions).
 
 The service listens on `127.0.0.1:4610` by default:
 

@@ -320,52 +320,6 @@ wheels = [
 ]
 
 [[package]]
-name = "nodeskclaw-rpa-engine"
-version = "0.6.0"
-source = { editable = "." }
-dependencies = [
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "boto3" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "packaging" },
-    { name = "playwright" },
-    { name = "pydantic-settings" },
-    { name = "python-multipart" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.14,<2" },
-    { name = "asyncpg", specifier = ">=0.29,<1" },
-    { name = "boto3", specifier = ">=1.35,<2" },
-    { name = "fastapi", specifier = ">=0.115,<1" },
-    { name = "httpx", specifier = ">=0.27,<1" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.14,<2" },
-    { name = "packaging", specifier = ">=24,<27" },
-    { name = "playwright", specifier = ">=1.49,<2" },
-    { name = "pydantic-settings", specifier = ">=2.7,<3" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<10" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24,<2" },
-    { name = "python-multipart", specifier = ">=0.0.20,<1" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9,<1" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<3" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34,<1" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -567,6 +521,52 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl", hash = "sha256:5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b", size = 154003, upload-time = "2025-09-25T21:32:21.167Z" },
     { url = "https://files.pythonhosted.org/packages/1a/08/67bd04656199bbb51dbed1439b7f27601dfb576fb864099c7ef0c3e55531/pyyaml-6.0.3-cp312-cp312-win_arm64.whl", hash = "sha256:64386e5e707d03a7e172c0701abfb7e10f0fb753ee1d773128192742712a98fd", size = 140344, upload-time = "2025-09-25T21:32:22.617Z" },
 ]
+
+[[package]]
+name = "rpa-engine"
+version = "0.6.0"
+source = { editable = "." }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "boto3" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "packaging" },
+    { name = "playwright" },
+    { name = "pydantic-settings" },
+    { name = "python-multipart" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.14,<2" },
+    { name = "asyncpg", specifier = ">=0.29,<1" },
+    { name = "boto3", specifier = ">=1.35,<2" },
+    { name = "fastapi", specifier = ">=0.115,<1" },
+    { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.14,<2" },
+    { name = "packaging", specifier = ">=24,<27" },
+    { name = "playwright", specifier = ">=1.49,<2" },
+    { name = "pydantic-settings", specifier = ">=2.7,<3" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<10" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24,<2" },
+    { name = "python-multipart", specifier = ">=0.0.20,<1" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9,<1" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<3" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34,<1" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "ruff"
