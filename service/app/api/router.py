@@ -8,6 +8,7 @@ from app.api import (
     human_actions,
     mcp,
     portal_accounts,
+    process_instances,
     rpa_dispatch,
     rpa_runs,
     rpa_workers,
@@ -31,6 +32,7 @@ api_router.include_router(portal_accounts.router, prefix="/portal-accounts", tag
 api_router.include_router(workflow_templates.router, prefix="/workflow-templates", tags=["Workflow Template"])
 api_router.include_router(workflow_bindings.router, prefix="/workflow-bindings", tags=["Workflow Binding"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["Automation Task"])
+api_router.include_router(process_instances.router, prefix="/process-instances", tags=["Process Instance"])
 api_router.include_router(rpa_runs.router, prefix="/runs", tags=["RPA Run"])
 api_router.include_router(human_actions.router, prefix="/human-actions", tags=["Human Action"])
 api_router.include_router(artifacts.router, prefix="/artifacts", tags=["Artifact"])

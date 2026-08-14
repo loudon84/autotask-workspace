@@ -7,6 +7,7 @@ export const endpointConfigSchema = z.object({
   taskBackendUrl: z.string().url(),
   taskPrefix: z.string().min(1),
   aiosHomeUrl: z.string().url().optional(),
+  sdmsWebBaseUrl: z.string().url().optional(),
 });
 
 export const loginInputSchema = z.object({

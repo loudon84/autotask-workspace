@@ -60,6 +60,14 @@ describe("default endpoint config", () => {
     expect(config.authPrefix).toBe("/api/v1/auth");
     expect(config.taskPrefix).toBe("/api/v1/autotask");
   });
+
+  it("builds SDMS OM view URLs from headerId", async () => {
+    const { buildSdmsOmViewUrl } = await import("@/types/endpoint-config");
+    expect(buildSdmsOmViewUrl("http://192.168.99.35:8080/", "1100983")).toBe(
+      "http://192.168.99.35:8080/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=1100983"
+    );
+    expect(buildSdmsOmViewUrl("http://example.com", "")).toBeNull();
+  });
 });
 
 describe("autotaskApi facade", () => {

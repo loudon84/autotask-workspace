@@ -95,9 +95,46 @@ async def lifespan(app: FastAPI):
         logger.info("SUCCESSOR_JOB_ENABLED=false，后继任务作业处理器保持关闭")
     app.state.successor_job_processor = successor_processor
 
+    scan_scheduler = None
+    if settings.SCAN_JOB_ENABLED:
+        from app.core.deps import async_session_factory
+        from app.services.scan_scheduler import ScanScheduler
+
+        scan_scheduler = ScanScheduler(
+            async_session_factory,
+            settings,
+        )
+        await scan_scheduler.start()
+        logger.info("扫单调度器已启动（每天 %02d:%02d）", settings.SCAN_JOB_HOUR, settings.SCAN_JOB_MINUTE)
+    else:
+        logger.info("SCAN_JOB_ENABLED=false，扫单调度器保持关闭")
+    app.state.scan_scheduler = scan_scheduler
+
+    sign_poll_scheduler = None
+    if settings.SIGN_POLL_JOB_ENABLED:
+        from app.core.deps import async_session_factory
+        from app.services.sign_poll_scheduler import SignPollScheduler
+
+        sign_poll_scheduler = SignPollScheduler(
+            async_session_factory,
+            settings,
+        )
+        await sign_poll_scheduler.start()
+        logger.info(
+            "回签轮询调度器已启动（间隔 %.0f 秒）",
+            settings.SIGN_POLL_INTERVAL_SECONDS,
+        )
+    else:
+        logger.info("SIGN_POLL_JOB_ENABLED=false，回签轮询调度器保持关闭")
+    app.state.sign_poll_scheduler = sign_poll_scheduler
+
     try:
         yield
     finally:
+        if sign_poll_scheduler is not None:
+            await sign_poll_scheduler.stop()
+        if scan_scheduler is not None:
+            await scan_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()
         await engine.dispose()

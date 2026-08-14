@@ -9,6 +9,9 @@ import {
   Settings,
   LayoutGrid,
   Monitor,
+  Workflow,
+  FileSpreadsheet,
+  ShoppingCart,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
@@ -23,6 +26,22 @@ export const sidebarData: SidebarData = {
       title: "主导航",
       items: [
         { title: "工作台", url: "/dashboard", icon: LayoutDashboard },
+        {
+          title: "流程实例",
+          icon: Workflow,
+          items: [
+            {
+              title: "客户订单流程实例",
+              url: "/processes",
+              icon: ShoppingCart,
+            },
+            {
+              title: "对账单流程实例",
+              url: "/process-instances/statements",
+              icon: FileSpreadsheet,
+            },
+          ],
+        },
         { title: "任务列表", url: "/tasks", icon: ListTodo },
         { title: "Web 工作区", url: "/web-workspace", icon: Monitor },
         { title: "任务记录", url: "/artifacts", icon: FileImage },
@@ -44,6 +63,8 @@ export const sidebarData: SidebarData = {
 
 export const routeTitles: Record<string, string> = {
   "/dashboard": "工作台",
+  "/processes": "客户订单流程实例",
+  "/process-instances/statements": "对账单流程实例",
   "/tasks": "任务列表",
   "/web-workspace": "Web 工作区",
   "/tasks/new": "新建任务",
@@ -57,6 +78,9 @@ export const routeTitles: Record<string, string> = {
 
 export function getPageTitle(pathname: string): string {
   if (routeTitles[pathname]) return routeTitles[pathname];
+  if (pathname.startsWith("/processes/") && pathname.endsWith("/dates"))
+    return "填写交货日期";
+  if (pathname.startsWith("/processes/")) return "客户订单流程实例详情";
   if (pathname.startsWith("/tasks/")) return "任务详情";
   if (pathname.startsWith("/workflows/")) return "流程模板详情";
   if (pathname.startsWith("/srm-portals/")) return "门户配置";

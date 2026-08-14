@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-11
+最后更新：2026-08-13
 
 ## 1. 用途
 
@@ -91,6 +91,10 @@
 9. 修正测试环境 Task Artifact 的 public/download base URL，并在部署版 Client 中复测截图预览及 PNG/XLSX 下载。
 10. 正式链路仍需修复演示门户的签章持久化契约；当前绕过方案已发布 Task 3 `1.0.1`，下一步需精确切换 Task 3 Binding，再由用户授权单独创建 Task 3。由于 Task 2 已是 `WAITING_HUMAN` 且没有成功输出，Task 服务不会自动创建后继任务；不得把独立 Task 3 成功记作 Task 2→3 自动链成功。
 11. 修正 Task 自动迁移开关，使 `.env` 的 `SKIP_AUTO_MIGRATE=1` 能在启动阶段生效，并增加启动配置测试。
+12. ~~**待授权**：执行 Alembic `b2e8a4c91f30`~~ **已执行（2026-08-13）**：`process_line_items` 已补齐 SRM 附件列；详情接口此前因缺列 500，现应可正常返回。
+13. **v2.02 运维（已完成）**：`prepare` Binding→**1.2.6**；`srm_check_reply_status` Template+Binding→**1.0.0**；本机 Task 已开 `SIGN_POLL_JOB_ENABLED=true`（见 2026-08-13 日志）。
+14. **R1 限制（已澄清）**：演示门户**当场签章**常不落库，该笔单据刷新后未必仍是「已回签」，不能拿它验轮询。初始化种子里另有单据本身就是「已回签」，可用这些 PO 把流程实例推到 `SIGN_REQUESTED` 再验 `check_reply`→自动归档。
+15. TEMP 签章回填（`rpa_flow_srm_sign_order` 1.0.1）仍待门户落库修复后删除。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -212,6 +216,106 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-08-14
+
+- **已回签阶段命名**：`SIGNED` 中文由「待上传附件」改为「已回签」；轮询确认后**先**改阶段再创建下载任务；失败可在已回签手动重试。`POJS2607240005` 已重置为 `SIGN_REQUESTED` 供复测。
+
+- **待回签不提供合同下载**：发起签章后客户→我司盖章全程为待回签；「手动触发签章合同下载」仅保留在 `SIGNED`（已回签）。PRD §3.2/§3.3 已改。
+
+- **R2 演示 TEMP**：回签轮询候选放宽为 `ACTIVE` +（`SIGN_REQUESTED`∪`DATES_COMPLETE`）；列表增加「立即回签轮询」`POST /process-instances/sign-poll/run-once`。PRD v2.02 §3.2/§3.3A 已记。单测相关通过。需重启 Task；Client 热更即可。
+
+- **签章成功不再立即归档**：按正式路径，签章 SUCCESS 一律停在 `SIGN_REQUESTED`；节点4仅由回签轮询（或人工兜底）触发。演示门户瞬间「已回签」不可信。已改 `process_instance_service._handle_sign_finished` + 单测；PRD v2.02 §3.3 同步。`POJS2607240005` 误进 `SIGNED` 已纠回 `DATES_COMPLETE`（门户仍待签章）。**需重启 Task** 后新签章才生效。
+
+- **联调清空脚本**：`service/scripts/clear_process_instances.py`（默认预览；加 `--yes` 硬删流程实例及相关任务/Run）。不删 Binding / Flow Registry。
+
+- **R3 Binding 已切换（MinIO 包已落）**：`rpa_flow_supplier_portal_upload_order_attachment` **1.1.0** Registry UUID `0513788f-a873-4f8d-8131-5baec1e49620`，checksum `sha256:6e8af37a…364ca`，9503 字节。门户 Binding 已切到「查看签章」合同下载。包已写入 MinIO（`GET /flow-versions/{id}/package` → 200）；`validate-binding` → valid。说明：`POST /api/v1/flows/packages` 当前对本机 Engine 返回空 body **502**（源码无 502），但同配置下直接 `put_package` 成功——接口层异常待查；联调以 MinIO+Registry 已就绪为准。
+
+- **联调重置**：按用户要求再次硬清空流程实例相关数据（7 实例 / 18 行 / 19 阶段历史，及关联 12 子任务与 Run/事件/制品）；计数均为 0，可重新手动扫单。
+
+### 2026-08-13
+
+- **R3 节点4附件纠正**：确认业务为已回签后下载**双方签章合同**上传 SDMS，不是「下载订单」的 XLSX/XML。演示门户入口为「查看签章」→ PDF（样例 `PURCHASE_ORDER.pdf`）。已新增 Flow `rpa_flow_supplier_portal_upload_order_attachment` **1.1.0**（源码+单测通过）；Client/service 按钮改为「手动触发签章合同下载」；PRD 增补 R3。**2026-08-14 已切换 Binding**（见上一日志）。
+
+- **错误体验**：已完成实例不再展示历史 `lastError`（成功推进签章/回签/归档时清除；列表 COMPLETED/CANCELLED 隐藏）；存量 `POJS2607180002` 已清脏。落库与 Client 展示按错误码中文化（如 `ORDER_SIGN_STATUS_UNCONFIRMED`）；签章 Flow 1.0.2 源码文案已改为中文（未强制重发版）。Task 需重启后新失败才会以中文落库；Client 刷新即可对旧英文码即时翻译展示。
+
+- **O4 客户订单命名与导航**：侧栏「流程实例」可折叠（客户订单 `/processes` + 对账单占位 `/process-instances/statements`）；列表/详情「客户订单 / 客户=`portal_name` / 交易主体」；新建实例标题 `{portal_name}·客户订单 - {po}`。本门户 `portal_name` 与 6 个 SOP 流程模板名已标为「天地伟业·…」（扫单/建单/交期/签章/回签探测/附件）。单测 process-instances 10 项通过。PRD §7 O4。
+
+- **O3 已落地（Client）**：阶段中文名与列表 Tab 对齐；详情主徽章「阶段」、辅徽章「运行状态」；签章失败仍「进行中」时展示卡点条（`lastError` / 失败子任务）。service `STAGE_DEFINITIONS` 文案已同步。旧 v2.02 plan 未改，以 PRD §6 为准。
+
+- **O3 需求草案**：已写入 `project-docs/prd/v2.02客户订单-业务需求.md` §6——保留 `stage`+`status` 两维；统一阶段中文名；详情以阶段为主、运行状态为辅；签章失败仍「进行中」时必须展示卡点/错误条。待用户审阅后再实施。
+
+- **签章 Flow 1.0.2**：`rpa_flow_srm_sign_order` 签章成功后**不再 reload**（演示门户不落库，刷新会冲掉页面「已回签/待回签」）；当前页读取状态，失败兜底输出 `待回签`。已发布 UUID `3118df88-b376-4be7-bfc5-fb3af6e5c450`，Binding `a206d2e8-…` 已切换。
+
+- **联调重置**：按用户要求硬清空流程实例相关数据（`process_instances` / `process_line_items` / `process_stage_history`，及 `process_instance_id` 关联的 automation_tasks + runs/事件/制品等）；当前计数均为 0，可重新扫单触发。
+
+- **v2.02 流程实例：回签轮询 + 详情优化（代码 + Registry/Binding 已落地）**
+  - **O2**：`prepare_erp_order` **1.2.6** 顶层输出 `headerId`；service summary 落库；Client `sdmsWebBaseUrl`（默认 `http://192.168.99.35:8080`）+ `ErpOrderLabel` 外链 SDMS 查看页（`fdId=headerId`）。无 headerId 时仍纯文本。
+  - **O1**：详情子任务改为 `ProcessSubTaskTree`（按节点/行聚合，历史失败 Collapsible）；API `subTasks.lineNumber` 从 task input 解析。
+  - **R2**：新 Flow `rpa_flow_srm_check_reply_status/1.0.0`（只读探测）；`SignPollScheduler`（`SIGN_POLL_JOB_ENABLED` / `SIGN_POLL_INTERVAL_SECONDS=1800`）；幂等 `_trigger_archive_if_needed`；签章成功且 `replyStatus=已回签` 立即自动归档；人工按钮改为「手动触发已签章下载」兜底。
+  - **R1（澄清）**：当场签章不落库的那笔验不了轮询；初始化里已有「已回签」种子单，应用其 PO 做 `SIGN_REQUESTED`→探测→归档验收。
+  - 单测：service process_instances 23；app process-instances 9；check_reply flow 4；prepare 1.2.6 相关通过。
+  - **运维（本机 Engine + 共享 DB）**：
+    - 已上传并发布 `rpa_flow_supplier_portal_prepare_erp_order` **1.2.6**（UUID `ff49be7b-7107-4366-b145-5ce985ea16da`，checksum `sha256:61097bcd…0d5b`）；门户 Binding `0a0b5beb-…` 已切到该版本；`validate-binding` → valid。
+    - 已上传并发布 `rpa_flow_srm_check_reply_status` **1.0.0**（UUID `95ce3888-78a8-4889-93f6-bc86ef3f0c05`，checksum `sha256:46ae5bb6…5498`）；新建 Template `srm_check_reply_status`（`62e8929f-…`）+ Binding `f14aecc9-…`（门户 `b182630d-…`）；`validate-binding` → valid。
+    - Task `.env` 已设 `SIGN_POLL_JOB_ENABLED=true`（间隔 1800）并已重启本机 Task；启动日志确认轮询调度器开启。
+    - 用户授权后已执行 Alembic **`b2e8a4c91f30`**（`9a3f2c71b5d4` → head）：补齐 `process_line_items` SRM 列；此前详情 500（缺 `material_status` 等）导致 Client 误报「不存在或已被删除」。
+
+- **流程实例订单行展示对齐 SRM（进行中增量）**
+  - 详情页与「填写交货日期」页共用 `ProcessOrderLinesTable`，表头按 SRM 附件字段：订单行号、料号、料品名称、料品规格、物料状态、内码、数量、单位、单价（元）、价税合计（元）、要求交货日期、标准交货日期（天）、是否满足LT、供方交期、欠交数量、备注、直发备注，外加预计交货日期与行状态（填交期页另有操作列）。
+  - service：建单成功钩子把 Flow `lines` 中对应字段写入 `process_line_items`；迁移 `b2e8a4c91f30` **已执行**（2026-08-13）。存量行新列为 NULL，新建单后才会写入单价/备注等。
+  - 单测：`app` process-instances、`service` test_process_instances 已通过。
+
+#### v2.0 流程实例（SOP 主任务）全链路实施
+
+- 依据 `project-docs/prd/v2.0客户订单-业务需求.md` 与实施计划完成流程实例体系全链路开发，新旧三任务链并存（successor 机制未动）。
+- service：新增 `ProcessInstance`/`ProcessLineItem`/`ProcessStageHistory` 模型与 `automation_tasks.process_instance_id` 关联列；Alembic 迁移 `9a3f2c71b5d4` 已准备**未执行**（数据库暂停点，待用户授权）。新增 `process_instance_service` 八阶段状态机、`/process-instances` API（列表/详情/按行提交/签章/归档/重试/取消/手动扫单）、`dispatch_service.finish_run` 钩子与 `ScanScheduler` 定时扫单（`SCAN_JOB_ENABLED` 等配置开关）。pytest 98 项通过（1 项为既有 `test_portal_accounts` 409/403 已知失败，非本次引入）。
+- rpa-flows：对真实门户 `http://192.168.102.247:3000` 完成只读探测（列表页选择器、分页、待签章详情页保存按钮与持久化契约），探测脚本 `rpa-engine/scripts/probe_srm_portal_readonly.py`（临时）。新建三个 Flow 1.0.0：`rpa_flow_srm_scan_pending_orders`（扫单）、`rpa_flow_srm_fill_line_delivery_date`（按行填交期）、`rpa_flow_srm_sign_order`（只签章），各含 manifest/selectors/README/单测，flows pytest 27 项通过，ZIP 包经 Engine `FlowPackageValidator` 离线校验通过；**尚未上传 Engine Registry 发布，WorkflowTemplate/Binding 待发布后创建**。
+- app：新增 `/processes/`、`/processes/$instanceId`、`/processes/$instanceId/dates` 三页（列表/详情/按行填交期），`remote-api`/`query-keys`/`autotask-api` 增加 process-instances 方法，侧边栏加「流程实例」入口，`/tasks` 列表按 `srm_scan_pending_orders` 过滤隐藏扫单任务。Vitest 66 项通过（含新增流程实例 7 项），`tsc --noEmit` 通过，electron-forge 生产打包通过。
+- 待办（需用户授权/联调）：执行 `alembic upgrade head`；三个 Flow 上传 Engine Registry 发布并创建 WorkflowTemplate + Binding；真实门户端到端联调（扫单→建单→按行填交期→签章→归档）。演示门户签章持久化历史问题（未决#14）仍可能影响节点3联调。
+
+#### v2.0 流程实例联调进展与需求澄清（续）
+
+- 数据库迁移 `9a3f2c71b5d4` 已执行；扫单/按行填交期/只签章 Flow 已发布，对应 WorkflowTemplate + Binding 已创建；任务一 `1.2.5` 已发布。
+- 扫单 `1.0.0` 误用表头「采购单号」导致 `totalRows=0`；已修复为「订单编号」并发布 `1.0.1`。重跑扫单成功：16 行中 7 张待签章，幂等创建 7 个流程实例并自动触发节点1。
+- 节点1（建 SDMS）多单成功进入 `SDMS_CREATED` 并落行；样例失败单 `POJS2607170001` 为附件重复行号（`ORDER_ATTACHMENT_LINE_DUPLICATE`），属数据/既有 Flow 边界，非流程实例状态机问题。
+- 节点2 按行填交期联调失败：`ORDER_LINE_SAVE_UNCONFIRMED`（保存后刷新日期未保留）。与历史任务二结论一致：演示门户「保存」无写请求。
+- **需求澄清（用户确认）**：交货日期是签章必要条件，二者不是同一件事；中间可能间隔很久或走内部流程。禁止把「填交期」合并成「直接签章」。产品状态机保持节点2/节点3分离；端到端阻塞点是门户「待签章可保存交期并持久化」契约，不是 SOP 设计。后续不按「填齐即签章」改产品。
+
+#### 节点2交期成功判定调整（演示门户不落库）
+
+- 用户确认演示门户按行「保存」仅有成功提示、不写库；业务上 AutoTask 行交期为真相来源，不以 SRM 刷新后是否仍显示该日期判定节点2成败。
+- 发布 `rpa_flow_srm_fill_line_delivery_date` `1.0.1`（UUID `812772a0-5d4b-452f-b783-794288dd9f69`）：删除 `verify_persisted`；填写 + 点击保存 + 成功提示即 SUCCESS；输出日期取任务输入；固定列选择器优先 `.el-table__fixed-right`。Binding 已切到 1.0.1。
+- 重跑联调时 Engine 侧出现 `SRM_LOGIN_PAGE_UNAVAILABLE`（本机只读探测仍可登录）；属运行时/浏览器通道波动，与本次成功判定变更无关。节点3签章 Flow 若仍从 SRM 页面读交期，在门户不落库时可能另需「签章前按 AutoTask 日期回填」——待登录恢复后继续验证。
+
+#### 填交期 1.0.2 修复并完成样例单节点2
+
+- 根因：首败实为 `ORDER_DATE_FILL_FAILED`（union 选择器 `.first` 点到 Element UI body 克隆）；Runtime 重试复用已登录 context 再找验证码，才表现为 `SRM_LOGIN_PAGE_UNAVAILABLE`。
+- 发布 `1.0.2`（UUID `0e5e2adb-3b7d-4234-946a-a2a56077c678`）：固定右列优先、已登录会话跳过登录、type+Enter 填写。Binding 已切换。
+- 样例 `POJS2607180002` 两行交期均 SUCCESS，流程实例进入 `DATES_COMPLETE`（10/20 均为 WRITTEN）。下一步可测节点3签章（若 SRM 不落库，签章前可能需按 AutoTask 日期回填）。
+
+#### TEMP E2E：签章前按 AutoTask 日期回填（联调后必须去掉）
+
+- **性质**：仅演示门户「保存交期不落库」时的临时绕过；产品上节点2/3仍分离。门户可持久化后删除下列全部 TEMP 代码与传参。
+- Flow：发布 `rpa_flow_srm_sign_order` `1.0.1`（UUID `02dc1d76-a72f-41fa-9ffd-313594f670a4`，checksum `8b610441…`）。输入可选 `temp_e2e_backfill_dates` + `order_lines`；签章前把 AutoTask 交期填入页面（不点保存）。Binding `a206d2e8-00e5-428a-a095-087e44f458b3` 已切到 1.0.1。
+- service：`request_sign` 在 `DATES_COMPLETE` 时把 WRITTEN 行日期写入子任务 input（带 `temp_e2e_backfill_dates=true`）。单测 `test_request_sign_passes_temp_e2e_backfill_payload` 覆盖。Task 已重启加载该逻辑。
+- 样例 `POJS2607180002` 节点3：子任务 `fb57d06a-…` / Run `272845eb-…` 精确使用 1.0.1；事件确认 `tempE2eBackfill=true`、回填 2 行 SUCCESS，随后点击签章；刷新后回复状态仍无法确认为待回签/已回签 → `WAITING_HUMAN` / `ORDER_SIGN_STATUS_UNCONFIRMED`（与历史演示门户签章不落库一致，未决#14）。实例仍停在 `DATES_COMPLETE`。
+- **待删除清单**：Flow `1.0.1` 回填逻辑与 README TEMP 段；`request_sign` 的 TEMP 传参与对应单测；Binding 可回切正式无回填版本；控制文档本条。
+
+#### v2.01 需求文档定稿（对照计划与落地差异）
+
+- 新增现行需求基线 `project-docs/prd/v2.01客户订单-业务需求.md`：相对 v2.0 / 实施计划记录已确认差异（新旧链并存、交期真相源、保存全部、路由跳转、TEMP 签章回填、阶段按钮等），并列出 v2.02 候选。
+- v2.0 文档顶部标注为历史定稿，指向 v2.01；后续需求变更走 v2.02。
+- Client：交期页表头「保存全部」、列表直达编辑页、详情子路由 Outlet；service：交期/扫单请求 camelCase 校验别名；API 错误文案解析避免 `[object Object]`。
+
+#### v2.02 需求草案（相对 v2.01 迭代）
+
+- 成文 `project-docs/prd/v2.02客户订单-业务需求.md`：明确为 **v2.01 的增量**，只写变更。
+- **R1**：记录演示门户签章后页面常直接「已回签」且不落库。
+- **R2**：节点4主路径改为每 30 分钟轮询「待回签」是否「已回签」，发现后自动推进并自动下载合同上传 SDMS（人工按钮降为兜底）；覆盖 v2.01「第一期不自动扫回签」。
+- **O1**：详情子任务改为按节点/行树状展示。
+- **O2**：ERP 订单号链到 SDMS 查看页，`fdId`=`headerId`，Web 基址可配置。
+- 实施前现行行为仍以 v2.01 为准；未开工实现。
 
 ### 2026-08-11
 

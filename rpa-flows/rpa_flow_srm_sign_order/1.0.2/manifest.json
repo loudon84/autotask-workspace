@@ -1,0 +1,39 @@
+{
+  "rpaFlowId": "rpa_flow_srm_sign_order",
+  "name": "SRM Sign Customer Purchase Order",
+    "version": "1.0.2",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_sign_order"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "po_no",
+      "type": "string",
+      "required": true,
+      "description": "Customer purchase order number to sign"
+    },
+    {
+      "name": "temp_e2e_backfill_dates",
+      "type": "boolean",
+      "required": false,
+      "description": "TEMP E2E ONLY: backfill AutoTask dates before sign when portal does not persist. Remove after portal save works."
+    },
+    {
+      "name": "order_lines",
+      "type": "array",
+      "required": false,
+      "description": "TEMP E2E ONLY: [{line_number, expected_delivery_date}] from AutoTask"
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

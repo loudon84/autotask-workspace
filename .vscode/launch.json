@@ -1,0 +1,79 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python: Debug Flow Test (1.1.0)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": [
+                "discover",
+                "-s",
+                "tests",
+                "-p",
+                "test_*.py",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/rpa_flow_supplier_portal_prepare_erp_order/1.1.0",
+            "python": "D:\\work_space260811\\autotask-workspace\\rpa-engine\\.venv\\Scripts\\python.exe",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/rpa-flows/rpa_flow_supplier_portal_prepare_erp_order/1.1.0"
+            }
+        },
+        {
+            "name": "Python: Debug Current Test File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": [
+                "${fileBasenameNoExtension}",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${fileDirname}",
+            "python": "D:\\work_space260811\\autotask-workspace\\rpa-engine\\.venv\\Scripts\\python.exe",
+            "env": {
+                "PYTHONPATH": "${fileDirname}/.."
+            }
+        },
+        {
+            "name": "Debug Flow: local_flow_runner (ERP 1.2.3)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/rpa-flows/tools/local_flow_runner.py",
+            "args": [
+                "rpa_flow_supplier_portal_prepare_erp_order/1.2.3",
+                "--config",
+                "tools/local_flow_config.json",
+                "--run"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "D:\\work_space260811\\autotask-workspace\\rpa-engine\\.venv\\Scripts\\python.exe",
+            "env": {
+                "AUTOTASK_RPA_ENGINE_ROOT": "D:\\work_space260811\\autotask-workspace\\rpa-engine"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "Debug Flow: validate only (no browser)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/local_flow_runner.py",
+            "args": [
+                "rpa_flow_supplier_portal_prepare_erp_order/1.2.3",
+                "--config",
+                "tools/local_flow_config.json"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "D:\\work_space260811\\autotask-workspace\\rpa-engine\\.venv\\Scripts\\python.exe",
+            "env": {
+                "AUTOTASK_RPA_ENGINE_ROOT": "D:\\work_space260811\\autotask-workspace\\rpa-engine"
+            },
+            "justMyCode": false
+        }
+    ]
+}

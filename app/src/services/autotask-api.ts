@@ -12,6 +12,13 @@ import type {
   PortalAccount,
   UpdatePortalAccountInput,
 } from "@/types/portal-account";
+import type {
+  ProcessInstanceDetail,
+  ProcessInstanceListItem,
+  ProcessLineItem,
+  ProcessScanResult,
+  ProcessSignPollRunResult,
+} from "@/types/process-instance";
 import type { RpaComponent } from "@/types/rpa-component";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
@@ -233,6 +240,107 @@ export const autotaskApi = {
 
   rpaComponents: {
     list: (): Promise<RpaComponent[]> => pickApi().getRpaComponents(),
+  },
+
+  processInstances: {
+    list: (params?: {
+      stage?: string;
+      status?: string;
+      keyword?: string;
+    }): Promise<ProcessInstanceListItem[]> => {
+      const api = pickApi();
+      if (
+        "listProcessInstances" in api &&
+        typeof api.listProcessInstances === "function"
+      ) {
+        return api.listProcessInstances(params);
+      }
+      return Promise.resolve([]);
+    },
+    get: (id: string): Promise<ProcessInstanceDetail | undefined> => {
+      const api = pickApi();
+      if (
+        "getProcessInstance" in api &&
+        typeof api.getProcessInstance === "function"
+      ) {
+        return api.getProcessInstance(id);
+      }
+      return Promise.resolve(undefined);
+    },
+    submitLineDate: (input: {
+      instanceId: string;
+      lineNumber: string;
+      expectedDeliveryDate: string;
+    }): Promise<ProcessLineItem> => {
+      const api = pickApi();
+      if (
+        "submitProcessLineDate" in api &&
+        typeof api.submitProcessLineDate === "function"
+      ) {
+        return api.submitProcessLineDate(input);
+      }
+      throw new Error("当前模式不支持提交交货日期");
+    },
+    sign: (id: string): Promise<ProcessInstanceListItem> => {
+      const api = pickApi();
+      if (
+        "signProcessInstance" in api &&
+        typeof api.signProcessInstance === "function"
+      ) {
+        return api.signProcessInstance(id);
+      }
+      throw new Error("当前模式不支持发起签章");
+    },
+    archive: (id: string): Promise<ProcessInstanceListItem> => {
+      const api = pickApi();
+      if (
+        "archiveProcessInstance" in api &&
+        typeof api.archiveProcessInstance === "function"
+      ) {
+        return api.archiveProcessInstance(id);
+      }
+      throw new Error("当前模式不支持归档");
+    },
+    retry: (id: string): Promise<ProcessInstanceListItem> => {
+      const api = pickApi();
+      if (
+        "retryProcessInstance" in api &&
+        typeof api.retryProcessInstance === "function"
+      ) {
+        return api.retryProcessInstance(id);
+      }
+      throw new Error("当前模式不支持重试");
+    },
+    cancel: (id: string): Promise<ProcessInstanceListItem> => {
+      const api = pickApi();
+      if (
+        "cancelProcessInstance" in api &&
+        typeof api.cancelProcessInstance === "function"
+      ) {
+        return api.cancelProcessInstance(id);
+      }
+      throw new Error("当前模式不支持取消");
+    },
+    triggerScan: (portalAccountId: string): Promise<ProcessScanResult> => {
+      const api = pickApi();
+      if (
+        "triggerProcessScan" in api &&
+        typeof api.triggerProcessScan === "function"
+      ) {
+        return api.triggerProcessScan(portalAccountId);
+      }
+      throw new Error("当前模式不支持手动扫单");
+    },
+    runSignPollOnce: (): Promise<ProcessSignPollRunResult> => {
+      const api = pickApi();
+      if (
+        "runSignPollOnce" in api &&
+        typeof api.runSignPollOnce === "function"
+      ) {
+        return api.runSignPollOnce();
+      }
+      throw new Error("当前模式不支持立即回签轮询");
+    },
   },
 
   auditLogs: {

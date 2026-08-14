@@ -13,6 +13,13 @@ import type {
   PortalAccount,
   UpdatePortalAccountInput,
 } from "@/types/portal-account";
+import type {
+  ProcessInstanceDetail,
+  ProcessInstanceListItem,
+  ProcessLineItem,
+  ProcessScanResult,
+  ProcessSignPollRunResult,
+} from "@/types/process-instance";
 import type { RpaComponent } from "@/types/rpa-component";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
@@ -463,6 +470,99 @@ export const remoteApi = {
       path: "/rpa-components",
     });
     return mapListResponse<RpaComponent>(data);
+  },
+
+  listProcessInstances: async (params?: {
+    stage?: string;
+    status?: string;
+    keyword?: string;
+  }): Promise<ProcessInstanceListItem[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/process-instances",
+      query: params,
+    });
+    return mapListResponse<ProcessInstanceListItem>(data);
+  },
+
+  getProcessInstance: async (
+    id: string
+  ): Promise<ProcessInstanceDetail | undefined> => {
+    try {
+      const data = await requestAutotaskApi<unknown>({
+        method: "GET",
+        path: `/process-instances/${id}`,
+      });
+      return mapItemResponse<ProcessInstanceDetail>(data);
+    } catch {
+      return;
+    }
+  },
+
+  submitProcessLineDate: async (input: {
+    instanceId: string;
+    lineNumber: string;
+    expectedDeliveryDate: string;
+  }): Promise<ProcessLineItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${input.instanceId}/lines/${input.lineNumber}/date`,
+      body: { expectedDeliveryDate: input.expectedDeliveryDate },
+    });
+    return mapItemResponse<ProcessLineItem>(data);
+  },
+
+  signProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/sign`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  archiveProcessInstance: async (
+    id: string
+  ): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/archive`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  retryProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/retry`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  cancelProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/cancel`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  triggerProcessScan: async (
+    portalAccountId: string
+  ): Promise<ProcessScanResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/process-instances/scan",
+      body: { portalAccountId },
+    });
+    return mapItemResponse<ProcessScanResult>(data);
+  },
+
+  runSignPollOnce: async (): Promise<ProcessSignPollRunResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/process-instances/sign-poll/run-once",
+    });
+    return mapItemResponse<ProcessSignPollRunResult>(data);
   },
 
   getAuditLogs: async (taskId?: string): Promise<AuditLog[]> => {

@@ -52,6 +52,14 @@ export const queryKeys = {
   rpaComponents: {
     all: ["rpa-components"] as const,
   },
+  processInstances: {
+    all: ["process-instances"] as const,
+    list: (params?: Record<string, unknown>) =>
+      params
+        ? ([...queryKeys.processInstances.all, params] as const)
+        : ([...queryKeys.processInstances.all] as const),
+    detail: (id: string) => [...queryKeys.processInstances.all, id] as const,
+  },
   search: {
     all: ["search"] as const,
     query: (q: string) => [...queryKeys.search.all, q] as const,

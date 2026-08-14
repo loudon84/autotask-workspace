@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     SUCCESSOR_JOB_BATCH_SIZE: int = Field(default=10, ge=1, le=100)
     SUCCESSOR_JOB_MAX_ATTEMPTS: int = Field(default=10, ge=1, le=100)
 
+    SCAN_JOB_ENABLED: bool = False
+    SCAN_JOB_HOUR: int = Field(default=8, ge=0, le=23)
+    SCAN_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
+    SCAN_JOB_POLL_INTERVAL_SECONDS: float = Field(default=60.0, gt=0, le=3600)
+
+    SIGN_POLL_JOB_ENABLED: bool = False
+    SIGN_POLL_INTERVAL_SECONDS: float = Field(default=1800.0, gt=0, le=86400)
+
     SEED_DATA_ENABLED: bool = True
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"

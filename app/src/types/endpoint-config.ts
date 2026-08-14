@@ -1,5 +1,6 @@
 export interface AutoTaskEndpointConfig {
   aiosHomeUrl?: string;
+  sdmsWebBaseUrl?: string;
   authBackendUrl: string;
   authPrefix: string;
   rpaEngineUrl: string;
@@ -17,6 +18,7 @@ export const defaultAutoTaskEndpointConfig: AutoTaskEndpointConfig = {
     import.meta.env.VITE_AUTOTASK_TASK_BACKEND_URL ?? "http://127.0.0.1:4520",
   taskPrefix: "/api/v1/autotask",
   aiosHomeUrl: "http://127.0.0.1:4517",
+  sdmsWebBaseUrl: "http://192.168.99.35:8080",
 };
 
 const TRAILING_SLASHES_PATTERN = /\/+$/;
@@ -50,6 +52,10 @@ export function normalizeAutoTaskEndpointConfig(
     taskBackendUrl: normalizeBaseUrl(
       merged.taskBackendUrl,
       defaultAutoTaskEndpointConfig.taskBackendUrl
+    ),
+    sdmsWebBaseUrl: normalizeBaseUrl(
+      merged.sdmsWebBaseUrl,
+      defaultAutoTaskEndpointConfig.sdmsWebBaseUrl ?? "http://192.168.99.35:8080"
     ),
   };
 }
@@ -88,4 +94,22 @@ export function buildRpaEngineUrl(
   const base = config.rpaEngineUrl.replace(TRAILING_SLASHES_PATTERN, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${base}/api/v1${normalizedPath}`;
+}
+
+/** SDMS 销售订单查看页：fdId = headerId */
+export function buildSdmsOmViewUrl(
+  baseUrl: string | undefined,
+  headerId: string
+): string | null {
+  const id = headerId.trim();
+  if (!id) {
+    return null;
+  }
+  const base = (baseUrl ?? defaultAutoTaskEndpointConfig.sdmsWebBaseUrl ?? "")
+    .trim()
+    .replace(TRAILING_SLASHES_PATTERN, "");
+  if (!base) {
+    return null;
+  }
+  return `${base}/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=${encodeURIComponent(id)}`;
 }

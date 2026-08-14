@@ -646,6 +646,9 @@ async def finish_run(db: AsyncSession, run_id: str, body: RunFinishRequest) -> R
             payload=dumps_json({"status": body.status}),
         )
     )
+    from app.services.process_instance_service import on_sub_task_finished
+
+    await on_sub_task_finished(db, task, run)
     await db.commit()
     await db.refresh(run)
     return run

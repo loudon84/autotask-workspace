@@ -18,11 +18,12 @@ build/
 *.zip
 storage/
 runtime-cache/
-runtime/
+/runtime/
 artifacts/
 downloads/
 test-results/
 playwright-report/
+.playwright-browsers/
 *.trace
 *.har
 *.log

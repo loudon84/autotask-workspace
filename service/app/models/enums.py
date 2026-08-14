@@ -150,3 +150,36 @@ class SuccessorJobStatus(StrEnum):
     RETRYING = "RETRYING"
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
+
+
+class ProcessInstanceStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class ProcessStage(StrEnum):
+    CREATING_SDMS = "CREATING_SDMS"
+    SDMS_CREATED = "SDMS_CREATED"
+    DATES_PARTIAL = "DATES_PARTIAL"
+    DATES_COMPLETE = "DATES_COMPLETE"
+    SIGN_REQUESTED = "SIGN_REQUESTED"
+    SIGNED = "SIGNED"
+    ARCHIVED = "ARCHIVED"
+    FAILED = "FAILED"
+
+
+class ProcessLineStatus(StrEnum):
+    PENDING = "PENDING"
+    SUBMITTING = "SUBMITTING"
+    WRITTEN = "WRITTEN"
+    WRITE_FAILED = "WRITE_FAILED"
+
+
+class ProcessSubTaskKind(StrEnum):
+    CREATE_SDMS = "CREATE_SDMS"
+    FILL_LINE_DATE = "FILL_LINE_DATE"
+    SIGN = "SIGN"
+    ARCHIVE = "ARCHIVE"
+    SCAN = "SCAN"
