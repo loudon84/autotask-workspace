@@ -69,8 +69,25 @@ def test_valid_date() -> None:
 
 
 def test_stage_definitions_cover_all_stages() -> None:
-    defined = {item["id"] for item in svc.STAGE_DEFINITIONS}
+    defined = {
+        item["id"]
+        for stages in svc.STAGE_DEFINITIONS.values()
+        for item in stages
+    }
     assert defined == {stage.value for stage in ProcessStage}
+
+
+@pytest.mark.asyncio
+async def test_list_instances_only_queries_customer_orders() -> None:
+    db = MagicMock()
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = []
+    db.execute = AsyncMock(return_value=result)
+    await svc.list_instances(db, "tenant-1")
+    stmt = db.execute.await_args.args[0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert svc.PROCESS_CODE_SRM_CUSTOMER_ORDER in compiled
+    assert svc.PROCESS_CODE_SRM_TIANDI_STATEMENT not in compiled
 
 
 @pytest.mark.asyncio
@@ -173,6 +190,18 @@ async def test_archive_rejects_sign_requested_and_dates_complete() -> None:
         db.execute = AsyncMock(return_value=_scalar_result(instance))
         with pytest.raises(BadRequestError):
             await svc.archive_signed_order(db, "tenant-1", "inst-1", _user())
+
+
+@pytest.mark.asyncio
+async def test_archive_requires_sdms_username() -> None:
+    instance = _instance(stage=ProcessStage.SIGNED.value)
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result(instance))
+    user = _user()
+    user.name = None
+    with pytest.raises(BadRequestError) as captured:
+        await svc.archive_signed_order(db, "tenant-1", "inst-1", user, sdms_username="")
+    assert captured.value.message_key == "errors.autotask.sdms_username_missing"
 
 
 @pytest.mark.asyncio
@@ -520,7 +549,7 @@ async def test_trigger_archive_idempotent_skips_when_archive_exists(
     monkeypatch.setattr(svc, "_has_archive_in_progress_or_success", _fake_has)
     monkeypatch.setattr(svc, "_create_sub_task", _fake_create)
     result = await svc._trigger_archive_if_needed(
-        db, instance, actor="user-1", note="manual"
+        db, instance, actor="user-1", note="manual", sdms_username="tester"
     )
     assert result is False
     assert created is False
@@ -564,16 +593,20 @@ async def test_trigger_archive_from_dates_complete(monkeypatch: pytest.MonkeyPat
     async def _no(*_a, **_k):  # noqa: ANN001
         return False
 
-    async def _create(*_a, **_k):  # noqa: ANN001
+    captured: dict = {}
+
+    async def _create(*_a, **kwargs):  # noqa: ANN001
+        captured.update(kwargs)
         return MagicMock(id="task-arch")
 
     monkeypatch.setattr(svc, "_has_archive_in_progress_or_success", _no)
     monkeypatch.setattr(svc, "_create_sub_task", _create)
     ok = await svc._trigger_archive_if_needed(
-        db, instance, actor="sign-poll-scheduler", note="poll"
+        db, instance, actor="sign-poll-scheduler", note="poll", sdms_username="tester"
     )
     assert ok is True
     assert instance.stage == ProcessStage.SIGNED.value
+    assert captured["task_input"] == {"po_no": "PO-001", "username": "tester"}
 
 
 @pytest.mark.asyncio

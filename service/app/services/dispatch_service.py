@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -50,6 +51,8 @@ from app.services.json_utils import dumps_json, loads_json
 from app.services.rpa_worker_service import get_worker
 from app.services.task_state_machine import transition
 from app.services.task_successor_service import enqueue_successor_job
+
+logger = logging.getLogger(__name__)
 
 TERMINAL_RUN_STATUSES = {RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELLED, RunStatus.WAITING_HUMAN}
 
@@ -648,7 +651,10 @@ async def finish_run(db: AsyncSession, run_id: str, body: RunFinishRequest) -> R
     )
     from app.services.process_instance_service import on_sub_task_finished
 
-    await on_sub_task_finished(db, task, run)
+    try:
+        await on_sub_task_finished(db, task, run)
+    except Exception:
+        logger.exception("on_sub_task_finished failed run_id=%s task_id=%s", run.id, task.id)
     await db.commit()
     await db.refresh(run)
     return run

@@ -18,11 +18,12 @@ cd d:\work_space260811\autotask-workspace\service
 .\.venv\Scripts\python.exe scripts\reset_to_sign_requested.py --yes POJS2607240005 POJS2607240006
 ```
 
-## 清空 / 按单号删除流程实例
+## 清空 / 按单号删除流程实例（客户订单）
 
 脚本：`clear_process_instances.py`
 
-硬删客户订单 SOP 联调产生的流程实例及相关任务/Run。  
+硬删**客户订单** SOP 联调产生的流程实例及相关任务/Run。  
+会删全部 `process_instances`（不传单号时），**不要**用它清对账单。  
 不动：WorkflowTemplate / Binding、门户账号、Engine Flow Registry、MinIO 包。
 
 ```powershell
@@ -47,3 +48,31 @@ cd d:\work_space260811\autotask-workspace\service
 
 - `process_instances` / `process_line_items` / `process_stage_history`
 - 挂了 `process_instance_id` 的 `automation_tasks` 及其 `rpa_runs`、事件、步骤、制品、租约、人工动作、后继作业等
+
+## 清空对账单 SOP
+
+脚本：`clear_statement_bills.py`
+
+硬删**天地伟业对账单**（`process_code = srm_tiandi_statement`）的账单、流程实例及相关任务/Run。  
+全量时也会清填单页产生的、未挂实例的查询收货任务。  
+**不影响客户订单。**
+
+```powershell
+cd d:\work_space260811\autotask-workspace\service
+
+# 全量预览 / 全量删除
+.\.venv\Scripts\python.exe scripts\clear_statement_bills.py
+.\.venv\Scripts\python.exe scripts\clear_statement_bills.py --yes
+
+# 指定对账单 id 预览 / 删除（可多个）
+.\.venv\Scripts\python.exe scripts\clear_statement_bills.py <bill-id>
+.\.venv\Scripts\python.exe scripts\clear_statement_bills.py --yes <bill-id>
+```
+
+对账单 id 在 Client 详情 URL：`/process-instances/statements/$billId`。
+
+### 说明
+
+- 不加 `--yes`：**只打印预览**，不会改库。
+- 加 `--yes`：事务内硬删，不可恢复。
+- 建议在没有正在跑的对账单任务时执行。

@@ -7,3 +7,7 @@ export function openExternalLink(url: string) {
 export function downloadFile(url: string) {
   return ipc.client.shell.downloadFile({ url });
 }
+
+export function selectInvoiceFiles() {
+  return ipc.client.shell.selectInvoiceFiles();
+}

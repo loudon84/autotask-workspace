@@ -85,6 +85,37 @@ async def sync_user_from_token(db: AsyncSession, user_id: str, token: str) -> Us
     return entity
 
 
+async def resolve_login_username(token: str | None, user: UserCache) -> str:
+    """Auth 登录账号（工号）：优先 /me.username，否则 UserCache.name。"""
+    if token:
+        try:
+            user_data = await _fetch_user_from_backend(token)
+            username = str(user_data.get("username") or "").strip()
+            if username:
+                return username
+            name = str(user_data.get("name") or "").strip()
+            if name:
+                return name
+        except Exception:
+            logger.info("resolve_login_username fallback to user cache name")
+    return str(user.name or "").strip()
+
+
+async def username_from_user_cache(db: AsyncSession, user_id: str | None) -> str:
+    """用 UserCache.name 作为工号回退（无 /me 时，如回签轮询）。"""
+    actor = str(user_id or "").strip()
+    if not actor:
+        return ""
+    cached = (
+        await db.execute(
+            select(UserCache).where(UserCache.user_id == actor, not_deleted(UserCache))
+        )
+    ).scalar_one_or_none()
+    if cached is None:
+        return ""
+    return str(cached.name or "").strip()
+
+
 async def refresh_user_cache_background(user_id: str, token: str) -> None:
     from app.core.deps import async_session_factory
 

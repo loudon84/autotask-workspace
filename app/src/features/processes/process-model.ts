@@ -6,6 +6,7 @@ import type {
 } from "@/types/process-instance";
 
 export const SCAN_TASK_TYPE = "srm_scan_pending_orders";
+export const CUSTOMER_ORDER_PROCESS_CODE = "srm_customer_order";
 
 export interface StageMeta {
   id: ProcessStage;

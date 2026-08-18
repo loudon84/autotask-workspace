@@ -343,6 +343,119 @@ export const autotaskApi = {
     },
   },
 
+  statements: {
+    list: (params?: {
+    checkStatus?: string;
+    stage?: string;
+  }): Promise<import("@/types/statement").StatementBillListItem[]> => {
+      const api = pickApi();
+      if ("listStatements" in api && typeof api.listStatements === "function") {
+        return api.listStatements(params);
+      }
+      return Promise.resolve([]);
+    },
+    get: (
+      id: string
+    ): Promise<import("@/types/statement").StatementBillDetail | undefined> => {
+      const api = pickApi();
+      if ("getStatement" in api && typeof api.getStatement === "function") {
+        return api.getStatement(id);
+      }
+      return Promise.resolve(undefined);
+    },
+    queryReceipts: (input: {
+      portalAccountId: string;
+      dateStart: string;
+      dateEnd: string;
+    }): Promise<import("@/types/statement").StatementTaskResult> => {
+      const api = pickApi();
+      if (
+        "queryStatementReceipts" in api &&
+        typeof api.queryStatementReceipts === "function"
+      ) {
+        return api.queryStatementReceipts(input);
+      }
+      throw new Error("当前模式不支持查询收货列表");
+    },
+    getQueryReceipts: (
+      taskId: string
+    ): Promise<import("@/types/statement").StatementQueryResult> => {
+      const api = pickApi();
+      if (
+        "getStatementQueryReceipts" in api &&
+        typeof api.getStatementQueryReceipts === "function"
+      ) {
+        return api.getStatementQueryReceipts(taskId);
+      }
+      throw new Error("当前模式不支持轮询收货查询结果");
+    },
+    generate: (input: {
+      portalAccountId: string;
+      lines: Record<string, unknown>[];
+      dateStart?: string;
+      dateEnd?: string;
+    }): Promise<import("@/types/statement").StatementGenerateResult> => {
+      const api = pickApi();
+      if (
+        "generateStatement" in api &&
+        typeof api.generateStatement === "function"
+      ) {
+        return api.generateStatement(input);
+      }
+      throw new Error("当前模式不支持生成对账单");
+    },
+    retryGenerate: (
+      billId: string
+    ): Promise<import("@/types/statement").StatementGenerateResult> => {
+      const api = pickApi();
+      if (
+        "retryGenerateStatement" in api &&
+        typeof api.retryGenerateStatement === "function"
+      ) {
+        return api.retryGenerateStatement(billId);
+      }
+      throw new Error("当前模式不支持重新生成对账单");
+    },
+    uploadInvoicePaths: (input: {
+      billId: string;
+      filePaths: string[];
+    }): Promise<import("@/types/statement").StatementTaskResult> => {
+      const api = pickApi();
+      if (
+        "uploadStatementInvoicePaths" in api &&
+        typeof api.uploadStatementInvoicePaths === "function"
+      ) {
+        return api.uploadStatementInvoicePaths(input);
+      }
+      throw new Error("当前模式不支持上传发票");
+    },
+    submitReview: (
+      billId: string,
+      input: { filePaths: string[] }
+    ): Promise<import("@/types/statement").StatementTaskResult> => {
+      const api = pickApi();
+      if (
+        "submitStatementReview" in api &&
+        typeof api.submitStatementReview === "function"
+      ) {
+        return api.submitStatementReview(billId, input);
+      }
+      throw new Error("当前模式不支持提交审核");
+    },
+    cancel: (
+      billId: string
+    ): Promise<import("@/types/statement").StatementBillListItem> => {
+      const api = pickApi();
+      if (
+        "cancelStatement" in api &&
+        typeof api.cancelStatement === "function"
+      ) {
+        return api.cancelStatement(billId);
+      }
+      throw new Error("当前模式不支持取消对账");
+    },
+  },
+
   auditLogs: {
     list: (taskId?: string): Promise<AuditLog[]> =>
       pickApi().getAuditLogs(taskId),

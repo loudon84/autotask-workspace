@@ -61,12 +61,18 @@ describe("default endpoint config", () => {
     expect(config.taskPrefix).toBe("/api/v1/autotask");
   });
 
-  it("builds SDMS OM view URLs from headerId", async () => {
-    const { buildSdmsOmViewUrl } = await import("@/types/endpoint-config");
+    it("builds SDMS OM view URLs from headerId", async () => {
+    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl } = await import(
+      "@/types/endpoint-config"
+    );
     expect(buildSdmsOmViewUrl("http://192.168.99.35:8080/", "1100983")).toBe(
       "http://192.168.99.35:8080/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=1100983"
     );
     expect(buildSdmsOmViewUrl("http://example.com", "")).toBeNull();
+    expect(buildSdmsCheckViewUrl("http://192.168.99.35:8080/", "36775")).toBe(
+      "http://192.168.99.35:8080/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=36775"
+    );
+    expect(buildSdmsCheckViewUrl("http://example.com", "")).toBeNull();
   });
 });
 

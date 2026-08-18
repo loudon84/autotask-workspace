@@ -29,6 +29,7 @@ from app.models.task_successor_job import TaskSuccessorJob
 from app.models.workflow_binding import WorkflowBinding
 from app.models.workflow_template import WorkflowTemplate
 from app.services.json_utils import dumps_json, loads_json
+from app.services.user_sync import username_from_user_cache
 
 logger = logging.getLogger(__name__)
 
@@ -635,6 +636,18 @@ class SuccessorJobProcessor:
             queue_immediately = False
         else:
             input_data = map_attachment_upload_input(source_run.output)
+            source_input = loads_json(source_task.input, {})
+            username = ""
+            if isinstance(source_input, dict):
+                username = str(source_input.get("username") or "").strip()
+            if not username:
+                username = await username_from_user_cache(db, source_task.created_by)
+            if not username:
+                raise SuccessorJobError(
+                    "SUCCESSOR_USERNAME_MISSING",
+                    "缺少 Auth 登录工号，无法创建附件上传任务",
+                )
+            input_data["username"] = username
             child_title = f"3. 上传订单附件 - {input_data['po_no']}"
             child_status = TaskStatus.QUEUED
             queue_immediately = True

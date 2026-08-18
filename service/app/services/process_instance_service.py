@@ -34,8 +34,10 @@ from app.models.workflow_binding import WorkflowBinding
 from app.models.workflow_template import WorkflowTemplate
 from app.services.json_utils import dumps_json, loads_json
 from app.services.process_error_messages import localize_process_error
+from app.services.user_sync import username_from_user_cache
 
 PROCESS_CODE_SRM_CUSTOMER_ORDER = "srm_customer_order"
+PROCESS_CODE_SRM_TIANDI_STATEMENT = "srm_tiandi_statement"
 
 SCAN_TASK_TYPE = "srm_scan_pending_orders"
 CREATE_SDMS_TEMPLATE_CODE = "srm_prepare_erp_order"
@@ -43,6 +45,11 @@ FILL_LINE_DATE_TEMPLATE_CODE = "srm_fill_line_delivery_date"
 SIGN_TEMPLATE_CODE = "srm_sign_order"
 CHECK_REPLY_TEMPLATE_CODE = "srm_check_reply_status"
 ARCHIVE_TEMPLATE_CODE = "srm_upload_order_attachment"
+
+STMT_QUERY_RECEIPTS_TEMPLATE_CODE = "srm_stmt_query_receipts"
+STMT_GENERATE_TEMPLATE_CODE = "srm_stmt_generate"
+STMT_UPLOAD_INVOICE_TEMPLATE_CODE = "srm_stmt_upload_invoice"
+STMT_SUBMIT_REVIEW_TEMPLATE_CODE = "srm_stmt_submit_review"
 
 SCAN_OUTPUT_SCHEMA = "SRM_PENDING_ORDERS_OUTPUT_V1"
 SIGNED_REPLY_STATUS = "已回签"
@@ -70,17 +77,42 @@ def _optional_str(value: object) -> str | None:
     return text or None
 
 
-# 节点按钮可见性由阶段驱动，Client 按此表渲染（阶段中文名与 v2.02 §6.3 对齐）
-STAGE_DEFINITIONS: list[dict] = [
-    {"id": ProcessStage.CREATING_SDMS.value, "name": "建单中", "button": None},
-    {"id": ProcessStage.SDMS_CREATED.value, "name": "待填写交期", "button": "填写交货日期"},
-    {"id": ProcessStage.DATES_PARTIAL.value, "name": "交期填写中", "button": "填写交货日期"},
-    {"id": ProcessStage.DATES_COMPLETE.value, "name": "待签章", "button": "去签章"},
-    {"id": ProcessStage.SIGN_REQUESTED.value, "name": "待回签", "button": None},
-    {"id": ProcessStage.SIGNED.value, "name": "已回签", "button": "手动触发签章合同下载"},
-    {"id": ProcessStage.ARCHIVED.value, "name": "已完成", "button": None},
-    {"id": ProcessStage.FAILED.value, "name": "失败", "button": "重试"},
-]
+# 节点按钮可见性由阶段驱动，Client 按 process_code 取表渲染
+STAGE_DEFINITIONS: dict[str, list[dict]] = {
+    PROCESS_CODE_SRM_CUSTOMER_ORDER: [
+        {"id": ProcessStage.CREATING_SDMS.value, "name": "建单中", "button": None},
+        {"id": ProcessStage.SDMS_CREATED.value, "name": "待填写交期", "button": "填写交货日期"},
+        {"id": ProcessStage.DATES_PARTIAL.value, "name": "交期填写中", "button": "填写交货日期"},
+        {"id": ProcessStage.DATES_COMPLETE.value, "name": "待签章", "button": "去签章"},
+        {"id": ProcessStage.SIGN_REQUESTED.value, "name": "待回签", "button": None},
+        {"id": ProcessStage.SIGNED.value, "name": "已回签", "button": "手动触发签章合同下载"},
+        {"id": ProcessStage.ARCHIVED.value, "name": "已完成", "button": None},
+        {"id": ProcessStage.FAILED.value, "name": "失败", "button": "重试"},
+    ],
+    PROCESS_CODE_SRM_TIANDI_STATEMENT: [
+        {
+            "id": ProcessStage.STMT_GENERATING.value,
+            "name": "待生成",
+            "button": "重新生成",
+        },
+        {
+            "id": ProcessStage.STMT_PENDING_INVOICE.value,
+            "name": "待上传发票",
+            "button": "提交审核",
+        },
+        {
+            "id": ProcessStage.STMT_PENDING_REVIEW.value,
+            "name": "提交审核",
+            "button": "提交审核",
+        },
+        {"id": ProcessStage.STMT_SUBMITTED.value, "name": "已完成", "button": None},
+        {"id": ProcessStage.STMT_CANCELLED.value, "name": "已作废", "button": None},
+    ],
+}
+
+
+def stage_definitions_for(process_code: str) -> list[dict]:
+    return STAGE_DEFINITIONS.get(process_code, [])
 
 
 def _valid_date(value: str) -> bool:
@@ -117,6 +149,7 @@ async def list_instances(
 ) -> list[ProcessInstance]:
     query = select(ProcessInstance).where(
         ProcessInstance.tenant_id == tenant_id,
+        ProcessInstance.process_code == PROCESS_CODE_SRM_CUSTOMER_ORDER,
         not_deleted(ProcessInstance),
     )
     if stage:
@@ -498,6 +531,8 @@ async def archive_signed_order(
     tenant_id: str,
     instance_id: str,
     user: UserCache,
+    *,
+    sdms_username: str = "",
 ) -> ProcessInstance:
     """手动兜底：仅在已确认已回签（SIGNED）后可触发合同下载上传。
 
@@ -510,11 +545,21 @@ async def archive_signed_order(
             message="仅在已回签阶段可手动触发签章合同下载",
             message_key="errors.autotask.process_archive_not_ready",
         )
+    raw_name = getattr(user, "name", "")
+    username = str(sdms_username or "").strip() or (
+        raw_name.strip() if isinstance(raw_name, str) else ""
+    )
+    if not username:
+        raise BadRequestError(
+            message="缺少当前登录工号，无法上传签章合同到 SDMS",
+            message_key="errors.autotask.sdms_username_missing",
+        )
     await _trigger_archive_if_needed(
         db,
         instance,
         actor=user.user_id,
         note="客服手动确认 SRM 已回签并触发归档",
+        sdms_username=username,
     )
     await db.commit()
     await db.refresh(instance)
@@ -546,12 +591,39 @@ async def _has_check_reply_in_flight(db: AsyncSession, instance_id: str) -> bool
     return any(task.status in _CHECK_REPLY_IN_FLIGHT for task in tasks)
 
 
+def _summary_sdms_username(instance: ProcessInstance) -> str:
+    summary = loads_json(instance.summary, {})
+    if not isinstance(summary, dict):
+        return ""
+    return str(summary.get("sdmsUsername") or "").strip()
+
+
+def _store_sdms_username(instance: ProcessInstance, username: str) -> None:
+    summary = loads_json(instance.summary, {})
+    if not isinstance(summary, dict):
+        summary = {}
+    summary["sdmsUsername"] = username
+    instance.summary = dumps_json(summary)
+
+
+async def _resolve_archive_username(
+    db: AsyncSession,
+    instance: ProcessInstance,
+    sdms_username: str,
+) -> str:
+    username = str(sdms_username or "").strip() or _summary_sdms_username(instance)
+    if username:
+        return username
+    return await username_from_user_cache(db, instance.created_by)
+
+
 async def _trigger_archive_if_needed(
     db: AsyncSession,
     instance: ProcessInstance,
     *,
     actor: str,
     note: str,
+    sdms_username: str = "",
 ) -> bool:
     """确认已回签后：先推进到 SIGNED（已回签），再幂等创建归档子任务。
 
@@ -571,12 +643,21 @@ async def _trigger_archive_if_needed(
         _change_stage(db, instance, ProcessStage.SIGNED, actor=actor, note=note)
     if await _has_archive_in_progress_or_success(db, instance.id):
         return False
+    username = await _resolve_archive_username(db, instance, sdms_username)
+    if not username:
+        _set_instance_error(
+            instance,
+            error_code="SDMS_USERNAME_MISSING",
+            error_message="缺少 Auth 登录工号，无法上传签章合同到 SDMS",
+        )
+        return False
+    _store_sdms_username(instance, username)
     await _create_sub_task(
         db,
         instance,
         template_code=ARCHIVE_TEMPLATE_CODE,
         title=f"4. 双方签章合同下载上传 - {instance.biz_key}",
-        task_input={"po_no": instance.biz_key},
+        task_input={"po_no": instance.biz_key, "username": username},
         actor=actor,
     )
     return True
@@ -618,6 +699,7 @@ async def list_sign_poll_candidates(db: AsyncSession) -> list[ProcessInstance]:
     """回签轮询候选：ACTIVE 且阶段为待回签或待签章。"""
     result = await db.execute(
         select(ProcessInstance).where(
+            ProcessInstance.process_code == PROCESS_CODE_SRM_CUSTOMER_ORDER,
             ProcessInstance.status == ProcessInstanceStatus.ACTIVE.value,
             or_(
                 ProcessInstance.stage == ProcessStage.SIGN_REQUESTED.value,
@@ -698,6 +780,10 @@ async def retry_instance(db: AsyncSession, tenant_id: str, instance_id: str, use
 
 async def on_sub_task_finished(db: AsyncSession, task: AutomationTask, run: RpaRun) -> None:
     """finish_run 钩子：子任务终态推进流程实例。调用方负责整体事务。"""
+    from app.services import statement_service
+
+    if await statement_service.dispatch_statement_finished(db, task, run):
+        return
     if task.task_type == SCAN_TASK_TYPE:
         if run.status == RunStatus.SUCCESS.value:
             await _handle_scan_success(db, task, run)
@@ -803,6 +889,9 @@ async def _handle_create_sdms_finished(
     await db.flush()
     instance.line_total = len(await list_line_items(db, instance.id))
     instance.line_done = 0
+    existing = loads_json(instance.summary, {})
+    if not isinstance(existing, dict):
+        existing = {}
     instance.summary = dumps_json(
         {
             "poNo": output.get("poNo"),
@@ -810,6 +899,7 @@ async def _handle_create_sdms_finished(
             "headerId": output.get("headerId"),
             "supplierCode": output.get("supplierCode"),
             "supplierName": output.get("supplierName"),
+            "sdmsUsername": existing.get("sdmsUsername"),
         }
     )
     _clear_instance_error(instance)

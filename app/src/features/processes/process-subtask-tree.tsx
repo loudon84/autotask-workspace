@@ -111,19 +111,25 @@ function FillLineGroup({ tasks }: { tasks: ProcessSubTask[] }) {
   );
 }
 
-export function ProcessSubTaskTree({ tasks }: { tasks: ProcessSubTask[] }) {
+export function ProcessSubTaskTree({
+  tasks,
+  nodeOrder = NODE_ORDER,
+}: {
+  tasks: ProcessSubTask[];
+  nodeOrder?: { taskType: string; label: string }[];
+}) {
   if (tasks.length === 0) {
     return (
       <p className="text-center text-muted-foreground text-sm">暂无子任务</p>
     );
   }
 
-  const knownTypes = new Set(NODE_ORDER.map((item) => item.taskType));
+  const knownTypes = new Set(nodeOrder.map((item) => item.taskType));
   const otherTasks = tasks.filter((task) => !knownTypes.has(task.taskType));
 
   return (
     <div className="space-y-3">
-      {NODE_ORDER.map(({ taskType, label }) => {
+      {nodeOrder.map(({ taskType, label }) => {
         const group = tasks.filter((task) => task.taskType === taskType);
         if (group.length === 0) {
           return null;

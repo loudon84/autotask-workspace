@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProcessInstances } from "@/features/processes/api/use-process-instances";
 import {
+  CUSTOMER_ORDER_PROCESS_CODE,
   formatProcessError,
   stageActionPath,
   stageButton,
@@ -109,6 +110,9 @@ export function ProcessesListPage() {
   };
 
   const filtered = instances.filter((item) => {
+    if (item.processCode !== CUSTOMER_ORDER_PROCESS_CODE) {
+      return false;
+    }
     if (!keyword) {
       return true;
     }

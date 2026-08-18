@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"
 
+    SDMS_ATTACHMENT_API_BASE_URL: str = "http://api.doc.uat.smart-core.com.hk"
+    SDMS_ATTACHMENT_FLAG: str = "SDMS_ARR"
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value):

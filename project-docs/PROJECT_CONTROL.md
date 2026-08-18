@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-13
+最后更新：2026-08-18
 
 ## 1. 用途
 
@@ -59,6 +59,11 @@
 | 本地 Auth/Task/Engine 闭环 | 已运行验证 | 三个服务健康检查均为 HTTP 200；本地 Task/Run 已完成一次 `rpa_flow_mock_srm_fetch_po` SUCCESS |
 | Client 证据中心 | 已支持真实预览和下载 | 截图使用临时签名地址接近全屏预览；截图和 XLSX 通过 Electron 下载到用户下载目录 |
 | 供应商门户任务 2→任务 3 自动链 | Task 2 1.2.0 停在 WAITING_HUMAN；Task 3 1.0.1 已发布 | Task 2 Run `635a6af1-c0c3-4d79-adf1-3ff4f8d56adb` 未生成后继任务；Task 3 跳过“已回签”校验版本已发布，UUID `85a896c4-f2df-4683-b41a-073872cded46`、摘要 `sha256:8284930376c590b8138f2ef74495414b6217db3d582464595e6588ca02714f37`，现有 Task 3 Binding 尚未切换，也未单独运行 |
+| 天地伟业对账单（v3.0） | 生成 Flow 1.0.6 已切 Binding；Client 可重新生成 | 勾选：用订单编号 span 定位所在行，再点选择列 checkbox。 |
+| 天地伟业对账单 SOP 体验（v3.01） | 详情已补回勾选明细；需重启唯一 Task 4520 | 六步进度：填单页待创建/SDMS核准；列表按 stage；详情对齐客户订单并展示 `summary.lines`。 |
+| 天地伟业对账单优化（v3.02） | 代码已改，需重启唯一 Task 4520 | 详情「对账明细」；展示 SDMS `check_num` 链接；SRM 提交成功后 HTTP 把发票传到 SDMS（`flag=SDMS_ARR`）。 |
+| 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
+| 天地伟业切正式演练（v4.0） | 方案已确认，未实施 | 正式 SRM 只读真跑 + 写步骤到按钮即停 + 影子单补缺态；本地读推进、写不推进并标「演练未提交」。 |
 
 ## 5. 未决问题
 
@@ -95,6 +100,8 @@
 13. **v2.02 运维（已完成）**：`prepare` Binding→**1.2.6**；`srm_check_reply_status` Template+Binding→**1.0.0**；本机 Task 已开 `SIGN_POLL_JOB_ENABLED=true`（见 2026-08-13 日志）。
 14. **R1 限制（已澄清）**：演示门户**当场签章**常不落库，该笔单据刷新后未必仍是「已回签」，不能拿它验轮询。初始化种子里另有单据本身就是「已回签」，可用这些 PO 把流程实例推到 `SIGN_REQUESTED` 再验 `check_reply`→自动归档。
 15. TEMP 签章回填（`rpa_flow_srm_sign_order` 1.0.1）仍待门户落库修复后删除。
+16. **对账单**：查询 RPA 已通，后续生成/发票/提交改由 Client 操作；SDMS 当月无单时生成会被拦住。
+17. **v4.0**：方案已确认。下一步按 `.cursor/plans/v4.0_天地伟业_正式演练_2026-08-18.plan.md` 实施；**先做正式站只读探测**，未出选择器笔记前不改正式选择器。正式 Binding 单独建，演示门户不动。凭据不进 Git/本文档。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -216,6 +223,98 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-08-18
+
+- **v4.0 天地伟业切正式演练：方案已确认（未写代码）**
+  - 文档：`project-docs/prd/AutoTask v4.0 天地伟业.md`；计划：`.cursor/plans/v4.0_天地伟业_正式演练_2026-08-18.plan.md`。
+  - 做法：正式门户只读真跑；保存/签章/生成/提交审批停在按钮前；网络再拦一遍写请求；Binding `dryRun=true` 仅挂正式 Portal。
+  - 本地状态：读步骤真推进；写步骤 `committed: false` 不改 stage；`summary.drill` + Client「演练未提交」。无待签章用影子实例，不假装 SRM 有单。发票演练允许扫描、禁止提交。
+  - 红线：不改对方数据；凭据不进文档。原 PRD 里的明文密码已去掉。
+  - 实施闸：先只读探测正式登录/菜单/表头，再改正式选择器。
+
+- **客户订单列表混入对账单**：`GET /process-instances` 未按 `process_code` 过滤，对账单 SOP 行（如 `2026-08-18|1151309.12`）出现在客户订单列表。列表与回签轮询现只查 `srm_customer_order`；Client 列表再挡一层。**需重启唯一 Task 4520**；Client 热刷新即可。
+
+- **客户订单节点4 SDMS 附件 1.2.2（username=Auth 工号）**
+  - Postman 的 `username` 不是写死工号，而是当前 AutoTask Auth 登录账号（SDMS 工号）。1.2.1 误写成固定值。
+  - Flow **1.2.2** 从任务输入读 `username`。手动归档 API 用 `/me.username`（否则 UserCache.name）写入任务输入；回签轮询回退实例摘要或创建人缓存名。
+  - 已发布 Registry UUID `e8cdd181-10f3-4c46-863f-3461b4a90fc0`，checksum `sha256:96f950b6…2ddef36`。Binding `8c272818-…` 已切。**需重启唯一 Task 4520** 后详情再点归档。
+
+- **客户订单节点4 SDMS 附件 1.2.1（对齐 Postman）**
+  - 1.2.0 门户下载成功后报 `ATTACHMENT_UPLOAD_REJECTED`。接口实为 HTTP 200 / `code=2001` /「上传地址不能为空」；Flow 未传 `uploadUrl`，也未回传接口原文。
+  - Postman form-data：`custPoNumber`、`username`、`filename`、`file`、`uploadUrl=http://api.doc.uat.smart-core.com.hk/upload`、`flag=SDMS_SO1`。
+  - Flow **1.2.1** 已发布：Registry UUID `92011c02-42b0-4ed4-95c9-d4eef5899c7b`，checksum `sha256:5e2bee6e…81494b`，8313 字节。`validate` PASSED。Binding `8c272818-…` 已从 1.2.0 切到 1.2.1。不必重启 Task/Engine。详情再点归档即可。
+
+- **客户订单节点4 SDMS 附件接口切换（v2.02 R4）**
+  - 旧：无认证 POST 旧附件服务 `/upload`，`flag=sdms`，`order_number`。
+  - 新：与创建 SDMS 销售订单相同 OAuth；`POST /core/api/srm/so/uploadAttachment`；`flag=SDMS_SO1`；`custPoNumber`=客户订单号；`username`/`filename`/`file` 不变。
+  - Flow `rpa_flow_supplier_portal_upload_order_attachment` **1.2.0** 已发布：Registry UUID `53609f3a-4fe4-4275-81d9-e83a0bb722aa`，checksum `sha256:43411543…82740`，7870 字节。`validate` PASSED，`validate-binding` valid。
+  - 天地伟业 Binding `8c272818-0b6b-4dd2-b9a5-450161c0ecc0` 已从 1.1.0（`0513788f-…`）切到 1.2.0。新回签归档会走新接口；不必重启 Task/Engine。
+
+- **v3.02 对账单优化（不另开 Plan，已直接开发）**
+  - 文档：`project-docs/prd/AutoTask v3.02 业务需求-天地伟业对账单.md`（由随手记录整理）。v3.0 详情用语同步为「对账明细」；填单页仍叫收货明细。
+  - O1：详情标题/空态改为对账明细。
+  - O2：SDMS 校验解析 `check_num`，写入 `summary.sdms_check_num`（无新列/无 DDL）；详情「SDMS对账单」超链接 `fdId=check_head_id`。旧草稿无单号需重新走 SDMS 校验。
+  - O3：SRM 提交成功后 Task HTTP 上传同一批发票到附件服务，`flag=SDMS_ARR`，`order_number=check_num`，`username` 取 Auth `/me.username`（否则 name）。SDMS 失败不回滚已完成，只记 `last_error`。
+  - **需重启唯一 Task 4520** 后：新生成的草稿才有单号；提交审核才会传 SDMS。Client 热刷新即可。
+
+- **扫描+提交必须同一次 RPA**：SRM 没有「已上传未提交」落态，只扫描不提交刷新后附件消失。Client 选发票不跑 RPA；点「提交审核」才发起。submit Flow **1.0.6**（`3dd99992-…`）同一会话扫描并提交，Binding 已切。单独上传接口会拒绝。**需重启唯一 Task 4520**；Client 热刷新后详情先选文件再提交。
+
+- **发票号误读备注 0/100**：upload/submit 用整块 `innerText` 正则取「发票号」，换行被压成空格后把右侧「备注」字数 `0/100` 拼进发票号。已按表单项读取，并在回写时截掉备注计数。upload/submit **1.0.5**（`48876c82-…` / `452e8a13-…`），Binding 已切。详情再扫即可，无需重启 Task。
+
+- **上传发票租约死循环**：任务 `97578af2-…` 每约 60s 被 Worker 再领一次。Engine 已 `RUNTIME_SUCCEEDED`，但 Task `finish_run` 在 `on_upload_finished` 里把空/非数字 `invoiceAmount` 丢给 `Decimal`，抛 `InvalidOperation`，整笔事务回滚，任务一直 `RUNNING`；`WORKER_LEASE_TTL_SECONDS=60` 到期后又把 `RUNNING` 打回 `QUEUED`。已容错解析金额；钩子异常不再挡住 Run 终态。该任务现为 `CANCELLED`。**需重启唯一 Task 4520** 后再在详情重扫。
+
+- **收货应付点不到**：匹配已成功（`RC2608180001`），`.first` 点到表体 `visibility:hidden` 克隆，30s 超时。可见「收货应付」在 `.el-table__fixed-right`。upload/submit **1.0.4**（`c09b0307-…` / `019c2f53-…`）先点固定列。Binding 已切。详情再扫即可。
+
+- **上传发票找不到对账单行**：Run `970593f8-…` 报 `statement row not found by date+amount`。failure.png 显示对账列表「暂无数据」，查询条件为空。演示门户必须先点「查询」才出数；upload/submit 1.0.2 进页后立刻匹配。已发 **1.0.3**（`f9773c87-…` / `6259eda9-…`），Binding 已切。点查询后列表是种子数据，没有本地这笔 `2026-08-18 / 1151309.12`。**产品确认：演示门户数据可以对不上，匹配逻辑仍按日期+金额，找不到即失败，不算 Client/RPA 缺陷。**
+
+- **扫描发票信息**：详情页联调占位（粘贴本机路径 + RPA/IPC 说明）已换成系统文件选择框。选 png/jpg/jpeg/pdf/ofd，最多 10 个、单个 ≤20MB，再开始扫描。需**重启 Client**（主进程 IPC）。
+
+- **对账单详情明细行**：详情页没有展示生成时勾选的收货行。明细不落 `statement_bills`，但已写在流程实例 `summary.lines`。详情 API 现返回 `lines`，详情页在业务信息下展示只读表。需重启 Task 4520；Client 热刷新即可。
+
+- **对账单详情历史失败条**：生成已成功仍显示「重新生成 FAILED」。卡点条曾按任意历史 FAILED 子任务展示。已对齐客户订单：同一 taskType 只看最新一次。Client 刷新即可。
+
+- **生成对账单勾选**：门户 `data-rpa='receiving-row-*'` 打在订单编号 span 上，不在行/勾选框。1.0.5 在 span 内找 checkbox 必然超时。1.0.6 按 marker 找到所在 `tr`，再点选择列。已发布 `d4128a58-…`，Binding 已切。
+
+- **生成对账单勾选**：Element UI 左固定列复制行，点 body 克隆会超时/判不可见。对齐交期 Flow 1.0.2：先选 `.el-table__fixed`，回退 body。已发布 generate **1.0.5**（`ca668193-…`），Binding 已切。
+
+- **生成对账单勾选超时**：Run `257b6633-…` 三次都卡在行 checkbox 点击（Element UI 隐藏 `input` + 逗号选择器），报 `RUNTIME_TIMEOUT`。已发布 generate **1.0.4**（`f468426d-…`）改点可见 `.el-checkbox__inner`。Binding 已切。本地 Trace：`service/storage/artifacts/2be7c618-…/820bd8a1-…/257b6633-…/trace.zip`。
+
+- **生成对账单 `login page unavailable`**：Runtime 重试复用已登录 browser context，生成 Flow 只等验证码图，误报 `SRM_LOGIN_PAGE_UNAVAILABLE`。已按交期 Flow 增加会话复用；query/upload/submit 同步。已发布 generate/query **1.0.3**（`1f0a675f-…` / `cd0bd301-…`）、upload/submit **1.0.2**，Binding 已切换。Client 详情「重新生成」即可，无需重启 Task。
+
+- **对账单联调清空脚本**：`service/scripts/clear_statement_bills.py`（默认预览；加 `--yes` 只删 `srm_tiandi_statement` + `statement_bills` + 填单页查询任务）。不要用 `clear_process_instances.py --yes` 清对账单，那会把客户订单一起删掉。
+
+- **v3.01 对账单 SOP 体验已落地（需重启 Task）**
+  - 填单页带六步进度（待创建 → SDMS对账单核准）；SDMS 失败仍留在填单页不落库。
+  - 列表 Tab 改为 SOP 阶段（待生成 / 待上传发票 / 提交审核 / 已完成 / 已作废），列分阶段与运行状态。
+  - 详情：阶段徽章、卡点、六步进度、业务信息、子任务树、阶段历史。`STMT_PENDING_REVIEW` 显示名改为「提交审核」。
+  - API：`GET /statements?stage=`；账单 DTO 带 `stage` / `instanceStatus` / `stageHistory`。无新迁移。
+
+- **v3.01 需求草案：对账单按客户订单 SOP 呈现**
+  - 文档：`project-docs/prd/AutoTask v3.01 业务需求-天地伟业对账单SOP.md`。
+  - 六步：**待创建 → SDMS对账单核准 → 待生成 → 待上传发票 → 提交审核 → 已完成**。前两步只在填单页，不落库；实例从待生成起进列表/详情。待确认无误后再实施。
+
+- **对账单「待生成」本地草稿（代码已改，需重启 Task）**
+  - 产品：SDMS 校验失败仍不落库；校验通过立刻写 `statement_bills.check_status=DRAFT`（展示「待生成」，SRM 无此状态），跳转该草稿详情跟踪 RPA。SRM 成功 → 未对账；失败仍为待生成并记 `last_error`，详情可「重新生成」同一条。待生成不可上传发票/提交审核；可取消（仅本地作废）。
+  - service：`ProcessStage.STMT_GENERATING`；`POST /statements/{id}/retry-generate`；finish 钩子改为更新已有草稿，失败不把实例标 FAILED。无需新迁移（状态为字符串）。
+  - Client：列表增加「待生成」Tab；生成成功带 `billId` 进详情；详情展示错误与重新生成。
+  - **操作前必须只留一个 Task 占用 4520**（旧进程曾与新 uvicorn 并存，Client 会打到旧代码）。路径：流程实例 → 对账单 → 生成客户对账单 → 天地伟业 → `2026-04-01`～`2026-04-30` → 搜索 → 生成。
+
+- **对账单查询链路已绿，交给 Client 操作后续写入步骤**
+  - 根因：query Flow `1.0.1` 登录成功后 `_fill_date_range` 引用未定义 `step_id`，Engine 报 `FLOW_UNHANDLED_ERROR`。已改为在 `open_receipt_list` 发成功事件，并升 **1.0.2**。
+  - 已发布：`rpa_flow_srm_stmt_query_receipts` / `rpa_flow_srm_stmt_generate` **1.0.2**；Binding 已切到新 versionId。upload/submit 仍用已发布包。
+  - 只读烟雾：Task `639822cb-…` SUCCESS，`totalRows=2`，样例收货单 `RCV2604300001` / 行 10，金额 `5999.74`，状态「未提交」。未跑生成/上传/提交（会改 SRM）。
+  - **下一步：用户在 Client 操作**。登录端点 Auth=`http://192.168.102.247:4510`、Task=`http://127.0.0.1:4520`。路径：流程实例 → 对账单流程实例 → 生成客户对账单；门户选天地伟业；日期 `2026-04-01`～`2026-04-30`。生成前需 SDMS 当月有对账单且金额等于勾选汇总（当前 SDMS 当月查不到单据）。发票上传详情页暂填本机路径（每行一个）。
+
+### 2026-08-17
+
+- **v3.0 天地伟业对账单：代码实现落地（未 git commit）**
+  - service：`statement_bills` 模型 + dormant迁移 `c4a1f0e82b17`（不执行）；`ProcessStage`/`ProcessSubTaskKind` 对账阶段；`STAGE_DEFINITIONS` 改为按 `process_code` 分组；`sdms_client` + `statement_service`（金额校验阻断/落表/上传/提交/取消）；`/api/v1/autotask/statements/*` 路由；seed 追加 4 个 template/binding。
+  - rpa-flows：新建 4 包 `rpa_flow_srm_stmt_{query_receipts,generate,upload_invoice,submit_review}/1.0.0`（纯函数单测通过；UI 选择器为 `data-rpa` 占位，需补 mock_srm 对账页或对接真实 SRM）。
+  - app：`/process-instances/statements` 列表/生成/详情三页 + `autotaskApi.statements` 方法族；详情发票上传暂用本机路径触发 RPA（IPC 选文件后续补）。
+  - **待用户授权**：`alembic upgrade`、Engine 发布 4 Flow、Binding 绑定真门户、全链路验收。
+- **v3.0 天地伟业对账单 PRD 定稿**：`project-docs/prd/AutoTask v3.0 业务需求-天地伟业对账单.md`。核心决策：生成即落本地表（`statement_bills`，不存收货明细）、取消定时扫描（未对账列表读本地库）、本地↔SRM 按「对账日期+对账金额」匹配（SRM 无可回读对账单号）、流程终点 = 提交审核成功（SRM 后续审批不跟踪）、SDMS 金额校验无容差阻断、发票扫描/反写全为 SRM 功能（字段只读、不存发票文件）、取消对账仅本地作废、失败不重试只记原因。三轮共 22 项需求确认完毕，含流程图与状态机（mermaid）。附件 3 收货字段清单在 `project-docs/prd/收货信息_20260817141512.xlsx`。
+- **实施计划**：`.cursor/plans/v3.0_天地伟业对账单_0ac52cb7.plan.md`；修正计划见 Cursor Plan「v3.0 天地伟业对账单修正计划」。
 
 ### 2026-08-14
 

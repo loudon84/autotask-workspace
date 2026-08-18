@@ -15,6 +15,7 @@ from app.models.rpa_component import RpaComponent  # noqa: F401
 from app.models.rpa_run import RpaRun  # noqa: F401
 from app.models.rpa_worker import RpaWorker  # noqa: F401
 from app.models.run_event import RunEvent  # noqa: F401
+from app.models.statement_bill import StatementBill  # noqa: F401
 from app.models.step_run import StepRun  # noqa: F401
 from app.models.task_message import TaskMessage  # noqa: F401
 from app.models.task_successor_job import TaskSuccessorJob  # noqa: F401

@@ -60,6 +60,16 @@ export const queryKeys = {
         : ([...queryKeys.processInstances.all] as const),
     detail: (id: string) => [...queryKeys.processInstances.all, id] as const,
   },
+  statements: {
+    all: ["statements"] as const,
+    list: (params?: Record<string, unknown>) =>
+      params
+        ? ([...queryKeys.statements.all, params] as const)
+        : ([...queryKeys.statements.all] as const),
+    detail: (id: string) => [...queryKeys.statements.all, id] as const,
+    queryReceipts: (taskId: string) =>
+      [...queryKeys.statements.all, "query-receipts", taskId] as const,
+  },
   search: {
     all: ["search"] as const,
     query: (q: string) => [...queryKeys.search.all, q] as const,

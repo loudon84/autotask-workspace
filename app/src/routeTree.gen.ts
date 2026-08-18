@@ -28,7 +28,10 @@ import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as ProcessesInstanceIdRouteImport } from './routes/processes/$instanceId'
 import { Route as ProcessInstancesStatementsRouteImport } from './routes/process-instances/statements'
 import { Route as ProcessesInstanceIdIndexRouteImport } from './routes/processes/$instanceId/index'
+import { Route as ProcessInstancesStatementsIndexRouteImport } from './routes/process-instances/statements/index'
 import { Route as ProcessesInstanceIdDatesRouteImport } from './routes/processes/$instanceId/dates'
+import { Route as ProcessInstancesStatementsGenerateRouteImport } from './routes/process-instances/statements/generate'
+import { Route as ProcessInstancesStatementsBillIdRouteImport } from './routes/process-instances/statements/$billId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -127,11 +130,29 @@ const ProcessesInstanceIdIndexRoute =
     path: '/',
     getParentRoute: () => ProcessesInstanceIdRoute,
   } as any)
+const ProcessInstancesStatementsIndexRoute =
+  ProcessInstancesStatementsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ProcessInstancesStatementsRoute,
+  } as any)
 const ProcessesInstanceIdDatesRoute =
   ProcessesInstanceIdDatesRouteImport.update({
     id: '/dates',
     path: '/dates',
     getParentRoute: () => ProcessesInstanceIdRoute,
+  } as any)
+const ProcessInstancesStatementsGenerateRoute =
+  ProcessInstancesStatementsGenerateRouteImport.update({
+    id: '/generate',
+    path: '/generate',
+    getParentRoute: () => ProcessInstancesStatementsRoute,
+  } as any)
+const ProcessInstancesStatementsBillIdRoute =
+  ProcessInstancesStatementsBillIdRouteImport.update({
+    id: '/$billId',
+    path: '/$billId',
+    getParentRoute: () => ProcessInstancesStatementsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -140,7 +161,7 @@ export interface FileRoutesByFullPath {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/process-instances/statements': typeof ProcessInstancesStatementsRoute
+  '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
@@ -153,7 +174,10 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
+  '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/statements/': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId/': typeof ProcessesInstanceIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -162,7 +186,6 @@ export interface FileRoutesByTo {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/process-instances/statements': typeof ProcessInstancesStatementsRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
@@ -174,7 +197,10 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksIndexRoute
   '/web-workspace': typeof WebWorkspaceIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
+  '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
+  '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/statements': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId': typeof ProcessesInstanceIdIndexRoute
 }
 export interface FileRoutesById {
@@ -184,7 +210,7 @@ export interface FileRoutesById {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
-  '/process-instances/statements': typeof ProcessInstancesStatementsRoute
+  '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
@@ -197,7 +223,10 @@ export interface FileRoutesById {
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
+  '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/statements/': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId/': typeof ProcessesInstanceIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -221,7 +250,10 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/web-workspace/'
     | '/workflows/'
+    | '/process-instances/statements/$billId'
+    | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/statements/'
     | '/processes/$instanceId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -230,7 +262,6 @@ export interface FileRouteTypes {
     | '/components'
     | '/dashboard'
     | '/settings'
-    | '/process-instances/statements'
     | '/runs/$runId'
     | '/srm-portals/$portalId'
     | '/tasks/$taskId'
@@ -242,7 +273,10 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/web-workspace'
     | '/workflows'
+    | '/process-instances/statements/$billId'
+    | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/statements'
     | '/processes/$instanceId'
   id:
     | '__root__'
@@ -264,7 +298,10 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/web-workspace/'
     | '/workflows/'
+    | '/process-instances/statements/$billId'
+    | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/statements/'
     | '/processes/$instanceId/'
   fileRoutesById: FileRoutesById
 }
@@ -274,7 +311,7 @@ export interface RootRouteChildren {
   ComponentsRoute: typeof ComponentsRoute
   DashboardRoute: typeof DashboardRoute
   SettingsRoute: typeof SettingsRoute
-  ProcessInstancesStatementsRoute: typeof ProcessInstancesStatementsRoute
+  ProcessInstancesStatementsRoute: typeof ProcessInstancesStatementsRouteWithChildren
   ProcessesInstanceIdRoute: typeof ProcessesInstanceIdRouteWithChildren
   RunsRunIdRoute: typeof RunsRunIdRoute
   SrmPortalsPortalIdRoute: typeof SrmPortalsPortalIdRoute
@@ -424,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessesInstanceIdIndexRouteImport
       parentRoute: typeof ProcessesInstanceIdRoute
     }
+    '/process-instances/statements/': {
+      id: '/process-instances/statements/'
+      path: '/'
+      fullPath: '/process-instances/statements/'
+      preLoaderRoute: typeof ProcessInstancesStatementsIndexRouteImport
+      parentRoute: typeof ProcessInstancesStatementsRoute
+    }
     '/processes/$instanceId/dates': {
       id: '/processes/$instanceId/dates'
       path: '/dates'
@@ -431,8 +475,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessesInstanceIdDatesRouteImport
       parentRoute: typeof ProcessesInstanceIdRoute
     }
+    '/process-instances/statements/generate': {
+      id: '/process-instances/statements/generate'
+      path: '/generate'
+      fullPath: '/process-instances/statements/generate'
+      preLoaderRoute: typeof ProcessInstancesStatementsGenerateRouteImport
+      parentRoute: typeof ProcessInstancesStatementsRoute
+    }
+    '/process-instances/statements/$billId': {
+      id: '/process-instances/statements/$billId'
+      path: '/$billId'
+      fullPath: '/process-instances/statements/$billId'
+      preLoaderRoute: typeof ProcessInstancesStatementsBillIdRouteImport
+      parentRoute: typeof ProcessInstancesStatementsRoute
+    }
   }
 }
+
+interface ProcessInstancesStatementsRouteChildren {
+  ProcessInstancesStatementsBillIdRoute: typeof ProcessInstancesStatementsBillIdRoute
+  ProcessInstancesStatementsGenerateRoute: typeof ProcessInstancesStatementsGenerateRoute
+  ProcessInstancesStatementsIndexRoute: typeof ProcessInstancesStatementsIndexRoute
+}
+
+const ProcessInstancesStatementsRouteChildren: ProcessInstancesStatementsRouteChildren =
+  {
+    ProcessInstancesStatementsBillIdRoute:
+      ProcessInstancesStatementsBillIdRoute,
+    ProcessInstancesStatementsGenerateRoute:
+      ProcessInstancesStatementsGenerateRoute,
+    ProcessInstancesStatementsIndexRoute: ProcessInstancesStatementsIndexRoute,
+  }
+
+const ProcessInstancesStatementsRouteWithChildren =
+  ProcessInstancesStatementsRoute._addFileChildren(
+    ProcessInstancesStatementsRouteChildren,
+  )
 
 interface ProcessesInstanceIdRouteChildren {
   ProcessesInstanceIdDatesRoute: typeof ProcessesInstanceIdDatesRoute
@@ -453,7 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComponentsRoute: ComponentsRoute,
   DashboardRoute: DashboardRoute,
   SettingsRoute: SettingsRoute,
-  ProcessInstancesStatementsRoute: ProcessInstancesStatementsRoute,
+  ProcessInstancesStatementsRoute: ProcessInstancesStatementsRouteWithChildren,
   ProcessesInstanceIdRoute: ProcessesInstanceIdRouteWithChildren,
   RunsRunIdRoute: RunsRunIdRoute,
   SrmPortalsPortalIdRoute: SrmPortalsPortalIdRoute,

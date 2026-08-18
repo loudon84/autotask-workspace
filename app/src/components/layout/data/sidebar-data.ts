@@ -65,6 +65,7 @@ export const routeTitles: Record<string, string> = {
   "/dashboard": "工作台",
   "/processes": "客户订单流程实例",
   "/process-instances/statements": "对账单流程实例",
+  "/process-instances/statements/generate": "生成客户对账单",
   "/tasks": "任务列表",
   "/web-workspace": "Web 工作区",
   "/tasks/new": "新建任务",
@@ -81,6 +82,7 @@ export function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/processes/") && pathname.endsWith("/dates"))
     return "填写交货日期";
   if (pathname.startsWith("/processes/")) return "客户订单流程实例详情";
+  if (pathname.startsWith("/process-instances/statements/")) return "对账单详情";
   if (pathname.startsWith("/tasks/")) return "任务详情";
   if (pathname.startsWith("/workflows/")) return "流程模板详情";
   if (pathname.startsWith("/srm-portals/")) return "门户配置";

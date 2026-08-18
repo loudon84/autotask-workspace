@@ -565,6 +565,117 @@ export const remoteApi = {
     return mapItemResponse<ProcessSignPollRunResult>(data);
   },
 
+  listStatements: async (params?: {
+    checkStatus?: string;
+    stage?: string;
+  }): Promise<import("@/types/statement").StatementBillListItem[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/statements",
+      query: params?.stage
+        ? { stage: params.stage }
+        : params?.checkStatus
+          ? { check_status: params.checkStatus }
+          : undefined,
+    });
+    return mapListResponse(data);
+  },
+
+  getStatement: async (
+    id: string
+  ): Promise<import("@/types/statement").StatementBillDetail | undefined> => {
+    try {
+      const data = await requestAutotaskApi<unknown>({
+        method: "GET",
+        path: `/statements/${id}`,
+      });
+      return mapItemResponse(data);
+    } catch {
+      return;
+    }
+  },
+
+  queryStatementReceipts: async (input: {
+    portalAccountId: string;
+    dateStart: string;
+    dateEnd: string;
+  }): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/statements/query-receipts",
+      body: input,
+    });
+    return mapItemResponse(data);
+  },
+
+  getStatementQueryReceipts: async (
+    taskId: string
+  ): Promise<import("@/types/statement").StatementQueryResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/statements/query-receipts/${taskId}`,
+    });
+    return mapItemResponse(data);
+  },
+
+  generateStatement: async (input: {
+    portalAccountId: string;
+    lines: Record<string, unknown>[];
+    dateStart?: string;
+    dateEnd?: string;
+  }): Promise<import("@/types/statement").StatementGenerateResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/statements/generate",
+      body: input,
+    });
+    return mapItemResponse(data);
+  },
+
+  retryGenerateStatement: async (
+    billId: string
+  ): Promise<import("@/types/statement").StatementGenerateResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/retry-generate`,
+    });
+    return mapItemResponse(data);
+  },
+
+  uploadStatementInvoicePaths: async (input: {
+    billId: string;
+    filePaths: string[];
+  }): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${input.billId}/invoice/paths`,
+      body: { filePaths: input.filePaths },
+    });
+    return mapItemResponse(data);
+  },
+
+  submitStatementReview: async (
+    billId: string,
+    input: { filePaths: string[] }
+  ): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/submit-review`,
+      body: { filePaths: input.filePaths },
+    });
+    return mapItemResponse(data);
+  },
+
+  cancelStatement: async (
+    billId: string
+  ): Promise<import("@/types/statement").StatementBillListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/cancel`,
+    });
+    return mapItemResponse(data);
+  },
+
   getAuditLogs: async (taskId?: string): Promise<AuditLog[]> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
-from app.core.security import get_current_user, require_tenant_access
+from app.core.security import bearer_scheme, get_current_user, require_tenant_access
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
 from app.schemas.process import (
@@ -16,6 +17,7 @@ from app.schemas.process import (
     ProcessStageHistoryResponse,
 )
 from app.services import process_instance_service
+from app.services.user_sync import resolve_login_username
 
 router = APIRouter()
 
@@ -118,9 +120,20 @@ async def archive_signed_order(
     instance_id: str,
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     tenant_id = require_tenant_access(user)
-    instance = await process_instance_service.archive_signed_order(db, tenant_id, instance_id, user)
+    username = await resolve_login_username(
+        credentials.credentials if credentials else None,
+        user,
+    )
+    instance = await process_instance_service.archive_signed_order(
+        db,
+        tenant_id,
+        instance_id,
+        user,
+        sdms_username=username,
+    )
     return ApiResponse(data=ProcessInstanceListItem.model_validate(instance))
 
 

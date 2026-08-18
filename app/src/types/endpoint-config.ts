@@ -113,3 +113,21 @@ export function buildSdmsOmViewUrl(
   }
   return `${base}/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=${encodeURIComponent(id)}`;
 }
+
+/** SDMS 客户对账单查看页：fdId = check_head_id */
+export function buildSdmsCheckViewUrl(
+  baseUrl: string | undefined,
+  checkHeadId: string
+): string | null {
+  const id = checkHeadId.trim();
+  if (!id) {
+    return null;
+  }
+  const base = (baseUrl ?? defaultAutoTaskEndpointConfig.sdmsWebBaseUrl ?? "")
+    .trim()
+    .replace(TRAILING_SLASHES_PATTERN, "");
+  if (!base) {
+    return null;
+  }
+  return `${base}/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=${encodeURIComponent(id)}`;
+}

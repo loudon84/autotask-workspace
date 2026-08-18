@@ -211,6 +211,45 @@ describe("ProcessesListPage", () => {
     expect(screen.getByText("1/2")).toBeInTheDocument();
     expect(screen.getByText("进行中")).toBeInTheDocument();
   });
+
+  it("hides statement instances from the customer order list", async () => {
+    mockList.mockResolvedValue([
+      {
+        id: "stmt-1",
+        processCode: "srm_tiandi_statement",
+        bizKey: "2026-08-18|1151309.12",
+        title: "对账单 2026-08-18 / 1151309.12",
+        portalAccountId: "portal-1",
+        stage: "ARCHIVED",
+        status: "COMPLETED",
+        lineTotal: 2,
+        lineDone: 0,
+        createdAt: "2026-08-18T00:00:00Z",
+        updatedAt: "2026-08-18T00:00:00Z",
+      },
+      {
+        id: "inst-1",
+        processCode: "srm_customer_order",
+        bizKey: "POJS2607130002",
+        title: "天地伟业-客户订单 - POJS2607130002",
+        portalAccountId: "portal-1",
+        stage: "SDMS_CREATED",
+        status: "ACTIVE",
+        lineTotal: 2,
+        lineDone: 1,
+        createdAt: "2026-08-13T00:00:00Z",
+        updatedAt: "2026-08-13T00:00:00Z",
+      },
+    ]);
+    renderWithQuery(<ProcessesListPage />);
+    await waitFor(() =>
+      expect(screen.getByText("POJS2607130002")).toBeInTheDocument()
+    );
+    expect(
+      screen.queryByText("对账单 2026-08-18 / 1151309.12")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("2026-08-18|1151309.12")).not.toBeInTheDocument();
+  });
 });
 
 describe("ProcessDetailPage", () => {
