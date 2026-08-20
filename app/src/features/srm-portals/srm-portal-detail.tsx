@@ -80,8 +80,20 @@ export function SrmPortalDetailPage({ portalId }: { portalId: string }) {
 
       <Card>
         <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
-          <Field label="客户编码" value={portal.erpEntityCode} />
-          <Field label="客户名称" value={portal.erpEntityName} />
+          <Field
+            label="实体类型"
+            value={portal.entityType === "SUPPLIER" ? "供应商" : "客户"}
+          />
+          <Field
+            label={portal.entityType === "SUPPLIER" ? "供应商编号" : "客户编号"}
+            value={portal.erpEntityCode}
+          />
+          <Field
+            label={portal.entityType === "SUPPLIER" ? "供应商名称" : "客户名称"}
+            value={portal.erpEntityName}
+          />
+          <Field label="业务实体" value={portal.businessEntity || "—"} />
+          <Field label="我方公司编号" value={portal.ou || "—"} />
           <Field label="门户名称" value={portal.portalName} />
           <Field label="门户地址" value={portal.portalUrl} />
           <Field label="登录账号" value={portal.loginAccount || "-"} />

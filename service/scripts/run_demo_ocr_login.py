@@ -1,0 +1,57 @@
+"""Load demo portal credentials and run OCR login probe. Does not print the password."""
+from __future__ import annotations
+
+import asyncio
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from sqlalchemy import select
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SERVICE_ROOT))
+
+from app.core.deps import async_session_factory, engine as db_engine
+from app.models.base import not_deleted
+from app.models.portal_account import PortalAccount
+
+PORTAL_NAME = "天地伟业-芯云test"
+ENGINE_PY = Path(r"d:\work_space260811\autotask-workspace\rpa-engine\.venv\Scripts\python.exe")
+PROBE = Path(r"d:\work_space260811\autotask-workspace\rpa-engine\scripts\_probe_demo_ocr_login.py")
+
+
+async def main() -> int:
+    async with async_session_factory() as db:
+        portal = (
+            await db.execute(
+                select(PortalAccount).where(
+                    PortalAccount.portal_name == PORTAL_NAME,
+                    not_deleted(PortalAccount),
+                )
+            )
+        ).scalar_one_or_none()
+    await db_engine.dispose()
+    if portal is None:
+        print("portal_missing")
+        return 1
+    password = (portal.credential_ref or "").strip()
+    if not password:
+        print("password_missing")
+        return 1
+    print("portal", portal.portal_name, "url", portal.portal_url, "user", portal.login_account, flush=True)
+    env = os.environ.copy()
+    env["DEMO_OCR_URL"] = portal.portal_url
+    env["DEMO_OCR_USER"] = portal.login_account
+    env["DEMO_OCR_PASS"] = password
+    env.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+    completed = subprocess.run(
+        [str(ENGINE_PY), str(PROBE)],
+        env=env,
+        check=False,
+    )
+    return completed.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(main()))

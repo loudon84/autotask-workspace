@@ -52,7 +52,7 @@ export function GlobalSearch() {
       <CommandDialog onOpenChange={setOpen} open={open}>
         <CommandInput
           onValueChange={handleSearch}
-          placeholder="搜索任务、流程模板、SRM 门户、运行记录..."
+          placeholder="搜索任务、流程模板、门户、运行记录..."
           value={query}
         />
         <CommandList>
@@ -94,7 +94,7 @@ export function GlobalSearch() {
             </CommandGroup>
           )}
           {results && results.portals.length > 0 && (
-            <CommandGroup heading="SRM 门户">
+            <CommandGroup heading="门户">
               {results.portals.map((portal) => (
                 <CommandItem
                   key={portal.id}

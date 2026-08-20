@@ -7,6 +7,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
@@ -45,6 +46,19 @@ function pickApi() {
 export const autotaskApi = {
   dashboard: {
     getSummary: (): Promise<DashboardData> => pickApi().getDashboard(),
+  },
+
+  integrationEndpoints: {
+    get: (): Promise<IntegrationEndpoints> => {
+      const api = pickApi();
+      if (
+        "getIntegrationEndpoints" in api &&
+        typeof api.getIntegrationEndpoints === "function"
+      ) {
+        return api.getIntegrationEndpoints();
+      }
+      return Promise.resolve({ sdmsBaseUrl: "" });
+    },
   },
 
   tasks: {

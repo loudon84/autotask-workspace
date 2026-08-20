@@ -12,7 +12,9 @@ import { isLineEditable } from "@/features/processes/process-model";
 import { ProcessOrderLinesTable } from "@/features/processes/process-order-lines-table";
 import { ErpOrderLabel } from "@/features/processes/erp-order-label";
 import {
+  resolvePortalBusinessEntity,
   resolvePortalCustomerName,
+  usePortalBusinessEntityMap,
   usePortalNameMap,
 } from "@/features/processes/use-portal-name-map";
 import { isCanonicalDate } from "@/features/tasks/delivery-date-task-model";
@@ -35,6 +37,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
   const queryClient = useQueryClient();
   const { data: detail, isLoading } = useProcessInstance(instanceId);
   const portalNameMap = usePortalNameMap();
+  const businessEntityMap = usePortalBusinessEntityMap();
   const [draftDates, setDraftDates] = useState<Record<string, string>>({});
   const [savingLine, setSavingLine] = useState<string | null>(null);
   const [savingAll, setSavingAll] = useState(false);
@@ -104,6 +107,10 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
     stageEditable && dirtyLines.length > 0 && !hasInvalidDraft && !busy;
   const customerName = resolvePortalCustomerName(
     portalNameMap,
+    detail.portalAccountId
+  );
+  const businessEntity = resolvePortalBusinessEntity(
+    businessEntityMap,
     detail.portalAccountId
   );
 
@@ -216,7 +223,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <span>客户订单：{display(detail.summary.poNo ?? detail.bizKey)}</span>
             <span>客户：{customerName}</span>
-            <span>交易主体：{display(detail.summary.supplierName)}</span>
+            <span>交易主体：{display(businessEntity)}</span>
             <ErpOrderLabel
               headerId={detail.summary.headerId}
               orderNumber={detail.summary.orderNumber}

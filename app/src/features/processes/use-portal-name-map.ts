@@ -23,3 +23,27 @@ export function resolvePortalCustomerName(
   }
   return portalNameMap.get(portalAccountId)?.trim() || fallback;
 }
+
+/** portalAccountId → businessEntity（我方公司 / 交易主体） */
+export function usePortalBusinessEntityMap() {
+  const { data: portals = [] } = usePortalAccounts();
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const portal of portals) {
+      map.set(portal.id, portal.businessEntity ?? "");
+    }
+    return map;
+  }, [portals]);
+}
+
+export function resolvePortalBusinessEntity(
+  businessEntityMap: Map<string, string>,
+  portalAccountId: string | null | undefined,
+  fallback = "—"
+): string {
+  if (!portalAccountId) {
+    return fallback;
+  }
+  const value = businessEntityMap.get(portalAccountId)?.trim();
+  return value ? value : fallback;
+}

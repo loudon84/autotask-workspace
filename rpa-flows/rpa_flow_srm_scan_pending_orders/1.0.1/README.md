@@ -1,5 +1,7 @@
 # SRM 扫单 Flow（rpa_flow_srm_scan_pending_orders 1.0.1）
 
+> **适用门户：演示门户**（`http://192.168.102.247:3000`，带 `data-rpa` 标记）。选择器基于 `data-rpa`，**不能用于正式门户**（`https://supplier.tiandy.com`，无 `data-rpa`）。正式门户需单独版本。绑定时按门户环境选对应版本；同一门户环境内始终用最新版本。
+
 ## 用途
 
 登录客户 SRM 门户，遍历订单列表全部分页，采集「回复状态 = 待签章」的采购订单，

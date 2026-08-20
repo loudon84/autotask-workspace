@@ -101,8 +101,12 @@ _PORTAL_MANAGE_ROLES = {"admin", "operator"}
 
 
 def require_portal_manage_access(user: UserCache) -> None:
+    """建/管门户门槛：门户维度角色 portal_org_role=admin/operator 放行；
+    兼容组织管理员 org_role=admin/operator 与超管。"""
     require_tenant_access(user)
     if user.is_super_admin:
+        return
+    if (user.portal_org_role or "") in _PORTAL_MANAGE_ROLES:
         return
     if (user.org_role or "") in _PORTAL_MANAGE_ROLES:
         return

@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_fill_line_delivery_date",
+  "rpaFlowVersion": "1.0.3",
+  "rpaFlowVersionId": "a5a021d0-5ada-4d2b-9953-8d020caa6132",
+  "packageChecksum": "sha256:74a4975df368d3cfb6aae01db4a35048abfa3fc06aff55e3b3b096035d2645b7",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_fill_line_delivery_date"
+}

@@ -205,6 +205,31 @@ async def test_archive_requires_sdms_username() -> None:
 
 
 @pytest.mark.asyncio
+async def test_resolve_archive_username_falls_back_to_hardcoded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """自动轮询无真人 actor 且 UserCache 取不到工号时，兜底用写死的工号。"""
+    instance = _instance(created_by="scripts/seed_sign_poll_test")
+
+    async def _empty_username(_db, _user_id):
+        return ""
+
+    monkeypatch.setattr(svc, "username_from_user_cache", _empty_username)
+    username = await svc._resolve_archive_username(MagicMock(), instance, "")
+    assert username == svc._FALLBACK_ARCHIVE_SDMS_USERNAME
+
+
+@pytest.mark.asyncio
+async def test_resolve_archive_username_prefers_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
+    instance = _instance()
+
+    async def _should_not_call(_db, _user_id):
+        raise AssertionError("should not consult user cache when username provided")
+
+    monkeypatch.setattr(svc, "username_from_user_cache", _should_not_call)
+    assert await svc._resolve_archive_username(MagicMock(), instance, "explicit") == "explicit"
+
+
+
+@pytest.mark.asyncio
 async def test_retry_requires_failed_status() -> None:
     instance = _instance(status=ProcessInstanceStatus.ACTIVE.value)
     db = MagicMock()
@@ -633,3 +658,61 @@ async def test_sign_poll_scheduler_process_once(monkeypatch: pytest.MonkeyPatch)
     scheduler = SignPollScheduler(_factory, Settings(SIGN_POLL_INTERVAL_SECONDS=1800))
     count = await scheduler.process_once()
     assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """定时扫单只对拥有 ENABLED srm_scan_pending_orders 绑定的门户建任务。"""
+    from datetime import datetime
+
+    from app.core.config import Settings
+    from app.services import scan_scheduler as sched_mod
+    from app.services.scan_scheduler import ScanScheduler
+
+    captured_portal_ids: list[str] = []
+
+    portal_with_binding = MagicMock(id="portal-bound", tenant_id="tenant-1")
+
+    class _Result:
+        def scalars(self):
+            class _S:
+                def all(self):
+                    return [portal_with_binding]
+
+            return _S()
+
+    class _Session:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def execute(self, _stmt):
+            return _Result()
+
+        async def rollback(self):
+            return None
+
+    def _factory():
+        return _Session()
+
+    async def _create_scan_task(_db, _tenant, portal_account_id, *, actor):
+        captured_portal_ids.append(portal_account_id)
+        return MagicMock()
+
+    # patch the name imported into the scheduler module
+    monkeypatch.setattr(sched_mod, "create_scan_task", _create_scan_task)
+    monkeypatch.setattr(
+        sched_mod,
+        "datetime",
+        MagicMock(now=lambda: datetime(2026, 8, 19, 9, 5)),
+    )
+
+    scheduler = ScanScheduler(_factory, Settings())
+    scheduler._last_run_date = None
+    count = await scheduler.process_once()
+    assert count == 1
+    assert captured_portal_ids == ["portal-bound"]

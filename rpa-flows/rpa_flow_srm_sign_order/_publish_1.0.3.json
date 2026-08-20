@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_sign_order",
+  "rpaFlowVersion": "1.0.3",
+  "rpaFlowVersionId": "e398b74c-0ee6-4146-8bb9-a90abc6d3584",
+  "packageChecksum": "sha256:fd876c31d19a832bab82e8a0478458272ab9a53ab3bcf00ec532d31ebb64de76",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_sign_order"
+}

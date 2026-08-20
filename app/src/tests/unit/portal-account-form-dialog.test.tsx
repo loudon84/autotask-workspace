@@ -26,6 +26,8 @@ const portal: PortalAccount = {
   entityType: "CUSTOMER",
   erpEntityCode: "C001",
   erpEntityName: "示例客户",
+  businessEntity: "深圳市芯云信息科技有限公司",
+  ou: "104",
   portalName: "供应商门户",
   portalUrl: "https://supplier.example.com",
   loginAccount: "portal-user",
@@ -43,13 +45,13 @@ describe("PortalAccountFormDialog credentialRef", () => {
     updateMutateMock.mockReset();
   });
 
-  it("创建 Portal 时提交凭据引用", async () => {
+  it("创建 Portal 时提交门户密码", async () => {
     const user = userEvent.setup();
     render(
       <PortalAccountFormDialog mode="create" onOpenChange={vi.fn()} open />
     );
 
-    await user.type(screen.getByLabelText("客户编码 *"), "C001");
+    await user.type(screen.getByLabelText("客户编号 *"), "C001");
     await user.type(screen.getByLabelText("客户名称 *"), "示例客户");
     await user.type(screen.getByLabelText("门户名称 *"), "供应商门户");
     await user.type(
@@ -58,13 +60,14 @@ describe("PortalAccountFormDialog credentialRef", () => {
     );
     await user.type(screen.getByLabelText("登录账号 *"), "portal-user");
     await user.type(
-      screen.getByLabelText("凭据引用（credentialRef） *"),
+      screen.getByLabelText("门户密码 *"),
       "credential-demo"
     );
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(createMutateMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        entityType: "CUSTOMER",
         credentialRef: "credential-demo",
         loginAccount: "portal-user",
       }),
@@ -72,7 +75,7 @@ describe("PortalAccountFormDialog credentialRef", () => {
     );
   });
 
-  it("编辑 Portal 时仅在填写后更新凭据引用", async () => {
+  it("编辑 Portal 时仅在填写后更新密码", async () => {
     const user = userEvent.setup();
     const { rerender } = render(
       <PortalAccountFormDialog
@@ -98,7 +101,7 @@ describe("PortalAccountFormDialog credentialRef", () => {
       />
     );
     await user.type(
-      screen.getByLabelText("凭据引用（credentialRef）"),
+      screen.getByLabelText("门户密码"),
       "credential-updated"
     );
     await user.click(screen.getByRole("button", { name: "保存" }));

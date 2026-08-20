@@ -54,6 +54,11 @@ STMT_SUBMIT_REVIEW_TEMPLATE_CODE = "srm_stmt_submit_review"
 SCAN_OUTPUT_SCHEMA = "SRM_PENDING_ORDERS_OUTPUT_V1"
 SIGNED_REPLY_STATUS = "已回签"
 
+# 临时写死归档上传 SDMS 用的 Auth 登录工号。
+# 自动回签轮询无真人 actor，取不到工号，先用此固定工号兜底；
+# 待门户「当前所属用户」权限优化需求落地后，改为从 portal.owner_user_id 取工号。
+_FALLBACK_ARCHIVE_SDMS_USERNAME = "SMC-SZ-HR15563"
+
 _ARCHIVE_SKIP_STATUSES = {
     TaskStatus.QUEUED.value,
     TaskStatus.RUNNING.value,
@@ -614,7 +619,10 @@ async def _resolve_archive_username(
     username = str(sdms_username or "").strip() or _summary_sdms_username(instance)
     if username:
         return username
-    return await username_from_user_cache(db, instance.created_by)
+    username = await username_from_user_cache(db, instance.created_by)
+    if username:
+        return username
+    return _FALLBACK_ARCHIVE_SDMS_USERNAME
 
 
 async def _trigger_archive_if_needed(

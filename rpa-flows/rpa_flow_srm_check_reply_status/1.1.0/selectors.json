@@ -1,0 +1,16 @@
+{
+  "username": "input[placeholder='账号或手机号码']:visible",
+  "password": "input[type='password']:visible",
+  "captcha": "input[placeholder='验证码']:visible",
+  "captcha_image": ".el-form-item:has(input[placeholder='验证码']) img:visible",
+  "agreement": "label:has-text('用户注册协议') input[type='checkbox']",
+  "login_button": "button:has-text('登录'):visible",
+  "login_error": ".el-message--error",
+  "login_success": ".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible",
+  "order_page": ".el-table:visible",
+  "po_number": ".el-form-item:has-text('订单编号') input:visible",
+  "search_button": "button:has-text('查询'):visible",
+  "detail_page": ".el-drawer:visible, .el-dialog:visible, .el-tag:visible",
+  "reply_status": ".el-tag:visible",
+  "loading_mask": ".el-loading-mask:visible"
+}

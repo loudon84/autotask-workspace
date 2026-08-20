@@ -55,7 +55,7 @@ async def create_portal_account(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
-    # require_portal_manage_access(user)
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     account = await portal_account_service.create_portal_account(db, tenant_id, user, body)
     return ApiResponse(data=PortalAccountResponse.model_validate(account))

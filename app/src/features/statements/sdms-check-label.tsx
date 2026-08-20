@@ -1,10 +1,6 @@
-import { useEffect, useState } from "react";
 import ExternalLink from "@/components/external-link";
-import { getAuthEndpointConfig } from "@/actions/auth";
-import {
-  buildSdmsCheckViewUrl,
-  defaultAutoTaskEndpointConfig,
-} from "@/types/endpoint-config";
+import { useSdmsBaseUrl } from "@/features/processes/api/use-sdms-base-url";
+import { buildSdmsCheckViewUrl } from "@/types/endpoint-config";
 
 function display(value: unknown): string {
   const text = String(value ?? "").trim();
@@ -18,28 +14,10 @@ export function SdmsCheckLabel({
   checkHeadId?: unknown;
   checkNum?: unknown;
 }) {
-  const [baseUrl, setBaseUrl] = useState(
-    defaultAutoTaskEndpointConfig.sdmsWebBaseUrl
-  );
+  const baseUrl = useSdmsBaseUrl();
   const label = display(checkNum) === "—" ? display(checkHeadId) : display(checkNum);
   const id = String(checkHeadId ?? "").trim();
   const href = id ? buildSdmsCheckViewUrl(baseUrl, id) : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    void getAuthEndpointConfig()
-      .then((config) => {
-        if (!cancelled && config.sdmsWebBaseUrl) {
-          setBaseUrl(config.sdmsWebBaseUrl);
-        }
-      })
-      .catch(() => {
-        /* keep default */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return (
     <span>

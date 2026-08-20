@@ -152,3 +152,41 @@ async def test_factory_uses_validated_secret_settings() -> None:
         "username": "mock-user",
         "password": "mock-password",
     }
+
+
+async def test_factory_chains_formal_portal_credentials() -> None:
+    subject = build_credential_resolver(
+        Settings(
+            _env_file=None,
+            app_env="test",
+            credential_resolver_mode="mock_env",
+            mock_srm_credential_ref="mock-srm-credential",
+            mock_srm_username="mock-user",
+            mock_srm_password="mock-password",
+            mock_srm_allowed_tenant_id="tenant-demo",
+            mock_srm_allowed_portal_account_id="portal-demo",
+            tiandy_prod_credential_ref="tiandy-prod-02556",
+            tiandy_prod_username="02556",
+            tiandy_prod_password="not-a-real-password",
+            tiandy_prod_allowed_portal_account_id="portal-formal",
+        )
+    )
+    demo = await subject.resolve(
+        "mock-srm-credential",
+        tenant_id="tenant-demo",
+        portal_account_id="portal-demo",
+    )
+    formal = await subject.resolve(
+        "tiandy-prod-02556",
+        tenant_id="tenant-demo",
+        portal_account_id="portal-formal",
+    )
+    assert demo["username"] == "mock-user"
+    assert formal["username"] == "02556"
+    with pytest.raises(RpaFatalError) as captured:
+        await subject.resolve(
+            "tiandy-prod-02556",
+            tenant_id="tenant-demo",
+            portal_account_id="portal-demo",
+        )
+    assert captured.value.code == "CREDENTIAL_SCOPE_MISMATCH"

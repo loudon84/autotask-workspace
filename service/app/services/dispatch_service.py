@@ -36,6 +36,7 @@ from app.models.workflow_template import WorkflowTemplate
 from app.schemas.dispatch import (
     BrowserSessionConfig,
     LeaseCommandConfig,
+    LeaseCredentials,
     RunArtifactCreate,
     RunEventCreate,
     RunFinishRequest,
@@ -49,6 +50,7 @@ from app.services.automation_task_service import task_input_dict
 from app.services.human_action_service import create_human_action_for_run
 from app.services.json_utils import dumps_json, loads_json
 from app.services.rpa_worker_service import get_worker
+from app.services.runtime_endpoints import integration_lease_config
 from app.services.task_state_machine import transition
 from app.services.task_successor_service import enqueue_successor_job
 
@@ -83,6 +85,13 @@ def _browser_session_from_config(config: dict[str, Any]) -> BrowserSessionConfig
     )
 
 
+def _optional_text(value: object | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
 def _build_command_snapshot(
     *,
     task: AutomationTask,
@@ -95,7 +104,18 @@ def _build_command_snapshot(
     portal_url = portal.portal_url
     if binding_config.get("portalUrl"):
         portal_url = binding_config["portalUrl"]
-    credential_ref = portal.credential_ref or ""
+    password = (portal.credential_ref or "").strip()
+    username = (portal.login_account or "").strip()
+    lease_config: dict[str, Any] = {
+        "portalUrl": portal_url,
+        "browserSession": browser_session.model_dump(by_alias=True),
+        "dryRun": bool(binding_config.get("dryRun") or binding_config.get("dry_run")),
+        "customerName": _optional_text(getattr(portal, "erp_entity_name", None)),
+        "customerCode": _optional_text(getattr(portal, "erp_entity_code", None)),
+        "businessEntity": _optional_text(getattr(portal, "business_entity", None)),
+        "ou": _optional_text(getattr(portal, "ou", None)),
+    }
+    lease_config.update(integration_lease_config())
     return {
         "taskId": task.id,
         "workflowBindingId": binding.id,
@@ -108,13 +128,38 @@ def _build_command_snapshot(
         "rpaFlowVersion": binding.rpa_flow_version,
         "rpaFlowVersionId": binding.rpa_flow_version_id,
         "flowChecksumSnapshot": binding.flow_checksum_snapshot,
-        "credentialRef": credential_ref,
+        "credentialRef": "",
+        "credentials": {"username": username, "password": password},
         "input": task_input_dict(task),
-        "config": {
-            "portalUrl": portal_url,
-            "browserSession": browser_session.model_dump(by_alias=True),
-        },
+        "config": lease_config,
     }
+
+
+def _lease_config_from_snapshot(config_raw: dict[str, Any]) -> LeaseCommandConfig:
+    browser_raw = config_raw.get("browserSession") or {}
+    return LeaseCommandConfig(
+        portal_url=config_raw.get("portalUrl") or "",
+        browser_session=BrowserSessionConfig(
+            mode=browser_raw.get("mode", "MANAGED"),
+            headless=bool(browser_raw.get("headless", True)),
+            channel=browser_raw.get("channel", "chrome"),
+            profile_ref=browser_raw.get("profileRef"),
+            cdp_endpoint_ref=browser_raw.get("cdpEndpointRef"),
+            close_policy=browser_raw.get("closePolicy", "CLOSE_ON_FINISH"),
+        ),
+        dry_run=bool(config_raw.get("dryRun") or config_raw.get("dry_run")),
+        customer_name=config_raw.get("customerName") or config_raw.get("customer_name"),
+        customer_code=config_raw.get("customerCode") or config_raw.get("customer_code"),
+        business_entity=config_raw.get("businessEntity") or config_raw.get("business_entity"),
+        ou=config_raw.get("ou"),
+        sdms_base_url=config_raw.get("sdmsBaseUrl") or config_raw.get("sdms_base_url"),
+        erp_base_url=config_raw.get("erpBaseUrl") or config_raw.get("erp_base_url"),
+        oa_base_url=config_raw.get("oaBaseUrl") or config_raw.get("oa_base_url"),
+        doc_base_url=config_raw.get("docBaseUrl") or config_raw.get("doc_base_url"),
+        erp_client_id=config_raw.get("erpClientId") or config_raw.get("erp_client_id"),
+        erp_client_secret=config_raw.get("erpClientSecret")
+        or config_raw.get("erp_client_secret"),
+    )
 
 
 def _response_from_snapshot(
@@ -125,7 +170,12 @@ def _response_from_snapshot(
     lease_expires_at: datetime,
 ) -> WorkerLeaseResponse:
     config_raw = snapshot.get("config") or {}
-    browser_raw = config_raw.get("browserSession") or {}
+    creds_raw = snapshot.get("credentials") or {}
+    username = str(creds_raw.get("username") or "").strip()
+    password = str(creds_raw.get("password") or "").strip()
+    credentials = None
+    if username and password:
+        credentials = LeaseCredentials(username=username, password=password)
     return WorkerLeaseResponse(
         task_id=snapshot["taskId"],
         run_id=run_id,
@@ -140,17 +190,8 @@ def _response_from_snapshot(
         rpa_engine_type=snapshot["rpaEngineType"],
         rpa_flow_version=snapshot["rpaFlowVersion"],
         credential_ref=snapshot.get("credentialRef") or "",
-        config=LeaseCommandConfig(
-            portal_url=config_raw.get("portalUrl") or "",
-            browser_session=BrowserSessionConfig(
-                mode=browser_raw.get("mode", "MANAGED"),
-                headless=bool(browser_raw.get("headless", True)),
-                channel=browser_raw.get("channel", "chrome"),
-                profile_ref=browser_raw.get("profileRef"),
-                cdp_endpoint_ref=browser_raw.get("cdpEndpointRef"),
-                close_policy=browser_raw.get("closePolicy", "CLOSE_ON_FINISH"),
-            ),
-        ),
+        credentials=credentials,
+        config=_lease_config_from_snapshot(config_raw if isinstance(config_raw, dict) else {}),
         lease_expires_at=lease_expires_at,
     )
 
@@ -184,8 +225,8 @@ def _validate_snapshot_sources(
             message="仅支持 MANAGED 浏览器会话模式",
             message_key="errors.autotask.browser_session_not_managed",
         )
-    if not portal.credential_ref:
-        raise BadRequestError(message="门户缺少 credentialRef", message_key="errors.autotask.credential_ref_missing")
+    if not (portal.credential_ref or "").strip() or not (portal.login_account or "").strip():
+        raise BadRequestError(message="门户缺少登录密码", message_key="errors.autotask.credential_ref_missing")
 
 
 async def _expire_stale_leases(db: AsyncSession) -> None:
@@ -250,100 +291,115 @@ async def _load_binding_context(
     return binding, template, portal
 
 
+_MAX_LEASE_CANDIDATES = 32
+
+
 async def lease_task(db: AsyncSession, body: WorkerLeaseRequest) -> WorkerLeaseResponse | None:
     await _expire_stale_leases(db)
     worker = await get_worker(db, body.worker_id)
+    skipped = False
 
-    stmt = (
-        select(AutomationTask)
-        .where(
-            AutomationTask.status == TaskStatus.QUEUED,
-            not_deleted(AutomationTask),
-        )
-        .order_by(AutomationTask.created_at.asc())
-        .with_for_update(skip_locked=True)
-        .limit(body.limit)
-    )
-    tasks = (await db.execute(stmt)).scalars().all()
-    if not tasks:
-        return None
-
-    task = tasks[0]
-    binding, template, portal = await _load_binding_context(db, task)
-
-    existing_run = (
-        await db.execute(
-            select(RpaRun)
-            .where(
-                RpaRun.task_id == task.id,
-                RpaRun.status.in_([RunStatus.QUEUED, RunStatus.RUNNING]),
-                not_deleted(RpaRun),
+    for _ in range(_MAX_LEASE_CANDIDATES):
+        task = (
+            await db.execute(
+                select(AutomationTask)
+                .where(
+                    AutomationTask.status == TaskStatus.QUEUED,
+                    not_deleted(AutomationTask),
+                )
+                .order_by(AutomationTask.created_at.asc())
+                .with_for_update(skip_locked=True)
+                .limit(1)
             )
-            .order_by(RpaRun.created_at.desc())
-            .with_for_update()
-        )
-    ).scalar_one_or_none()
+        ).scalar_one_or_none()
+        if task is None:
+            break
 
-    lease_id = str(uuid.uuid4())
-    expires_at = datetime.now(UTC) + timedelta(seconds=settings.WORKER_LEASE_TTL_SECONDS)
-
-    if existing_run is not None and existing_run.command_snapshot:
-        run = existing_run
-        snapshot = dict(existing_run.command_snapshot)
-    else:
-        _validate_snapshot_sources(binding=binding, portal=portal, template=template, task=task)
-        snapshot = _build_command_snapshot(task=task, binding=binding, template=template, portal=portal)
-        if existing_run is None:
-            run = RpaRun(
-                task_id=task.id,
-                rpa_flow_id=binding.rpa_flow_id,
-                status=RunStatus.QUEUED,
-                command_snapshot=snapshot,
-            )
-            db.add(run)
+        try:
+            binding, template, portal = await _load_binding_context(db, task)
+            _validate_snapshot_sources(binding=binding, portal=portal, template=template, task=task)
+        except (BadRequestError, NotFoundError):
+            # 禁用门户/无效绑定不能 400 整条领取队列，否则后面可跑的任务永远卡住。
+            transition(task, TaskStatus.CANCELLED)
+            skipped = True
             await db.flush()
-        else:
-            run = existing_run
-            run.command_snapshot = snapshot
+            continue
 
-    transition(task, TaskStatus.LEASED)
-    run.lease_id = lease_id
-    run.rpa_worker_id = body.worker_id
-    run.status = RunStatus.RUNNING
-    if run.started_at is None:
-        run.started_at = datetime.now(UTC)
-    run.ended_at = None
-    worker.status = WorkerStatus.BUSY
-    worker.current_run_id = run.id
-    db.add(
-        WorkerLease(
-            task_id=task.id,
+        existing_run = (
+            await db.execute(
+                select(RpaRun)
+                .where(
+                    RpaRun.task_id == task.id,
+                    RpaRun.status.in_([RunStatus.QUEUED, RunStatus.RUNNING]),
+                    not_deleted(RpaRun),
+                )
+                .order_by(RpaRun.created_at.desc())
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+
+        lease_id = str(uuid.uuid4())
+        expires_at = datetime.now(UTC) + timedelta(seconds=settings.WORKER_LEASE_TTL_SECONDS)
+
+        if existing_run is not None and existing_run.command_snapshot:
+            run = existing_run
+            snapshot = dict(existing_run.command_snapshot)
+        else:
+            snapshot = _build_command_snapshot(task=task, binding=binding, template=template, portal=portal)
+            if existing_run is None:
+                run = RpaRun(
+                    task_id=task.id,
+                    rpa_flow_id=binding.rpa_flow_id,
+                    status=RunStatus.QUEUED,
+                    command_snapshot=snapshot,
+                )
+                db.add(run)
+                await db.flush()
+            else:
+                run = existing_run
+                run.command_snapshot = snapshot
+
+        transition(task, TaskStatus.LEASED)
+        run.lease_id = lease_id
+        run.rpa_worker_id = body.worker_id
+        run.status = RunStatus.RUNNING
+        if run.started_at is None:
+            run.started_at = datetime.now(UTC)
+        run.ended_at = None
+        worker.status = WorkerStatus.BUSY
+        worker.current_run_id = run.id
+        db.add(
+            WorkerLease(
+                task_id=task.id,
+                run_id=run.id,
+                worker_id=body.worker_id,
+                lease_id=lease_id,
+                lease_expires_at=expires_at,
+            )
+        )
+        db.add(
+            RunEvent(
+                run_id=run.id,
+                task_id=task.id,
+                worker_id=body.worker_id,
+                type=RunEventType.RUN_STARTED,
+                level="INFO",
+                message="任务已被 Worker 领取",
+                payload=dumps_json({"leaseId": lease_id}),
+            )
+        )
+        transition(task, TaskStatus.RUNNING)
+        await db.commit()
+        return _response_from_snapshot(
+            snapshot=snapshot,
             run_id=run.id,
-            worker_id=body.worker_id,
             lease_id=lease_id,
             lease_expires_at=expires_at,
         )
-    )
-    db.add(
-        RunEvent(
-            run_id=run.id,
-            task_id=task.id,
-            worker_id=body.worker_id,
-            type=RunEventType.RUN_STARTED,
-            level="INFO",
-            message="任务已被 Worker 领取",
-            payload=dumps_json({"leaseId": lease_id}),
-        )
-    )
-    transition(task, TaskStatus.RUNNING)
-    await db.commit()
 
-    return _response_from_snapshot(
-        snapshot=snapshot,
-        run_id=run.id,
-        lease_id=lease_id,
-        lease_expires_at=expires_at,
-    )
+    if skipped:
+        await db.commit()
+    return None
 
 
 async def renew_lease(db: AsyncSession, task_id: str, body: WorkerLeaseRenewRequest) -> WorkerLeaseRenewResponse:

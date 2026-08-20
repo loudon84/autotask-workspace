@@ -43,17 +43,17 @@ vi.mock("@/services/autotask-api", () => ({
         {
           id: "portal-1",
           portalName: "天地伟业技术有限公司",
+          businessEntity: "深圳市芯云信息科技有限公司",
           status: "ENABLED",
         },
       ]),
     },
+    integrationEndpoints: {
+      get: vi.fn().mockResolvedValue({
+        sdmsBaseUrl: "http://192.168.99.35:8080",
+      }),
+    },
   },
-}));
-
-vi.mock("@/actions/auth", () => ({
-  getAuthEndpointConfig: vi.fn().mockResolvedValue({
-    sdmsWebBaseUrl: "http://192.168.99.35:8080",
-  }),
 }));
 
 vi.mock("@/actions/shell", () => ({
@@ -272,7 +272,7 @@ describe("ProcessDetailPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("客户订单：POJS2607130002")).toBeInTheDocument();
     expect(screen.getByText("客户：天地伟业技术有限公司")).toBeInTheDocument();
-    expect(screen.getByText(/交易主体：/)).toBeInTheDocument();
+    expect(screen.getByText(/交易主体：深圳市芯云信息科技有限公司/)).toBeInTheDocument();
     expect(screen.getByText("1. 建 SDMS 销售订单 - POJS2607130002")).toBeInTheDocument();
     expect(screen.getByText("料品规格")).toBeInTheDocument();
     expect(screen.getByText("单价（元）")).toBeInTheDocument();
@@ -282,7 +282,9 @@ describe("ProcessDetailPage", () => {
     expect(screen.getByText("② 填写交货日期")).toBeInTheDocument();
     expect(screen.getByText("行 10")).toBeInTheDocument();
     expect(screen.getByText("历史尝试（1）")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "10408260800013" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "10408260800013" })).toBeInTheDocument()
+    );
   });
 
   it("shows ERP order as plain text when headerId is missing", async () => {

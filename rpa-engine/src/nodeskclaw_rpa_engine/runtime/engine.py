@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import shutil
+import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,10 +36,18 @@ from nodeskclaw_rpa_engine.runtime.errors import (
     ErrorHandler,
     RpaBusinessError,
     RpaFatalError,
+    RpaRuntimeError,
 )
 from nodeskclaw_rpa_engine.runtime.loader import FlowLoader
+from nodeskclaw_rpa_engine.runtime.session_cache import (
+    PortalSessionCache,
+    session_cache_key,
+    should_drop_session,
+    should_persist_session,
+)
 from nodeskclaw_rpa_engine.workers.schemas import (
     AttemptStatus,
+    LeaseRunCommand,
     RunCommand,
     RunResult,
 )
@@ -85,6 +94,9 @@ class RpaRuntime:
         )
         self._error_handler = error_handler or ErrorHandler()
         self._work_root = settings.runtime_work_dir.resolve()
+        self._session_cache = PortalSessionCache(
+            settings.runtime_session_cache_dir.resolve()
+        )
 
     async def handle(self, command: RunCommand) -> RunResult:
         lease = command.lease
@@ -93,6 +105,9 @@ class RpaRuntime:
         session: BrowserSession | None = None
         recorder: ArtifactRecorder | None = None
         trace_recorded = False
+        cache_key: str | None = None
+        cache_username = ""
+        outcome_error_code: str | None = None
         with bind_log_context(
             run_id=lease.run_id,
             worker_id=self._settings.worker_id,
@@ -108,88 +123,158 @@ class RpaRuntime:
                 await self._verify_work_directory(run_directory)
                 loaded = await self._loader.load(command.flow)
                 self._validate_input(loaded.manifest, lease.input)
-                credentials = await self._credential_resolver.resolve(
-                    lease.credential_ref,
-                    tenant_id=lease.tenant_id,
-                    portal_account_id=lease.portal_account_id,
+                credentials = self._portal_credentials(lease)
+                if credentials is None:
+                    credentials = dict(
+                        await self._credential_resolver.resolve(
+                            lease.credential_ref,
+                            tenant_id=lease.tenant_id,
+                            portal_account_id=lease.portal_account_id,
+                        )
+                    )
+                credentials = self._merge_erp_credentials(lease, credentials)
+                identity = self._session_identity(
+                    credentials,
+                    lease.config.portal_url,
                 )
+                if identity is not None:
+                    cache_key, cache_username = identity
                 trace_enabled = (
                     self._settings.runtime_trace_mode is not RuntimeTraceMode.OFF
                 )
-                session = await self._browser_manager.start(
-                    lease.config.browser_session,
-                    run_directory=run_directory,
-                    trace_enabled=trace_enabled,
-                )
-                recorder = ArtifactRecorder(
-                    page=session.page,
-                    task_id=lease.task_id,
-                    run_id=lease.run_id,
-                    run_directory=run_directory,
-                    sink=self._artifact_sink,
-                    max_bytes=self._settings.artifact_max_bytes,
-                )
-                context = RunContext.create(
-                    input_data=lease.input,
-                    credentials=credentials,
-                    page=session.page,
-                    portal_url=lease.config.portal_url,
-                    selectors=loaded.selectors,
-                    artifacts=recorder,
-                    event_sink=sink,
-                    safe_config=self._safe_config(command),
-                )
-                execution = await self._execute_with_retries(
-                    loaded.run,
-                    context,
-                    sink,
-                )
-                if execution.decision is None:
-                    if self._settings.runtime_trace_mode is RuntimeTraceMode.ALWAYS:
-                        trace_recorded = await self._record_trace(
-                            session,
-                            recorder,
-                            run_directory,
+                async with self._session_cache.lock(cache_key):
+                    try:
+                        session = await self._browser_manager.start(
+                            lease.config.browser_session,
+                            run_directory=run_directory,
+                            trace_enabled=trace_enabled,
+                            storage_state=self._session_cache.existing_state_path(
+                                cache_key
+                            ),
                         )
-                    await self._emit(
-                        sink,
-                        "RUNTIME_SUCCEEDED",
-                        message="Runtime completed successfully",
-                    )
-                    return RunResult(
-                        status=AttemptStatus.SUCCESS,
-                        output=execution.output,
-                    )
+                        recorder = ArtifactRecorder(
+                            page=session.page,
+                            task_id=lease.task_id,
+                            run_id=lease.run_id,
+                            run_directory=run_directory,
+                            sink=self._artifact_sink,
+                            max_bytes=self._settings.artifact_max_bytes,
+                        )
+                        context = RunContext.create(
+                            input_data=lease.input,
+                            credentials=credentials,
+                            page=session.page,
+                            portal_url=lease.config.portal_url,
+                            selectors=loaded.selectors,
+                            artifacts=recorder,
+                            event_sink=sink,
+                            safe_config=self._safe_config(command),
+                        )
+                        execution = await self._execute_with_retries(
+                            loaded.run,
+                            context,
+                            sink,
+                        )
+                        if execution.decision is None:
+                            if (
+                                self._settings.runtime_trace_mode
+                                is RuntimeTraceMode.ALWAYS
+                            ):
+                                trace_recorded = await self._record_trace(
+                                    session,
+                                    recorder,
+                                    run_directory,
+                                )
+                            await self._emit(
+                                sink,
+                                "RUNTIME_SUCCEEDED",
+                                message="Runtime completed successfully",
+                            )
+                            return RunResult(
+                                status=AttemptStatus.SUCCESS,
+                                output=execution.output,
+                            )
 
-                result = execution.decision
-                await self._capture_failure(recorder)
-                if self._settings.runtime_trace_mode in {
-                    RuntimeTraceMode.ALWAYS,
-                    RuntimeTraceMode.ON_FAILURE,
-                }:
-                    trace_recorded = await self._record_trace(
-                        session,
-                        recorder,
-                        run_directory,
-                    )
-                await self._emit(
-                    sink,
-                    "RUNTIME_WAITING_HUMAN"
-                    if result.status is AttemptStatus.WAITING_HUMAN
-                    else "RUNTIME_FAILED",
-                    level=(
-                        "WARNING"
-                        if result.status is AttemptStatus.WAITING_HUMAN
-                        else "ERROR"
-                    ),
-                    message=result.error_message,
-                    payload={"errorCode": result.error_code},
-                )
-                return RunResult(
-                    status=result.status,
-                    error_code=result.error_code,
-                    error_message=result.error_message,
-                )
+                        result = execution.decision
+                        outcome_error_code = result.error_code
+                        await self._capture_failure(recorder)
+                        if self._settings.runtime_trace_mode in {
+                            RuntimeTraceMode.ALWAYS,
+                            RuntimeTraceMode.ON_FAILURE,
+                        }:
+                            trace_recorded = await self._record_trace(
+                                session,
+                                recorder,
+                                run_directory,
+                            )
+                        await self._emit(
+                            sink,
+                            "RUNTIME_WAITING_HUMAN"
+                            if result.status is AttemptStatus.WAITING_HUMAN
+                            else "RUNTIME_FAILED",
+                            level=(
+                                "WARNING"
+                                if result.status is AttemptStatus.WAITING_HUMAN
+                                else "ERROR"
+                            ),
+                            message=result.error_message,
+                            payload={"errorCode": result.error_code},
+                        )
+                        return RunResult(
+                            status=result.status,
+                            error_code=result.error_code,
+                            error_message=result.error_message,
+                        )
+                    except Exception as exc:
+                        decision = self._error_handler.classify(
+                            exc,
+                            attempt_no=self._settings.runtime_max_retries + 1,
+                            max_retries=self._settings.runtime_max_retries,
+                        )
+                        outcome_error_code = decision.error_code
+                        if recorder is not None:
+                            await self._capture_failure(recorder)
+                        if (
+                            session is not None
+                            and recorder is not None
+                            and self._settings.runtime_trace_mode
+                            in {
+                                RuntimeTraceMode.ALWAYS,
+                                RuntimeTraceMode.ON_FAILURE,
+                            }
+                        ):
+                            trace_recorded = await self._record_trace(
+                                session,
+                                recorder,
+                                run_directory,
+                            )
+                        await self._emit(
+                            sink,
+                            "RUNTIME_FAILED",
+                            level="ERROR",
+                            message=decision.error_message,
+                            payload={"errorCode": decision.error_code},
+                        )
+                        return RunResult(
+                            status=decision.status,
+                            error_code=decision.error_code,
+                            error_message=decision.error_message,
+                        )
+                    finally:
+                        if session is not None:
+                            if session.trace_started and not trace_recorded:
+                                with contextlib.suppress(Exception):
+                                    await session.stop_trace(
+                                        run_directory / "trace-discard.zip"
+                                    )
+                            await self._finish_session_cache(
+                                cache_key,
+                                cache_username,
+                                lease.config.portal_url,
+                                session,
+                                self._resolved_session_error_code(outcome_error_code),
+                            )
+                            await session.close()
             except Exception as exc:
                 decision = self._error_handler.classify(
                     exc,
@@ -222,15 +307,57 @@ class RpaRuntime:
                     error_message=decision.error_message,
                 )
             finally:
-                if session is not None:
-                    if session.trace_started and not trace_recorded:
-                        with contextlib.suppress(Exception):
-                            await session.stop_trace(
-                                run_directory / "trace-discard.zip"
-                            )
-                    await session.close()
                 if self._settings.runtime_cleanup_on_finish:
                     await asyncio.to_thread(self._cleanup, run_directory)
+
+    def _session_identity(
+        self,
+        credentials: Mapping[str, Any],
+        portal_url: str,
+    ) -> tuple[str, str] | None:
+        if not self._settings.runtime_session_cache_enabled:
+            return None
+        username = str(credentials.get("username") or "").strip()
+        if not username:
+            return None
+        return session_cache_key(portal_url, username), username
+
+    @staticmethod
+    def _resolved_session_error_code(outcome: str | None) -> str | None:
+        if outcome is not None:
+            return outcome
+        pending = sys.exc_info()[1]
+        if isinstance(pending, RpaRuntimeError):
+            return pending.code
+        return None
+
+    async def _finish_session_cache(
+        self,
+        cache_key: str | None,
+        username: str,
+        portal_url: str,
+        session: BrowserSession,
+        error_code: str | None,
+    ) -> None:
+        if not cache_key:
+            return
+        try:
+            if should_drop_session(error_code):
+                await asyncio.to_thread(self._session_cache.drop, cache_key)
+                return
+            if not should_persist_session(error_code):
+                return
+            await self._session_cache.persist(
+                cache_key,
+                session,
+                portal_url=portal_url,
+                username=username,
+            )
+        except Exception:
+            logger.warning(
+                "Portal session cache update failed",
+                extra={"sessionCacheKey": cache_key[:12]},
+            )
 
     async def _execute_with_retries(
         self,
@@ -370,16 +497,60 @@ class RpaRuntime:
             )
 
     @staticmethod
+    def _portal_credentials(lease: LeaseRunCommand) -> dict[str, Any] | None:
+        creds = lease.credentials
+        if creds is None:
+            return None
+        username = str(creds.username or "").strip()
+        password = str(creds.password or "")
+        if username and password:
+            return {"username": username, "password": password}
+        return None
+
+    @staticmethod
+    def _merge_erp_credentials(
+        lease: LeaseRunCommand,
+        credentials: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        payload = dict(credentials)
+        config = lease.config
+        client_id = str(getattr(config, "erp_client_id", "") or "").strip()
+        client_secret = str(getattr(config, "erp_client_secret", "") or "")
+        if client_id:
+            payload["erpClientId"] = client_id
+        if client_secret.strip():
+            payload["erpClientSecret"] = client_secret
+        return payload
+
+    @staticmethod
     def _safe_config(command: RunCommand) -> Mapping[str, Any]:
         browser = command.lease.config.browser_session
-        return {
+        config = command.lease.config
+        safe: dict[str, Any] = {
             "browserSession": {
                 "mode": browser.mode,
                 "headless": browser.headless,
                 "channel": browser.channel,
                 "closePolicy": browser.close_policy,
-            }
+            },
+            "dryRun": bool(getattr(config, "dry_run", False)),
         }
+        mapped = (
+            ("customer_name", "customerName"),
+            ("customer_code", "customerCode"),
+            ("business_entity", "businessEntity"),
+            ("ou", "ou"),
+            ("sdms_base_url", "sdmsBaseUrl"),
+            ("erp_base_url", "erpBaseUrl"),
+            ("oa_base_url", "oaBaseUrl"),
+            ("doc_base_url", "docBaseUrl"),
+            ("erp_client_id", "erpClientId"),
+        )
+        for attr, key in mapped:
+            value = str(getattr(config, attr, "") or "").strip()
+            if value:
+                safe[key] = value
+        return safe
 
     @staticmethod
     def _validate_input(

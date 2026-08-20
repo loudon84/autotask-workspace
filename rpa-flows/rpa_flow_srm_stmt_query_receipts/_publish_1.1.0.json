@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_query_receipts",
+  "rpaFlowVersion": "1.1.0",
+  "rpaFlowVersionId": "2a673d87-2964-48a0-bcb8-bb63a9e86aae",
+  "packageChecksum": "sha256:80c0dfefcd525e9318d93797b281fa47408dc5b358b5c87d0101a5fbcc484ad5",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_stmt_query_receipts"
+}

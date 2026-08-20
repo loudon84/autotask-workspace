@@ -62,8 +62,17 @@ class Settings(BaseSettings):
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"
 
-    SDMS_ATTACHMENT_API_BASE_URL: str = "http://api.doc.uat.smart-core.com.hk"
-    SDMS_ATTACHMENT_FLAG: str = "SDMS_ARR"
+    # 环境级外部系统基址。测试/正式只改这里，不要写进 Binding、不要写进登录页。
+    # SMC_API_BASE_URL：公司内部 SQL→JSON 接口平台（对账单查询等）。
+    # SDMS_BASE_URL：SDMS 网页主机（Client 打开销售订单/对账单链接）。
+    # 以后 OA 可加 OA_BASE_URL，租约会透传 oaBaseUrl。
+    SMC_API_BASE_URL: str = ""
+    SDMS_BASE_URL: str = ""
+    ERP_BASE_URL: str = ""
+    OA_BASE_URL: str = ""
+    ERP_CLIENT_ID: str = ""
+    ERP_CLIENT_SECRET: str = ""
+    SDMS_ATTACHMENT_API_BASE_URL: str = ""
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

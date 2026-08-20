@@ -131,6 +131,8 @@ export function mapPortalAccount(raw: unknown): PortalAccount {
       data.erpEntityCode ?? data.customerCode ?? data.id ?? ""
     ),
     erpEntityName: String(data.erpEntityName ?? data.customerName ?? ""),
+    businessEntity: String(data.businessEntity ?? ""),
+    ou: String(data.ou ?? ""),
     portalName: String(data.portalName ?? data.name ?? ""),
     portalUrl: String(data.portalUrl ?? data.url ?? ""),
     loginAccount: String(data.loginAccount ?? ""),

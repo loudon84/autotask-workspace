@@ -59,7 +59,7 @@ class MockEnvironmentCredentialResolver:
     ) -> Mapping[str, Any]:
         if (
             credential_ref != self._credential_ref
-            # or tenant_id != self._allowed_tenant_id
+            or tenant_id != self._allowed_tenant_id
             or portal_account_id != self._allowed_portal_account_id
         ):
             raise RpaFatalError(
@@ -72,6 +72,72 @@ class MockEnvironmentCredentialResolver:
                 "password": self._password,
             }
         )
+
+
+class ChainedCredentialResolver:
+    """按 credentialRef + portal 依次尝试多组环境凭据（演示站 / 正式站）。"""
+
+    def __init__(self, resolvers: list[MockEnvironmentCredentialResolver]) -> None:
+        if not resolvers:
+            raise RpaFatalError(
+                "CREDENTIAL_CONFIGURATION_INVALID",
+                "Mock credential resolver configuration is incomplete",
+            )
+        self._resolvers = resolvers
+
+    async def resolve(
+        self,
+        credential_ref: str | None,
+        *,
+        tenant_id: str | None,
+        portal_account_id: str | None,
+    ) -> Mapping[str, Any]:
+        last_error: RpaFatalError | None = None
+        for resolver in self._resolvers:
+            try:
+                return await resolver.resolve(
+                    credential_ref,
+                    tenant_id=tenant_id,
+                    portal_account_id=portal_account_id,
+                )
+            except RpaFatalError as exc:
+                if exc.code != "CREDENTIAL_SCOPE_MISMATCH":
+                    raise
+                last_error = exc
+        if last_error is not None:
+            raise last_error
+        raise RpaFatalError(
+            "CREDENTIAL_SCOPE_MISMATCH",
+            "Credential reference or scope is not authorized",
+        )
+
+
+def _optional_prod_resolver(settings: Settings) -> MockEnvironmentCredentialResolver | None:
+    values = (
+        settings.tiandy_prod_credential_ref,
+        settings.tiandy_prod_username,
+        settings.tiandy_prod_password,
+        settings.tiandy_prod_allowed_portal_account_id,
+    )
+    if all(value is None for value in values):
+        return None
+    if any(value is None for value in values):
+        raise RpaFatalError(
+            "CREDENTIAL_CONFIGURATION_INVALID",
+            "Formal portal credential resolver configuration is incomplete",
+        )
+    tenant_id = settings.mock_srm_allowed_tenant_id or "unused"
+    return MockEnvironmentCredentialResolver(
+        credential_ref=settings.tiandy_prod_credential_ref or "",
+        username=settings.tiandy_prod_username.get_secret_value()
+        if settings.tiandy_prod_username
+        else "",
+        password=settings.tiandy_prod_password.get_secret_value()
+        if settings.tiandy_prod_password
+        else "",
+        allowed_tenant_id=tenant_id,
+        allowed_portal_account_id=settings.tiandy_prod_allowed_portal_account_id or "",
+    )
 
 
 def build_credential_resolver(settings: Settings) -> CredentialResolver:
@@ -95,10 +161,18 @@ def build_credential_resolver(settings: Settings) -> CredentialResolver:
             "CREDENTIAL_CONFIGURATION_INVALID",
             "Mock credential resolver configuration is incomplete",
         )
-    return MockEnvironmentCredentialResolver(
-        credential_ref=credential_ref,
-        username=username.get_secret_value(),
-        password=password.get_secret_value(),
-        allowed_tenant_id=tenant_id,
-        allowed_portal_account_id=portal_account_id,
-    )
+    resolvers = [
+        MockEnvironmentCredentialResolver(
+            credential_ref=credential_ref,
+            username=username.get_secret_value(),
+            password=password.get_secret_value(),
+            allowed_tenant_id=tenant_id,
+            allowed_portal_account_id=portal_account_id,
+        )
+    ]
+    extra = _optional_prod_resolver(settings)
+    if extra is not None:
+        resolvers.append(extra)
+    if len(resolvers) == 1:
+        return resolvers[0]
+    return ChainedCredentialResolver(resolvers)

@@ -9,6 +9,8 @@ export interface PortalAccount {
   entityType: PortalEntityType;
   erpEntityCode: string;
   erpEntityName: string;
+  businessEntity: string;
+  ou: string;
   portalName: string;
   portalUrl: string;
   loginAccount: string;
@@ -30,6 +32,7 @@ export type CreatePortalAccountInput = Omit<
 export type UpdatePortalAccountInput = Partial<
   Pick<
     PortalAccount,
+    | "entityType"
     | "portalName"
     | "portalUrl"
     | "loginAccount"
@@ -38,6 +41,8 @@ export type UpdatePortalAccountInput = Partial<
     | "status"
     | "erpEntityName"
     | "erpEntityCode"
+    | "businessEntity"
+    | "ou"
   >
 > & {
   credentialRef?: string;

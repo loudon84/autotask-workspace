@@ -30,6 +30,7 @@ def _user(
     org_role: str | None = "admin",
     is_super_admin: bool = False,
     current_org_id: str = "tenant-001",
+    portal_org_role: str | None = None,
 ) -> UserCache:
     return UserCache(
         user_id=user_id,
@@ -37,7 +38,7 @@ def _user(
         email="user@example.com",
         current_org_id=current_org_id,
         org_role=org_role,
-        portal_org_role=None,
+        portal_org_role=portal_org_role,
         is_super_admin=is_super_admin,
         synced_at=datetime.now(UTC),
     )
@@ -50,6 +51,8 @@ def _portal_account(**overrides):
         "entity_type": EntityType.CUSTOMER.value,
         "erp_entity_code": "CUST-001",
         "erp_entity_name": "示例客户 A",
+        "business_entity": "",
+        "ou": "",
         "portal_name": "客户 SRM 门户",
         "portal_url": "https://portal.example.com/srm",
         "login_account": "buyer@example.com",
@@ -90,7 +93,18 @@ def test_portal_account_create_requires_non_empty_fields():
         )
 
 
-def test_portal_list_page_response_uses_camel_case():
+def test_portal_account_create_requires_password():
+    with pytest.raises(ValidationError):
+        PortalAccountCreate(
+            entityType="CUSTOMER",
+            erpEntityCode="CUST-001",
+            erpEntityName="示例客户 A",
+            portalName="客户 SRM 门户",
+            portalUrl="https://portal.example.com/srm",
+            loginAccount="buyer@example.com",
+            credentialRef="  ",
+            clientOpenMode="webcontents",
+        )
     payload = PortalListPageResponse(
         items=[
             PortalAccountResponse.model_validate(
@@ -105,7 +119,26 @@ def test_portal_list_page_response_uses_camel_case():
     assert payload["pageSize"] == 20
     assert payload["items"][0]["portalName"] == "客户 SRM 门户"
     assert payload["items"][0]["tenantId"] == "tenant-001"
+    assert payload["items"][0]["businessEntity"] == ""
+    assert payload["items"][0]["ou"] == ""
     assert "credentialRef" not in payload["items"][0]
+
+
+def test_portal_account_create_accepts_business_entity_and_ou():
+    body = PortalAccountCreate(
+        entityType="CUSTOMER",
+        erpEntityCode="CUST-001",
+        erpEntityName="示例客户 A",
+        businessEntity="深圳市芯云信息科技有限公司",
+        ou="104",
+        portalName="客户 SRM 门户",
+        portalUrl="https://portal.example.com/srm",
+        loginAccount="buyer@example.com",
+        credentialRef="secret",
+        clientOpenMode="webcontents",
+    )
+    assert body.business_entity == "深圳市芯云信息科技有限公司"
+    assert body.ou == "104"
 
 
 def test_portal_test_open_response_matches_prd():
@@ -130,9 +163,16 @@ def test_require_portal_manage_access_allows_admin_and_operator():
     require_portal_manage_access(_user(is_super_admin=True, org_role=None))
 
 
+def test_require_portal_manage_access_allows_portal_org_role():
+    require_portal_manage_access(_user(org_role="user", portal_org_role="admin"))
+    require_portal_manage_access(_user(org_role="user", portal_org_role="operator"))
+
+
 def test_require_portal_manage_access_rejects_member():
     with pytest.raises(ForbiddenError):
         require_portal_manage_access(_user(org_role="member"))
+    with pytest.raises(ForbiddenError):
+        require_portal_manage_access(_user(org_role="user", portal_org_role="member"))
 
 
 @pytest.mark.asyncio
@@ -149,6 +189,7 @@ async def test_create_portal_account_uses_explicit_id_for_grant_and_partition():
         portalName="新客户 SRM",
         portalUrl="https://portal.example.com/new",
         loginAccount="new@example.com",
+        credentialRef="new-password",
         clientOpenMode="webcontents",
     )
     added: list[object] = []
@@ -195,9 +236,7 @@ async def test_check_portal_uniqueness_raises_conflict():
         await portal_account_service._check_portal_uniqueness(
             db,
             "tenant-001",
-            EntityType.CUSTOMER.value,
-            "https://portal.example.com/srm",
-            "buyer@example.com",
+            "客户 SRM 门户",
         )
     assert exc_info.value.message_key == "errors.autotask.portal_account.duplicate"
 
@@ -266,6 +305,7 @@ def test_create_portal_account_api_requires_manage_access():
             "portalName": "新客户 SRM",
             "portalUrl": "https://portal.example.com/new",
             "loginAccount": "new@example.com",
+            "credentialRef": "portal-password",
             "clientOpenMode": "webcontents",
         },
     )

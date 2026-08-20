@@ -36,7 +36,9 @@ import { ProcessOrderLinesTable } from "@/features/processes/process-order-lines
 import { ErpOrderLabel } from "@/features/processes/erp-order-label";
 import { ProcessSubTaskTree } from "@/features/processes/process-subtask-tree";
 import {
+  resolvePortalBusinessEntity,
   resolvePortalCustomerName,
+  usePortalBusinessEntityMap,
   usePortalNameMap,
 } from "@/features/processes/use-portal-name-map";
 import { autotaskApi } from "@/services/autotask-api";
@@ -186,6 +188,7 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
   const queryClient = useQueryClient();
   const { data: detail, isLoading } = useProcessInstance(instanceId);
   const portalNameMap = usePortalNameMap();
+  const businessEntityMap = usePortalBusinessEntityMap();
 
   const onUpdated = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.processInstances.all });
@@ -206,6 +209,10 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
   const blocker = resolveProcessBlocker(detail);
   const customerName = resolvePortalCustomerName(
     portalNameMap,
+    detail.portalAccountId
+  );
+  const businessEntity = resolvePortalBusinessEntity(
+    businessEntityMap,
     detail.portalAccountId
   );
 
@@ -270,7 +277,7 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <span>客户订单：{display(detail.summary.poNo ?? detail.bizKey)}</span>
             <span>客户：{customerName}</span>
-            <span>交易主体：{display(detail.summary.supplierName)}</span>
+            <span>交易主体：{display(businessEntity)}</span>
             <ErpOrderLabel
               headerId={detail.summary.headerId}
               orderNumber={detail.summary.orderNumber}

@@ -8,6 +8,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
@@ -137,6 +138,16 @@ export const remoteApi = {
       path: "/dashboard/summary",
     });
     return mapDashboardSummary(data);
+  },
+
+  getIntegrationEndpoints: async (): Promise<IntegrationEndpoints> => {
+    const data = await requestAutotaskApi<{ sdmsBaseUrl?: string }>({
+      method: "GET",
+      path: "/integration-endpoints",
+    });
+    return {
+      sdmsBaseUrl: String(data?.sdmsBaseUrl ?? "").trim().replace(/\/+$/, ""),
+    };
   },
 
   getTasks: async (): Promise<AutomationTask[]> => {

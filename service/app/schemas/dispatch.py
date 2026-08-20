@@ -41,6 +41,26 @@ class BrowserSessionConfig(CamelModel):
 class LeaseCommandConfig(CamelModel):
     portal_url: str = Field(serialization_alias="portalUrl")
     browser_session: BrowserSessionConfig = Field(serialization_alias="browserSession")
+    dry_run: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("dry_run", "dryRun"),
+        serialization_alias="dryRun",
+    )
+    customer_name: str | None = Field(None, serialization_alias="customerName")
+    customer_code: str | None = Field(None, serialization_alias="customerCode")
+    business_entity: str | None = Field(None, serialization_alias="businessEntity")
+    ou: str | None = Field(None, serialization_alias="ou")
+    sdms_base_url: str | None = Field(None, serialization_alias="sdmsBaseUrl")
+    erp_base_url: str | None = Field(None, serialization_alias="erpBaseUrl")
+    oa_base_url: str | None = Field(None, serialization_alias="oaBaseUrl")
+    doc_base_url: str | None = Field(None, serialization_alias="docBaseUrl")
+    erp_client_id: str | None = Field(None, serialization_alias="erpClientId")
+    erp_client_secret: str | None = Field(None, serialization_alias="erpClientSecret")
+
+
+class LeaseCredentials(CamelModel):
+    username: str
+    password: str
 
 
 class WorkerLeaseResponse(CamelModel):
@@ -57,6 +77,7 @@ class WorkerLeaseResponse(CamelModel):
     rpa_engine_type: str = Field(serialization_alias="rpaEngineType")
     rpa_flow_version: str = Field(serialization_alias="rpaFlowVersion")
     credential_ref: str = Field(serialization_alias="credentialRef")
+    credentials: LeaseCredentials | None = None
     config: LeaseCommandConfig
     lease_expires_at: datetime = Field(serialization_alias="leaseExpiresAt")
 

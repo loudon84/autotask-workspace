@@ -1,0 +1,20 @@
+{
+  "rpaFlowId": "rpa_flow_srm_scan_pending_orders",
+  "name": "SRM Scan Pending Signature Orders (Demo OCR)",
+  "version": "1.0.2",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_scan_pending_orders"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

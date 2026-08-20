@@ -1,0 +1,36 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_submit_review",
+  "name": "SRM Statement Submit Review (Demo OCR)",
+  "version": "1.0.7",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_stmt_submit_review"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "checkDate",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "checkAmount",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "filePaths",
+      "type": "array",
+      "required": true
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

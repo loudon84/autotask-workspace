@@ -184,7 +184,9 @@ async def test_lease_snapshot_and_renew_and_step_projection(db_factory):
             )
             assert lease is not None
             assert lease.workflow_code == "srm_fetch_po"
-            assert lease.credential_ref == "credential-ref-mock-srm"
+            assert lease.credentials is not None
+            assert lease.credentials.username == "buyer@example.com"
+            assert lease.credentials.password == "credential-ref-mock-srm"
             assert lease.config.portal_url == "https://portal.example.com/srm"
             assert lease.input == {"po_no": "PO-20260708-001"}
             run_id = lease.run_id

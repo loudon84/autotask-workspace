@@ -79,13 +79,27 @@ export function ProcessesListPage() {
       const portals = await autotaskApi.portalAccounts.list();
       const enabled = portals.filter((portal) => portal.status === "ENABLED");
       if (enabled.length === 0) {
-        toast.error("没有已启用的客户 SRM 门户");
+        toast.error("没有已启用的客户门户");
         return;
       }
+      let ok = 0;
+      const failed: string[] = [];
       for (const portal of enabled) {
-        await autotaskApi.processInstances.triggerScan(portal.id);
+        try {
+          await autotaskApi.processInstances.triggerScan(portal.id);
+          ok += 1;
+        } catch (error) {
+          failed.push(
+            `${portal.portalName}: ${error instanceof Error ? error.message : "失败"}`
+          );
+        }
       }
-      toast.success(`已触发 ${enabled.length} 个门户的扫单任务`);
+      if (ok > 0) {
+        toast.success(`已触发 ${ok} 个门户的扫单任务`);
+      }
+      if (failed.length > 0) {
+        toast.error(`以下门户扫单失败：\n${failed.join("\n")}`);
+      }
       onUpdate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "触发扫单失败");

@@ -8,11 +8,9 @@ class PortalAccount(BaseModel):
     __tablename__ = "portal_accounts"
     __table_args__ = (
         Index(
-            "uq_portal_accounts_tenant_entity_url_login",
+            "uq_portal_accounts_tenant_portal_name",
             "tenant_id",
-            "entity_type",
-            "portal_url",
-            "login_account",
+            "portal_name",
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
@@ -23,6 +21,8 @@ class PortalAccount(BaseModel):
     entity_type: Mapped[str] = mapped_column(String(32), nullable=False)
     erp_entity_code: Mapped[str] = mapped_column(String(128), nullable=False)
     erp_entity_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    business_entity: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    ou: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     portal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     portal_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     login_account: Mapped[str] = mapped_column(String(255), nullable=False)

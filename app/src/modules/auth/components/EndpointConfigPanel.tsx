@@ -80,15 +80,6 @@ export function EndpointConfigPanel({
             value={config.rpaEngineUrl}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="sdmsWebBaseUrl">SDMS Web Base URL</Label>
-          <Input
-            id="sdmsWebBaseUrl"
-            onChange={(e) => update({ sdmsWebBaseUrl: e.target.value })}
-            placeholder={defaultAutoTaskEndpointConfig.sdmsWebBaseUrl}
-            value={config.sdmsWebBaseUrl ?? ""}
-          />
-        </div>
       </CollapsibleContent>
     </Collapsible>
   );

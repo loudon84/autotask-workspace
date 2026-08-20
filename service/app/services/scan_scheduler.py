@@ -1,7 +1,10 @@
 """SRM 待签章订单定时扫单调度器。
 
-每天到点（SCAN_JOB_HOUR:SCAN_JOB_MINUTE，本地时间）为每个启用的 Portal
-创建一个扫单子任务；扫单 Flow 成功后由 finish_run 钩子幂等创建流程实例。
+每天到点（SCAN_JOB_HOUR:SCAN_JOB_MINUTE，本地时间）为每个"已启用扫单绑定"
+的 Portal 创建一个扫单子任务；扫单 Flow 成功后由 finish_run 钩子幂等创建流程实例。
+
+只扫拥有 ENABLED 的 srm_scan_pending_orders 绑定的门户，避免对未配置扫单
+Flow 的门户（如未来其他客户门户）误触发并刷错误日志。
 """
 
 import asyncio
@@ -16,7 +19,9 @@ from app.core.config import Settings
 from app.models.base import not_deleted
 from app.models.enums import PortalAccountStatus
 from app.models.portal_account import PortalAccount
-from app.services.process_instance_service import create_scan_task
+from app.models.workflow_binding import WorkflowBinding
+from app.models.workflow_template import WorkflowTemplate
+from app.services.process_instance_service import SCAN_TASK_TYPE, create_scan_task
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +72,22 @@ class ScanScheduler:
             portals = list(
                 (
                     await db.execute(
-                        select(PortalAccount).where(
+                        select(PortalAccount)
+                        .join(
+                            WorkflowBinding,
+                            WorkflowBinding.portal_account_id == PortalAccount.id,
+                        )
+                        .join(
+                            WorkflowTemplate,
+                            WorkflowTemplate.id == WorkflowBinding.workflow_template_id,
+                        )
+                        .where(
                             PortalAccount.status == PortalAccountStatus.ENABLED.value,
                             not_deleted(PortalAccount),
+                            WorkflowTemplate.code == SCAN_TASK_TYPE,
+                            not_deleted(WorkflowTemplate),
+                            WorkflowBinding.status == "ENABLED",
+                            not_deleted(WorkflowBinding),
                         )
                     )
                 )

@@ -25,6 +25,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
@@ -137,6 +138,9 @@ function appendAuditLog(entry: Omit<AuditLog, "id">) {
 export const mockApi = {
   getDashboard: async (): Promise<DashboardData> =>
     delay(dashboardData as DashboardData),
+
+  getIntegrationEndpoints: async (): Promise<IntegrationEndpoints> =>
+    delay({ sdmsBaseUrl: "" }),
 
   getTasks: async (): Promise<AutomationTask[]> => delay(getTasks()),
 

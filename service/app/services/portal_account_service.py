@@ -37,16 +37,12 @@ _DEFAULT_CREATOR_PERMISSIONS = [
 async def _check_portal_uniqueness(
     db: AsyncSession,
     tenant_id: str,
-    entity_type: str,
-    portal_url: str,
-    login_account: str,
+    portal_name: str,
     exclude_id: str | None = None,
 ) -> None:
     query = select(PortalAccount).where(
         PortalAccount.tenant_id == tenant_id,
-        PortalAccount.entity_type == entity_type,
-        PortalAccount.portal_url == portal_url,
-        PortalAccount.login_account == login_account,
+        PortalAccount.portal_name == portal_name,
         not_deleted(PortalAccount),
     )
     if exclude_id:
@@ -54,7 +50,7 @@ async def _check_portal_uniqueness(
     existing = (await db.execute(query)).scalar_one_or_none()
     if existing:
         raise ConflictError(
-            message="门户账号已存在",
+            message="门户名称已存在",
             message_key="errors.autotask.portal_account.duplicate",
         )
 
@@ -156,9 +152,7 @@ async def create_portal_account(
     await _check_portal_uniqueness(
         db,
         tenant_id,
-        entity_type,
-        body.portal_url,
-        body.login_account,
+        body.portal_name,
     )
 
     account_id = str(uuid.uuid4())
@@ -170,6 +164,8 @@ async def create_portal_account(
         entity_type=entity_type,
         erp_entity_code=body.erp_entity_code,
         erp_entity_name=body.erp_entity_name,
+        business_entity=(body.business_entity or "").strip(),
+        ou=(body.ou or "").strip(),
         portal_name=body.portal_name,
         portal_url=body.portal_url,
         login_account=body.login_account,
@@ -221,24 +217,19 @@ async def update_portal_account(
     account = await get_portal_account(db, tenant_id, account_id)
     previous_status = account.status
     updates = body.model_dump(exclude_unset=True, by_alias=False)
+    if "credential_ref" in updates and not str(updates.get("credential_ref") or "").strip():
+        updates.pop("credential_ref")
+    for key in ("business_entity", "ou"):
+        if key in updates:
+            updates[key] = str(updates.get(key) or "").strip()
 
-    next_entity_type = updates.get("entity_type", account.entity_type)
-    if hasattr(next_entity_type, "value"):
-        next_entity_type = next_entity_type.value
-    next_portal_url = updates.get("portal_url", account.portal_url)
-    next_login_account = updates.get("login_account", account.login_account)
+    next_portal_name = updates.get("portal_name", account.portal_name)
 
-    if (
-        next_entity_type != account.entity_type
-        or next_portal_url != account.portal_url
-        or next_login_account != account.login_account
-    ):
+    if next_portal_name != account.portal_name:
         await _check_portal_uniqueness(
             db,
             tenant_id,
-            next_entity_type,
-            next_portal_url,
-            next_login_account,
+            next_portal_name,
             exclude_id=account.id,
         )
 
@@ -248,7 +239,10 @@ async def update_portal_account(
             value = value.value
         old_value = getattr(account, field)
         if old_value != value:
-            changed_fields[field] = {"from": str(old_value), "to": str(value)}
+            if field == "credential_ref":
+                changed_fields[field] = {"from": "***", "to": "***"}
+            else:
+                changed_fields[field] = {"from": str(old_value), "to": str(value)}
         setattr(account, field, value)
 
     if previous_status != PortalAccountStatus.DISABLED.value and account.status == PortalAccountStatus.DISABLED.value:

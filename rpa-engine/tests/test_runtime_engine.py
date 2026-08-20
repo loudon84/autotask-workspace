@@ -17,6 +17,7 @@ from nodeskclaw_rpa_engine.runtime.errors import (
     RpaRetryableError,
 )
 from nodeskclaw_rpa_engine.runtime.loader import LoadedFlow
+from nodeskclaw_rpa_engine.runtime.session_cache import session_cache_key
 from nodeskclaw_rpa_engine.workers.schemas import (
     AttemptStatus,
     LeaseRunCommand,
@@ -25,38 +26,49 @@ from nodeskclaw_rpa_engine.workers.schemas import (
 )
 
 
-def command(*, credential_ref: str | None = None) -> RunCommand:
-    lease = LeaseRunCommand.model_validate(
-        {
-            "taskId": "task-runtime-1",
-            "runId": "run-runtime-1",
-            "leaseId": "lease-runtime-1",
-            "workflowBindingId": "binding-1",
-            "portalAccountId": "portal-1",
-            "rpaFlowId": "rpa_flow_runtime_test",
-            "input": {"record_id": "record-1"},
-            "tenantId": "tenant-1",
-            "workflowTemplateId": "template-1",
-            "workflowCode": "runtime_test",
-            "rpaEngineType": "PLAYWRIGHT_CDP",
-            "rpaFlowVersion": "1.0.0",
-            "credentialRef": credential_ref,
-            "config": {
-                "portalUrl": "http://mock.test",
-                "browserSession": {
-                    "mode": "MANAGED",
-                    "headless": True,
-                    "channel": "chromium",
-                    "profileRef": None,
-                    "cdpEndpointRef": None,
-                    "closePolicy": "CLOSE_ON_FINISH",
-                },
-            },
-            "leaseExpiresAt": (
-                datetime.now(UTC) + timedelta(minutes=5)
-            ).isoformat(),
-        }
-    )
+def command(
+    *,
+    credential_ref: str | None = None,
+    dry_run: bool = False,
+    credentials: dict[str, str] | None = None,
+    extra_config: dict[str, object] | None = None,
+) -> RunCommand:
+    config: dict[str, object] = {
+        "portalUrl": "http://mock.test",
+        "dryRun": dry_run,
+        "browserSession": {
+            "mode": "MANAGED",
+            "headless": True,
+            "channel": "chromium",
+            "profileRef": None,
+            "cdpEndpointRef": None,
+            "closePolicy": "CLOSE_ON_FINISH",
+        },
+    }
+    if extra_config:
+        config.update(extra_config)
+    payload: dict[str, object] = {
+        "taskId": "task-runtime-1",
+        "runId": "run-runtime-1",
+        "leaseId": "lease-runtime-1",
+        "workflowBindingId": "binding-1",
+        "portalAccountId": "portal-1",
+        "rpaFlowId": "rpa_flow_runtime_test",
+        "input": {"record_id": "record-1"},
+        "tenantId": "tenant-1",
+        "workflowTemplateId": "template-1",
+        "workflowCode": "runtime_test",
+        "rpaEngineType": "PLAYWRIGHT_CDP",
+        "rpaFlowVersion": "1.0.0",
+        "credentialRef": credential_ref,
+        "config": config,
+        "leaseExpiresAt": (
+            datetime.now(UTC) + timedelta(minutes=5)
+        ).isoformat(),
+    }
+    if credentials is not None:
+        payload["credentials"] = credentials
+    lease = LeaseRunCommand.model_validate(payload)
     return RunCommand(
         lease=lease,
         flow=ResolvedFlowVersion(
@@ -84,9 +96,19 @@ class FakeSession:
         self.page = FakePage()
         self.trace_started = False
         self.closed = False
+        self.saved_storage_state: Path | None = None
 
     async def stop_trace(self, _path: Path):
         return None
+
+    async def save_storage_state(self, path: Path) -> None:
+        await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(
+            path.write_text,
+            '{"cookies":[],"origins":[]}',
+            encoding="utf-8",
+        )
+        self.saved_storage_state = path
 
     async def close(self) -> None:
         self.closed = True
@@ -96,9 +118,11 @@ class FakeBrowserManager:
     def __init__(self) -> None:
         self.session = FakeSession()
         self.starts = 0
+        self.storage_states: list[Path | None] = []
 
-    async def start(self, *_args, **_kwargs):
+    async def start(self, *_args, **kwargs):
         self.starts += 1
+        self.storage_states.append(kwargs.get("storage_state"))
         return self.session
 
 
@@ -161,6 +185,7 @@ def runtime(
         "app_env": "test",
         "runtime_cache_dir": tmp_path / "flows",
         "runtime_work_dir": tmp_path / "runs",
+        "runtime_session_cache_dir": tmp_path / "sessions",
         "runtime_trace_mode": "OFF",
         "runtime_retry_backoff_seconds": 0,
         "runtime_cleanup_on_finish": True,
@@ -191,6 +216,7 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
         observed["selector"] = ctx.selectors["search"]
         observed["portal"] = ctx.portal_url
         observed["config"] = dict(ctx.config["browserSession"])
+        observed["dryRun"] = ctx.config.get("dryRun")
         await ctx.log.info(
             "safe log",
             {"password": "must-not-leak", "visible": "value"},
@@ -198,12 +224,13 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
         await ctx.events.emit("FLOW_STEP", message="step")
 
     handler, browser, artifacts, events = runtime(tmp_path, flow)
-    result = await handler.handle(command())
+    result = await handler.handle(command(dry_run=True))
 
     assert result.status is AttemptStatus.SUCCESS
     assert observed["input"] == "record-1"
     assert observed["selector"] == "#search"
     assert observed["portal"] == "http://mock.test"
+    assert observed["dryRun"] is True
     assert "profileRef" not in observed["config"]
     assert "cdpEndpointRef" not in observed["config"]
     assert browser.session.closed is True
@@ -389,6 +416,44 @@ async def test_runtime_injects_credentials_from_governed_resolver(tmp_path) -> N
     assert observed["username"] == "demo-user"
 
 
+async def test_runtime_uses_lease_credentials_without_resolver(tmp_path) -> None:
+    observed: dict[str, object] = {}
+
+    async def flow(ctx) -> None:
+        observed["username"] = ctx.credentials["username"]
+        observed["password"] = ctx.credentials["password"]
+        observed["erpSecret"] = ctx.credentials.get("erpClientSecret")
+        observed["config"] = dict(ctx.config)
+
+    handler, _, _, events = runtime(tmp_path, flow)
+    result = await handler.handle(
+        command(
+            credentials={"username": "portal-user", "password": "portal-password"},
+            extra_config={
+                "erpBaseUrl": "http://erp.example",
+                "sdmsBaseUrl": "http://sdms.example",
+                "customerName": "客户A",
+                "businessEntity": "深圳市芯云信息科技有限公司",
+                "ou": "104",
+                "erpClientId": "smc_erp",
+                "erpClientSecret": "erp-secret",
+            },
+        )
+    )
+
+    assert result.status is AttemptStatus.SUCCESS
+    assert observed["username"] == "portal-user"
+    assert observed["password"] == "portal-password"
+    assert observed["erpSecret"] == "erp-secret"
+    assert observed["config"]["erpBaseUrl"] == "http://erp.example"
+    assert observed["config"]["customerName"] == "客户A"
+    assert observed["config"]["businessEntity"] == "深圳市芯云信息科技有限公司"
+    assert observed["config"]["ou"] == "104"
+    assert "erpClientSecret" not in observed["config"]
+    assert all("erp-secret" not in str(item) for item in events.items)
+    assert all("portal-password" not in str(item) for item in events.items)
+
+
 def test_runtime_work_directory_probe_round_trips_file(tmp_path) -> None:
     run_directory = tmp_path / "runs" / "run-1" / "lease-1"
 
@@ -428,3 +493,93 @@ async def test_runtime_maps_work_directory_probe_errors(
     assert browser.starts == 0
     assert events.items[-1]["type"] == "RUNTIME_FAILED"
     assert events.items[-1]["payload"] == {"errorCode": expected_code}
+
+
+def _portal_command(**kwargs) -> RunCommand:
+    return command(
+        credentials={"username": "02556", "password": "portal-password"},
+        extra_config={"portalUrl": "http://192.168.102.247:3000/#/login"},
+        **kwargs,
+    )
+
+
+async def test_runtime_persists_and_restores_portal_session(tmp_path) -> None:
+    async def flow(_ctx) -> None:
+        return None
+
+    handler, browser, _, _ = runtime(tmp_path, flow)
+    first = await handler.handle(_portal_command())
+
+    assert first.status is AttemptStatus.SUCCESS
+    assert browser.storage_states == [None]
+    saved = browser.session.saved_storage_state
+    assert saved is not None
+    assert saved.is_file()
+    meta = saved.parent / "meta.json"
+    assert '"username": "02556"' in meta.read_text(encoding="utf-8")
+    assert "portal-password" not in meta.read_text(encoding="utf-8")
+
+    browser.session = FakeSession()
+    second = await handler.handle(
+        command(
+            credentials={"username": "02556", "password": "portal-password"},
+            extra_config={"portalUrl": "http://192.168.102.247:3000/"},
+        )
+    )
+
+    assert second.status is AttemptStatus.SUCCESS
+    assert browser.storage_states[1] == saved
+
+
+async def test_runtime_session_cache_is_isolated_by_login(tmp_path) -> None:
+    async def flow(_ctx) -> None:
+        return None
+
+    handler, browser, _, _ = runtime(tmp_path, flow)
+    await handler.handle(_portal_command())
+    browser.session = FakeSession()
+    await handler.handle(
+        command(
+            credentials={"username": "other-login", "password": "portal-password"},
+            extra_config={"portalUrl": "http://192.168.102.247:3000/"},
+        )
+    )
+
+    assert browser.storage_states[0] is None
+    assert browser.storage_states[1] is None
+
+
+async def test_runtime_drops_session_cache_after_login_failure(tmp_path) -> None:
+    async def flow(_ctx) -> None:
+        raise RpaBusinessError("SRM_LOGIN_FAILED", "Supplier portal login failed")
+
+    key = session_cache_key("http://192.168.102.247:3000", "02556")
+    seeded = tmp_path / "sessions" / key / "storage_state.json"
+    seeded.parent.mkdir(parents=True)
+    seeded.write_text('{"cookies":[{"name":"keep"}],"origins":[]}', encoding="utf-8")
+
+    handler, browser, _, _ = runtime(tmp_path, flow, runtime_max_retries=0)
+    result = await handler.handle(_portal_command())
+
+    assert result.status is AttemptStatus.FAILED
+    assert result.error_code == "SRM_LOGIN_FAILED"
+    assert browser.storage_states == [seeded]
+    assert not seeded.exists()
+
+
+async def test_runtime_keeps_session_cache_when_captcha_fails(tmp_path) -> None:
+    async def flow(_ctx) -> None:
+        raise RpaRetryableError("CAPTCHA_OCR_FAILED", "captcha failed")
+
+    key = session_cache_key("http://192.168.102.247:3000", "02556")
+    seeded = tmp_path / "sessions" / key / "storage_state.json"
+    seeded.parent.mkdir(parents=True)
+    original = '{"cookies":[{"name":"keep"}],"origins":[]}'
+    seeded.write_text(original, encoding="utf-8")
+
+    handler, _, _, _ = runtime(tmp_path, flow, runtime_max_retries=0)
+    result = await handler.handle(_portal_command())
+
+    assert result.status is AttemptStatus.FAILED
+    assert result.error_code == "CAPTCHA_OCR_FAILED"
+    assert seeded.read_text(encoding="utf-8") == original

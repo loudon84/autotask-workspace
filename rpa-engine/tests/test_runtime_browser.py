@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,13 @@ class FakeContext:
 
     async def close(self) -> None:
         self.closed = True
+
+    async def storage_state(self, *, path: str) -> None:
+        await asyncio.to_thread(
+            Path(path).write_text,
+            '{"cookies":[],"origins":[]}',
+            encoding="utf-8",
+        )
 
 
 class FakeBrowser:
@@ -115,6 +123,29 @@ async def test_managed_browser_owns_context_page_trace_and_cleanup(tmp_path) -> 
     assert playwright.chromium.browser.context.closed is True
     assert playwright.chromium.browser.closed is True
     assert playwright.stopped is True
+
+
+async def test_managed_browser_restores_and_saves_storage_state(tmp_path: Path) -> None:
+    controller = FakeController()
+    manager = ManagedBrowserSessionManager(lambda: controller)
+    state = tmp_path / "storage_state.json"
+    state.write_text('{"cookies":[],"origins":[]}', encoding="utf-8")
+
+    session = await manager.start(
+        config(),
+        run_directory=tmp_path / "run",
+        trace_enabled=False,
+        storage_state=state,
+    )
+    saved = tmp_path / "saved.json"
+    await session.save_storage_state(saved)
+    await session.close()
+
+    assert controller.playwright.chromium.browser.context_options == {
+        "accept_downloads": True,
+        "storage_state": str(state),
+    }
+    assert saved.is_file()
 
 
 @pytest.mark.parametrize("channel", ["chrome", "msedge"])

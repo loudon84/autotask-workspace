@@ -50,7 +50,7 @@ export const sidebarData: SidebarData = {
           icon: LayoutGrid,
           items: [
             { title: "运行监控", url: "/runs", icon: Activity },
-            { title: "客户SRM", url: "/srm-portals", icon: Globe },
+            { title: "门户", url: "/srm-portals", icon: Globe },
             { title: "系统设置", url: "/settings", icon: Settings },
             { title: "流程模板", url: "/workflows", icon: GitBranch },
             { title: "RPA组件库", url: "/components", icon: Boxes },
@@ -71,7 +71,7 @@ export const routeTitles: Record<string, string> = {
   "/tasks/new": "新建任务",
   "/workflows": "流程模板",
   "/components": "RPA 组件库",
-  "/srm-portals": "客户 SRM",
+  "/srm-portals": "客户/供应商门户",
   "/runs": "运行监控",
   "/artifacts": "任务记录",
   "/settings": "系统设置",
@@ -85,7 +85,7 @@ export function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/process-instances/statements/")) return "对账单详情";
   if (pathname.startsWith("/tasks/")) return "任务详情";
   if (pathname.startsWith("/workflows/")) return "流程模板详情";
-  if (pathname.startsWith("/srm-portals/")) return "门户配置";
+  if (pathname.startsWith("/srm-portals/")) return "门户详情";
   if (pathname.startsWith("/runs/")) return "运行详情";
   return "AutoTask Studio";
 }

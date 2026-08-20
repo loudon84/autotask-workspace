@@ -32,6 +32,8 @@ describe("mapPortalAccount", () => {
       entity_type: "CUSTOMER",
       erp_entity_code: "CUST-001",
       erp_entity_name: "示例客户",
+      business_entity: "深圳市芯云信息科技有限公司",
+      ou: "104",
       portal_name: "生产门户",
       portal_url: "https://portal.example.com",
       login_account: "buyer@example.com",
@@ -44,6 +46,8 @@ describe("mapPortalAccount", () => {
     });
 
     expect(result.erpEntityCode).toBe("CUST-001");
+    expect(result.businessEntity).toBe("深圳市芯云信息科技有限公司");
+    expect(result.ou).toBe("104");
     expect(result.portalName).toBe("生产门户");
     expect(result.status).toBe("DISABLED");
     expect(result.clientOpenMode).toBe("system_browser");

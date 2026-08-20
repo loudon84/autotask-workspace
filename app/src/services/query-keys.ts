@@ -49,6 +49,9 @@ export const queryKeys = {
   settings: {
     all: ["settings"] as const,
   },
+  integrationEndpoints: {
+    all: ["integration-endpoints"] as const,
+  },
   rpaComponents: {
     all: ["rpa-components"] as const,
   },

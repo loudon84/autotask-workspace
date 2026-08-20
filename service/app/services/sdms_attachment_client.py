@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_TIMEOUT_SECONDS = 60
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
+# SDMS 对账单发票附件接口固定业务字段，环境无关。
+STATEMENT_ATTACHMENT_FLAG = "SDMS_ARR"
 _SUCCESS_CODES = {"200", "1", 200, 1}
 
 
@@ -45,7 +47,6 @@ async def upload_statement_invoices_to_sdms(
         return "SRM 已提交，但没有可上传的发票文件，发票未传到 SDMS"
 
     base_url = settings.SDMS_ATTACHMENT_API_BASE_URL.rstrip("/")
-    flag = settings.SDMS_ATTACHMENT_FLAG or "SDMS_ARR"
     errors: list[str] = []
     try:
         async with httpx.AsyncClient(timeout=UPLOAD_TIMEOUT_SECONDS, trust_env=False) as client:
@@ -53,7 +54,7 @@ async def upload_statement_invoices_to_sdms(
                 error = await _upload_one(
                     client,
                     base_url=base_url,
-                    flag=flag,
+                    flag=STATEMENT_ATTACHMENT_FLAG,
                     order_number=order_number,
                     username=actor,
                     file_path=raw_path,

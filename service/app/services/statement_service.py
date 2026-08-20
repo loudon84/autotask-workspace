@@ -36,8 +36,9 @@ from app.schemas.process import ProcessStageHistoryResponse, ProcessSubTaskRespo
 from app.schemas.statement import StatementBillDetail, StatementBillListItem
 from app.services import process_instance_service as process_svc
 from app.services.json_utils import dumps_json, loads_json
+from app.services.runtime_endpoints import sdms_check_url
 from app.services.sdms_attachment_client import upload_statement_invoices_to_sdms
-from app.services.sdms_client import describe_lookup, fetch_check_amount
+from app.services.sdms_client import build_custom_son_code, describe_lookup, fetch_check_amount
 
 PROCESS_CODE = process_svc.PROCESS_CODE_SRM_TIANDI_STATEMENT
 
@@ -189,7 +190,27 @@ async def generate_statement(
 ) -> dict[str, Any]:
     """校验 SDMS 金额后创建流程实例 + 生成对账单子任务。"""
     local_amount = sum_line_amounts(lines)
-    lookup = await fetch_check_amount(today)
+    portal = await _get_portal(db, portal_account_id)
+    customer_code = (portal.erp_entity_code or "").strip()
+    business_entity_code = (getattr(portal, "ou", None) or "").strip()
+    if not customer_code:
+        raise BadRequestError(
+            message="门户缺少客户/供应商编号",
+            message_key="errors.autotask.statement.customer_code_missing",
+        )
+    if not business_entity_code and "_" not in customer_code:
+        raise BadRequestError(
+            message="门户缺少我方公司编号",
+            message_key="errors.autotask.statement.business_entity_code_missing",
+        )
+    custom_son_code = build_custom_son_code(customer_code, business_entity_code)
+    check_url = sdms_check_url()
+    if not check_url:
+        raise BadRequestError(
+            message="未配置 SMC_API_BASE_URL，无法查询对账单",
+            message_key="errors.autotask.statement.sdms_url_missing",
+        )
+    lookup = await fetch_check_amount(today, url=check_url, customer_site=custom_son_code)
     sdms_amount, check_head_id, check_num = (
         lookup.amount,
         lookup.check_head_id,
@@ -233,7 +254,6 @@ async def generate_statement(
         )
     ).scalar_one_or_none()
 
-    await _get_portal(db, portal_account_id)
     summary = {
         "local_amount": str(local_amount),
         "sdms_check_head_id": check_head_id,

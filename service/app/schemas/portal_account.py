@@ -30,10 +30,12 @@ class PortalAccountCreate(CamelModel):
     entity_type: EntityType = Field(alias="entityType")
     erp_entity_code: str = Field(alias="erpEntityCode")
     erp_entity_name: str = Field(alias="erpEntityName")
+    business_entity: str = Field("", alias="businessEntity")
+    ou: str = Field("", alias="ou")
     portal_name: str = Field(alias="portalName")
     portal_url: str = Field(alias="portalUrl")
     login_account: str = Field(alias="loginAccount")
-    credential_ref: str | None = Field(None, alias="credentialRef")
+    credential_ref: str = Field(alias="credentialRef")
     client_open_mode: ClientOpenMode = Field(
         ClientOpenMode.WEBCONTENTS,
         alias="clientOpenMode",
@@ -48,7 +50,13 @@ class PortalAccountCreate(CamelModel):
     def validate_portal_url(cls, value: str) -> str:
         return _validate_http_url(value)
 
-    @field_validator("erp_entity_code", "erp_entity_name", "portal_name", "login_account")
+    @field_validator(
+        "erp_entity_code",
+        "erp_entity_name",
+        "portal_name",
+        "login_account",
+        "credential_ref",
+    )
     @classmethod
     def validate_required_text(cls, value: str, info) -> str:
         labels = {
@@ -56,6 +64,7 @@ class PortalAccountCreate(CamelModel):
             "erp_entity_name": "erpEntityName",
             "portal_name": "portalName",
             "login_account": "loginAccount",
+            "credential_ref": "credentialRef",
         }
         return _validate_non_empty(value, labels.get(info.field_name, info.field_name))
 
@@ -64,6 +73,8 @@ class PortalAccountUpdate(CamelModel):
     entity_type: EntityType | None = Field(None, alias="entityType")
     erp_entity_code: str | None = Field(None, alias="erpEntityCode")
     erp_entity_name: str | None = Field(None, alias="erpEntityName")
+    business_entity: str | None = Field(None, alias="businessEntity")
+    ou: str | None = Field(None, alias="ou")
     portal_name: str | None = Field(None, alias="portalName")
     portal_url: str | None = Field(None, alias="portalUrl")
     login_account: str | None = Field(None, alias="loginAccount")
@@ -101,6 +112,8 @@ class PortalAccountResponse(CamelModel):
     entity_type: str = Field(serialization_alias="entityType")
     erp_entity_code: str = Field(serialization_alias="erpEntityCode")
     erp_entity_name: str = Field(serialization_alias="erpEntityName")
+    business_entity: str = Field("", serialization_alias="businessEntity")
+    ou: str = Field("", serialization_alias="ou")
     portal_name: str = Field(serialization_alias="portalName")
     portal_url: str = Field(serialization_alias="portalUrl")
     login_account: str = Field(serialization_alias="loginAccount")

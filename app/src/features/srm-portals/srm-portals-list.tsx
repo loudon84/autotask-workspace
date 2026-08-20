@@ -28,11 +28,27 @@ import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-porta
 import type { PortalAccount, PortalStatus } from "@/types/portal-account";
 import type { ClientOpenMode } from "@/types/web-tab";
 import { formatBeijingDateTime } from "@/utils/date-time";
+import { cn } from "@/utils/tailwind";
 
-const openModeLabels: Record<ClientOpenMode, string> = {
-  webcontents: "内置 Web",
-  system_browser: "系统浏览器",
-};
+function TruncatedCell({
+  value,
+  className,
+  empty = "—",
+}: {
+  value: string | undefined;
+  className?: string;
+  empty?: string;
+}) {
+  const text = value?.trim() || empty;
+  return (
+    <span
+      className={cn("inline-block max-w-[11rem] truncate align-middle", className)}
+      title={text === empty ? undefined : text}
+    >
+      {text}
+    </span>
+  );
+}
 
 interface PortalRowActionsProps {
   canWrite: boolean;
@@ -46,7 +62,7 @@ function PortalRowActions({ portal, canWrite, onEdit }: PortalRowActionsProps) {
   const deleteMutation = useDeletePortalAccount();
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-nowrap items-center gap-1">
       <PortalActions compact portal={portal} />
       {canWrite && (
         <>
@@ -88,15 +104,36 @@ function buildColumns(
   onEdit: (portal: PortalAccount) => void
 ): ColumnDef<PortalAccount>[] {
   return [
-    { accessorKey: "erpEntityCode", header: "客户编码" },
-    { accessorKey: "erpEntityName", header: "客户名称" },
+    {
+      accessorKey: "entityType",
+      header: "实体类型",
+      cell: ({ row }) =>
+        row.original.entityType === "SUPPLIER" ? "供应商" : "客户",
+    },
+    { accessorKey: "erpEntityCode", header: "编号" },
+    {
+      accessorKey: "erpEntityName",
+      header: "主体名称",
+      cell: ({ row }) => (
+        <TruncatedCell
+          className="max-w-[9rem]"
+          value={row.original.erpEntityName}
+        />
+      ),
+    },
+    {
+      accessorKey: "businessEntity",
+      header: "业务实体",
+      cell: ({ row }) => <TruncatedCell value={row.original.businessEntity} />,
+    },
     {
       accessorKey: "portalName",
       header: "门户名称",
       cell: ({ row }) => (
         <Link
-          className="hover:underline"
+          className="inline-block max-w-[9rem] truncate hover:underline"
           params={{ portalId: row.original.id }}
+          title={row.original.portalName}
           to="/srm-portals/$portalId"
         >
           {row.original.portalName}
@@ -107,19 +144,21 @@ function buildColumns(
       accessorKey: "portalUrl",
       header: "门户地址",
       cell: ({ row }) => (
-        <span
-          className="inline-block max-w-[200px] truncate"
-          title={row.original.portalUrl}
-        >
-          {row.original.portalUrl}
-        </span>
+        <TruncatedCell
+          className="max-w-[10rem] font-mono text-xs"
+          value={row.original.portalUrl}
+        />
       ),
     },
-    { accessorKey: "loginAccount", header: "登录账号" },
     {
-      accessorKey: "clientOpenMode",
-      header: "打开方式",
-      cell: ({ row }) => openModeLabels[row.original.clientOpenMode],
+      accessorKey: "loginAccount",
+      header: "登录账号",
+      cell: ({ row }) => (
+        <TruncatedCell
+          className="max-w-[8rem] font-mono text-xs"
+          value={row.original.loginAccount}
+        />
+      ),
     },
     {
       accessorKey: "status",
@@ -229,13 +268,13 @@ export function SrmPortalsListPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        description="维护客户 SRM Portal Account，支持快速打开和 Session 隔离"
-        title="客户 SRM"
+        description="维护客户与供应商的门户登录与基础信息"
+        title="客户/供应商门户"
       >
         {canWrite && (
           <Button onClick={handleCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            新增 SRM
+            新增门户
           </Button>
         )}
       </PageHeader>
@@ -244,7 +283,7 @@ export function SrmPortalsListPage() {
         <Input
           className="max-w-xs"
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="搜索客户/门户/账号"
+          placeholder="搜索主体/门户/账号"
           value={search}
         />
         <Select
@@ -289,13 +328,15 @@ export function SrmPortalsListPage() {
           {canWrite && portals.length === 0 && (
             <div className="flex justify-center">
               <Button onClick={handleCreate} variant="outline">
-                新增 SRM
+                新增门户
               </Button>
             </div>
           )}
         </div>
       ) : (
-        <DataTable columns={columns} data={filteredPortals} />
+        <div className="overflow-x-auto">
+          <DataTable columns={columns} data={filteredPortals} />
+        </div>
       )}
 
       <PortalAccountFormDialog

@@ -173,11 +173,11 @@ export function TaskNewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">SRM 与流程模板</CardTitle>
+          <CardTitle className="text-base">门户与流程模板</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>SRM 门户 *</Label>
+            <Label>门户 *</Label>
             <Select
               onValueChange={(value) => {
                 setPortalId(value);
@@ -188,7 +188,7 @@ export function TaskNewPage() {
               value={portalId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="选择 SRM 门户" />
+                <SelectValue placeholder="选择门户" />
               </SelectTrigger>
               <SelectContent>
                 {portals

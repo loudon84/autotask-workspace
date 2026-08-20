@@ -6,6 +6,7 @@ from app.api import (
     artifacts,
     dashboard,
     human_actions,
+    integration,
     mcp,
     portal_accounts,
     process_instances,
@@ -29,6 +30,7 @@ async def health_check():
 
 
 api_router.include_router(dashboard.router, tags=["Dashboard"])
+api_router.include_router(integration.router, tags=["Integration"])
 api_router.include_router(portal_accounts.router, prefix="/portal-accounts", tags=["Portal Account"])
 api_router.include_router(workflow_templates.router, prefix="/workflow-templates", tags=["Workflow Template"])
 api_router.include_router(workflow_bindings.router, prefix="/workflow-bindings", tags=["Workflow Binding"])

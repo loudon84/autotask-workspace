@@ -50,21 +50,41 @@ def test_sum_line_amounts_missing_field() -> None:
         svc.sum_line_amounts([{"receiptNo": "WR1"}])
 
 
+def test_build_custom_son_code_joins_customer_and_business_entity() -> None:
+    from app.services.sdms_client import build_custom_son_code
+
+    assert build_custom_son_code("C007193-01", "104") == "C007193-01_104"
+    assert build_custom_son_code("C007193-01_104", "104") == "C007193-01_104"
+    assert build_custom_son_code("C007193-01_104", "") == "C007193-01_104"
+    assert build_custom_son_code("", "104") == ""
+
+
 @pytest.mark.asyncio
 async def test_generate_blocks_when_sdms_missing() -> None:
-    with patch(
-        "app.services.statement_service.fetch_check_amount",
-        AsyncMock(
-            return_value=SdmsCheckLookup(
-                None,
-                None,
-                {
-                    "create_date_s": "2026-08-01",
-                    "create_date_e": "2026-08-31",
-                    "custom_son_code": "C007193-01_104",
-                },
-                error="data 为空",
-            )
+    portal = MagicMock()
+    portal.erp_entity_code = "C007193-01"
+    portal.ou = "104"
+    with (
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
+        ),
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
+        patch(
+            "app.services.statement_service.fetch_check_amount",
+            AsyncMock(
+                return_value=SdmsCheckLookup(
+                    None,
+                    None,
+                    {
+                        "create_date_s": "2026-08-01",
+                        "create_date_e": "2026-08-31",
+                        "custom_son_code": "C007193-01_104",
+                    },
+                    error="data 为空",
+                    url="http://sdms.test/sdms/ar_check/view_doc_srm",
+                )
+            ),
         ),
     ):
         with pytest.raises(BadRequestError) as exc:
@@ -82,9 +102,19 @@ async def test_generate_blocks_when_sdms_missing() -> None:
 
 @pytest.mark.asyncio
 async def test_generate_blocks_when_amount_mismatch() -> None:
-    with patch(
-        "app.services.statement_service.fetch_check_amount",
-        AsyncMock(return_value=SdmsCheckLookup(Decimal("20.00"), "36599", {})),
+    portal = MagicMock()
+    portal.erp_entity_code = "SITE-1"
+    portal.ou = "104"
+    with (
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
+        ),
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
+        patch(
+            "app.services.statement_service.fetch_check_amount",
+            AsyncMock(return_value=SdmsCheckLookup(Decimal("20.00"), "36599", {})),
+        ),
     ):
         with pytest.raises(ConflictError) as exc:
             await svc.generate_statement(
@@ -97,6 +127,60 @@ async def test_generate_blocks_when_amount_mismatch() -> None:
         assert "不一致" in exc.value.message
         assert exc.value.message_params["sdms_amount"] == "20.00"
         assert exc.value.message_params["local_amount"] == "10.00"
+
+
+@pytest.mark.asyncio
+async def test_generate_rejects_missing_customer_code() -> None:
+    portal = MagicMock()
+    portal.erp_entity_code = "  "
+    portal.ou = "104"
+    with patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)):
+        with pytest.raises(BadRequestError) as exc:
+            await svc.generate_statement(
+                MagicMock(),
+                "t1",
+                "pa1",
+                [{"taxIncludedAmount": "10.00"}],
+                actor="u1",
+            )
+    assert "编号" in exc.value.message
+
+
+@pytest.mark.asyncio
+async def test_generate_rejects_missing_business_entity_code() -> None:
+    portal = MagicMock()
+    portal.erp_entity_code = "C007193-01"
+    portal.ou = ""
+    with patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)):
+        with pytest.raises(BadRequestError) as exc:
+            await svc.generate_statement(
+                MagicMock(),
+                "t1",
+                "pa1",
+                [{"taxIncludedAmount": "10.00"}],
+                actor="u1",
+            )
+    assert "我方公司编号" in exc.value.message
+
+
+@pytest.mark.asyncio
+async def test_generate_rejects_missing_sdms_base_url() -> None:
+    portal = MagicMock()
+    portal.erp_entity_code = "SITE-1"
+    portal.ou = "104"
+    with (
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
+        patch("app.services.statement_service.sdms_check_url", return_value=""),
+    ):
+        with pytest.raises(BadRequestError) as exc:
+            await svc.generate_statement(
+                MagicMock(),
+                "t1",
+                "pa1",
+                [{"taxIncludedAmount": "10.00"}],
+                actor="u1",
+            )
+    assert "SMC_API_BASE_URL" in exc.value.message
 
 
 def _empty_execute() -> MagicMock:
@@ -130,14 +214,22 @@ async def test_generate_ok_creates_draft_bill_and_task() -> None:
     portal.entity_type = "CUSTOMER"
     portal.erp_entity_code = "C1"
     portal.erp_entity_name = "客户"
+    portal.ou = "104"
     binding = MagicMock()
     binding.id = "b1"
     binding.rpa_flow_id = "rpa_flow_srm_stmt_generate"
 
+    fetch_mock = AsyncMock(
+        return_value=SdmsCheckLookup(Decimal("10.00"), "36599", {}, check_num="104DZ26080001")
+    )
     with (
         patch(
             "app.services.statement_service.fetch_check_amount",
-            AsyncMock(return_value=SdmsCheckLookup(Decimal("10.00"), "36599", {}, check_num="104DZ26080001")),
+            fetch_mock,
+        ),
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
         ),
         patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
         patch("app.services.statement_service._find_binding", AsyncMock(return_value=binding)),
@@ -157,6 +249,8 @@ async def test_generate_ok_creates_draft_bill_and_task() -> None:
     assert result["local_amount"] == "10.00"
     assert result["sdms_amount"] == "10.00"
     assert result["sdms_check_head_id"] == "36599"
+    fetch_mock.assert_awaited_once()
+    assert fetch_mock.await_args.kwargs["customer_site"] == "C1_104"
     assert result["sdms_check_num"] == "104DZ26080001"
     assert result["bill_id"]
     added_bills = [call.args[0] for call in db.add.call_args_list if call.args[0].__class__.__name__ == "StatementBill"]
@@ -187,12 +281,19 @@ async def test_generate_reuses_existing_draft() -> None:
 
     task = MagicMock()
     task.id = "task-retry"
+    portal = MagicMock()
+    portal.erp_entity_code = "C007193-01"
+    portal.ou = "104"
     with (
         patch(
             "app.services.statement_service.fetch_check_amount",
             AsyncMock(return_value=SdmsCheckLookup(Decimal("10.00"), "36599", {})),
         ),
-        patch("app.services.statement_service._get_portal", AsyncMock()),
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
+        ),
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
         patch("app.services.statement_service._create_standalone_task", AsyncMock(return_value=task)),
     ):
         result = await svc.generate_statement(
@@ -217,12 +318,19 @@ async def test_generate_rejects_duplicate_non_draft() -> None:
     execute_bill = MagicMock()
     execute_bill.scalar_one_or_none.return_value = existing
     db.execute = AsyncMock(return_value=execute_bill)
+    portal = MagicMock()
+    portal.erp_entity_code = "C007193-01"
+    portal.ou = "104"
     with (
         patch(
             "app.services.statement_service.fetch_check_amount",
             AsyncMock(return_value=SdmsCheckLookup(Decimal("10.00"), "36599", {})),
         ),
-        patch("app.services.statement_service._get_portal", AsyncMock()),
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
+        ),
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
     ):
         with pytest.raises(ConflictError) as exc:
             await svc.generate_statement(
@@ -403,7 +511,11 @@ async def test_fetch_check_amount_parses_payload() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
     with patch("app.services.sdms_client.httpx.AsyncClient", return_value=mock_client) as client_cls:
-        lookup = await sdms_client.fetch_check_amount(date(2026, 8, 17))
+        lookup = await sdms_client.fetch_check_amount(
+            date(2026, 8, 17),
+            url="http://sdms.test/sdms/ar_check/view_doc_srm",
+            customer_site="C007193-01_104",
+        )
 
     assert lookup.amount == Decimal("20739830.66")
     assert lookup.check_head_id == "36599"
@@ -411,6 +523,7 @@ async def test_fetch_check_amount_parses_payload() -> None:
     assert client_cls.call_args.kwargs.get("trust_env") is False
     params = mock_client.get.await_args.kwargs["params"]
     assert params["custom_son_code"] == "C007193-01_104"
+    assert mock_client.get.await_args.args[0] == "http://sdms.test/sdms/ar_check/view_doc_srm"
     assert params["create_date_s"] == "2026-08-01"
     assert params["create_date_e"] == "2026-08-31"
 
@@ -428,7 +541,11 @@ async def test_fetch_check_amount_keeps_sdms_error() -> None:
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
     with patch("app.services.sdms_client.httpx.AsyncClient", return_value=mock_client):
-        lookup = await sdms_client.fetch_check_amount(date(2026, 8, 17))
+        lookup = await sdms_client.fetch_check_amount(
+            date(2026, 8, 17),
+            url="http://sdms.test/sdms/ar_check/view_doc_srm",
+            customer_site="SITE-1",
+        )
 
     assert lookup.amount is None
     assert "ORA-01830" in (lookup.error or "")

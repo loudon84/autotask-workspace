@@ -42,6 +42,7 @@ REQUIRED_LEASE_FIELDS = {
     "rpaEngineType",
     "rpaFlowVersion",
     "credentialRef",
+    "credentials",
     "config",
     "leaseExpiresAt",
 }
@@ -52,6 +53,163 @@ def test_worker_lease_request_accepts_snake_case():
         {"worker_id": "server-worker-001", "capabilities": ["PLAYWRIGHT_CDP"], "limit": 1}
     )
     assert body.worker_id == "server-worker-001"
+
+
+def test_lease_command_config_includes_dry_run():
+    cfg = LeaseCommandConfig(
+        portal_url="https://supplier.tiandy.com",
+        browser_session=BrowserSessionConfig(mode="MANAGED", channel="chrome"),
+        dry_run=True,
+    )
+    dumped = cfg.model_dump(by_alias=True)
+    assert dumped["dryRun"] is True
+    assert dumped["portalUrl"] == "https://supplier.tiandy.com"
+
+
+def test_lease_command_config_dry_run_defaults_false():
+    cfg = LeaseCommandConfig(
+        portal_url="https://portal.example.com/srm",
+        browser_session=BrowserSessionConfig(mode="MANAGED", channel="chrome"),
+    )
+    assert cfg.dry_run is False
+    assert cfg.model_dump(by_alias=True)["dryRun"] is False
+
+
+def test_build_command_snapshot_includes_dry_run_from_binding():
+    task = MagicMock()
+    task.id = "t1"
+    task.tenant_id = "tenant-1"
+    task.input = "{}"
+    binding = MagicMock()
+    binding.id = "b1"
+    binding.config = '{"dryRun": true, "browserSession": {"mode": "MANAGED", "channel": "chrome"}}'
+    binding.rpa_engine_type = "PLAYWRIGHT_CDP"
+    binding.rpa_flow_id = "flow"
+    binding.rpa_flow_version = "1.0.0"
+    binding.rpa_flow_version_id = "fv1"
+    binding.flow_checksum_snapshot = "abc"
+    template = MagicMock()
+    template.id = "tpl1"
+    template.code = "code"
+    portal = MagicMock()
+    portal.id = "p1"
+    portal.portal_url = "https://supplier.tiandy.com"
+    portal.credential_ref = "srm-password"
+    portal.login_account = "02556"
+    portal.erp_entity_name = "天地伟业"
+    portal.erp_entity_code = "C007193-01_104"
+    portal.business_entity = "深圳市芯云信息科技有限公司"
+    portal.ou = "104"
+
+    with patch.object(dispatch_service, "task_input_dict", return_value={}):
+        snapshot = dispatch_service._build_command_snapshot(
+            task=task, binding=binding, template=template, portal=portal
+        )
+    assert snapshot["config"]["dryRun"] is True
+    assert snapshot["config"]["portalUrl"] == "https://supplier.tiandy.com"
+    assert snapshot["config"]["customerName"] == "天地伟业"
+    assert snapshot["config"]["businessEntity"] == "深圳市芯云信息科技有限公司"
+    assert snapshot["config"]["ou"] == "104"
+    assert snapshot["credentials"] == {"username": "02556", "password": "srm-password"}
+    assert snapshot["credentialRef"] == ""
+
+    response = dispatch_service._response_from_snapshot(
+        snapshot=snapshot,
+        run_id="r1",
+        lease_id="l1",
+        lease_expires_at=datetime.now(UTC),
+    )
+    assert response.config.dry_run is True
+    assert response.model_dump(by_alias=True)["config"]["dryRun"] is True
+
+
+def test_build_command_snapshot_dry_run_false_when_absent():
+    task = MagicMock()
+    task.id = "t1"
+    task.tenant_id = "tenant-1"
+    binding = MagicMock()
+    binding.id = "b1"
+    binding.config = '{"browserSession": {"mode": "MANAGED"}}'
+    binding.rpa_engine_type = "PLAYWRIGHT_CDP"
+    binding.rpa_flow_id = "flow"
+    binding.rpa_flow_version = "1.0.0"
+    binding.rpa_flow_version_id = "fv1"
+    binding.flow_checksum_snapshot = "abc"
+    template = MagicMock()
+    template.id = "tpl1"
+    template.code = "code"
+    portal = MagicMock()
+    portal.id = "p1"
+    portal.portal_url = "http://192.168.102.247:3000"
+    portal.credential_ref = "demo-password"
+    portal.login_account = "demo"
+    portal.erp_entity_name = "示例客户"
+    portal.erp_entity_code = "CUST-001"
+    portal.business_entity = ""
+    portal.ou = ""
+
+    with patch.object(dispatch_service, "task_input_dict", return_value={}):
+        snapshot = dispatch_service._build_command_snapshot(
+            task=task, binding=binding, template=template, portal=portal
+        )
+    assert snapshot["config"]["dryRun"] is False
+    assert snapshot["config"]["businessEntity"] is None
+    assert snapshot["config"]["ou"] is None
+
+
+def test_build_command_snapshot_copies_task_env_bases(monkeypatch):
+    task = MagicMock()
+    task.id = "t1"
+    task.tenant_id = "tenant-1"
+    binding = MagicMock()
+    binding.id = "b1"
+    binding.config = '{"browserSession": {"mode": "MANAGED"}}'
+    binding.rpa_engine_type = "PLAYWRIGHT_CDP"
+    binding.rpa_flow_id = "flow"
+    binding.rpa_flow_version = "1.0.0"
+    binding.rpa_flow_version_id = "fv1"
+    binding.flow_checksum_snapshot = "abc"
+    template = MagicMock()
+    template.id = "tpl1"
+    template.code = "code"
+    portal = MagicMock()
+    portal.id = "p1"
+    portal.portal_url = "https://portal.example.com"
+    portal.credential_ref = "pw"
+    portal.login_account = "user1"
+    portal.erp_entity_name = "客户A"
+    portal.erp_entity_code = "SITE-1"
+    portal.business_entity = "深圳市芯云信息科技有限公司"
+    portal.ou = "104"
+
+    monkeypatch.setattr("app.services.runtime_endpoints.settings.SDMS_BASE_URL", "http://sdms.example")
+    monkeypatch.setattr("app.services.runtime_endpoints.settings.ERP_BASE_URL", "http://erp.example")
+    monkeypatch.setattr("app.services.runtime_endpoints.settings.OA_BASE_URL", "")
+    monkeypatch.setattr(
+        "app.services.runtime_endpoints.settings.SDMS_ATTACHMENT_API_BASE_URL",
+        "http://doc.example",
+    )
+    monkeypatch.setattr("app.services.runtime_endpoints.settings.ERP_CLIENT_ID", "smc_erp")
+    monkeypatch.setattr("app.services.runtime_endpoints.settings.ERP_CLIENT_SECRET", "secret")
+
+    with patch.object(dispatch_service, "task_input_dict", return_value={}):
+        snapshot = dispatch_service._build_command_snapshot(
+            task=task, binding=binding, template=template, portal=portal
+        )
+    assert snapshot["config"]["sdmsBaseUrl"] == "http://sdms.example"
+    assert snapshot["config"]["erpBaseUrl"] == "http://erp.example"
+    assert snapshot["config"]["docBaseUrl"] == "http://doc.example"
+    assert snapshot["config"]["erpClientId"] == "smc_erp"
+    assert snapshot["config"]["erpClientSecret"] == "secret"
+    assert "erpTokenUrl" not in snapshot["config"]
+    response = dispatch_service._response_from_snapshot(
+        snapshot=snapshot,
+        run_id="r1",
+        lease_id="l1",
+        lease_expires_at=datetime.now(UTC),
+    )
+    assert response.config.erp_base_url == "http://erp.example"
+    assert response.credentials.password == "pw"
 
 
 def test_worker_lease_response_requires_snapshot_fields():
@@ -79,7 +237,8 @@ def test_worker_lease_response_requires_snapshot_fields():
         workflow_code="srm_fetch_po",
         rpa_engine_type="PLAYWRIGHT_CDP",
         rpa_flow_version="1.0.0",
-        credential_ref="credential-ref-mock-srm",
+        credential_ref="",
+        credentials={"username": "buyer", "password": "secret"},
         config=LeaseCommandConfig(
             portal_url="https://portal.example.com/srm",
             browser_session=BrowserSessionConfig(mode="MANAGED", channel="chrome"),
@@ -91,6 +250,8 @@ def test_worker_lease_response_requires_snapshot_fields():
     assert dumped["config"]["portalUrl"] == "https://portal.example.com/srm"
     assert dumped["config"]["browserSession"]["mode"] == "MANAGED"
     assert dumped["input"] == {"po_no": "PO-20260708-001"}
+    assert dumped["credentials"]["username"] == "buyer"
+    assert dumped["credentials"]["password"] == "secret"
 
 
 def test_renew_response_returns_lease_expires_at():
@@ -105,6 +266,33 @@ def test_running_can_requeue_after_lease_expire():
     assert can_transition(TaskStatus.RUNNING, TaskStatus.QUEUED)
     assert can_transition(TaskStatus.WAITING_HUMAN, TaskStatus.SUCCESS_MANUAL)
     assert not can_transition(TaskStatus.HUMAN_OPERATING, TaskStatus.RUNNING)
+
+
+def test_queued_can_cancel_when_portal_disabled():
+    assert can_transition(TaskStatus.QUEUED, TaskStatus.CANCELLED)
+
+
+def test_validate_snapshot_sources_rejects_disabled_portal():
+    portal = MagicMock()
+    portal.status = "DISABLED"
+    portal.tenant_id = "t1"
+    portal.portal_url = "http://example.test"
+    portal.credential_ref = "secret"
+    portal.login_account = "user"
+    binding = MagicMock()
+    binding.status = "ENABLED"
+    binding.rpa_flow_version_id = "v1"
+    binding.flow_checksum_snapshot = "abc"
+    binding.config = "{}"
+    template = MagicMock()
+    template.tenant_id = "t1"
+    task = MagicMock()
+    task.tenant_id = "t1"
+    with pytest.raises(BadRequestError) as exc:
+        dispatch_service._validate_snapshot_sources(
+            binding=binding, portal=portal, template=template, task=task
+        )
+    assert exc.value.message_key == "errors.autotask.portal_disabled"
 
 
 def test_normalize_checksum_strips_prefix():
@@ -268,7 +456,8 @@ def test_response_from_snapshot_does_not_use_latest_binding():
         "rpaEngineType": "PLAYWRIGHT_CDP",
         "rpaFlowId": "rpa_flow_mock_srm_fetch_po",
         "rpaFlowVersion": "1.0.0",
-        "credentialRef": "credential-ref-mock-srm",
+        "credentialRef": "",
+        "credentials": {"username": "buyer", "password": "secret"},
         "input": {"po_no": "PO-20260708-001"},
         "config": {
             "portalUrl": "https://portal.example.com/srm-original",
@@ -290,3 +479,6 @@ def test_response_from_snapshot_does_not_use_latest_binding():
     )
     assert resp.config.portal_url == "https://portal.example.com/srm-original"
     assert resp.rpa_flow_version == "1.0.0"
+    assert resp.credentials is not None
+    assert resp.credentials.username == "buyer"
+    assert resp.credentials.password == "secret"

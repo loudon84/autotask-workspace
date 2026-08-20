@@ -1,10 +1,6 @@
-import { useEffect, useState } from "react";
 import ExternalLink from "@/components/external-link";
-import { getAuthEndpointConfig } from "@/actions/auth";
-import {
-  buildSdmsOmViewUrl,
-  defaultAutoTaskEndpointConfig,
-} from "@/types/endpoint-config";
+import { useSdmsBaseUrl } from "@/features/processes/api/use-sdms-base-url";
+import { buildSdmsOmViewUrl } from "@/types/endpoint-config";
 
 function display(value: unknown): string {
   const text = String(value ?? "").trim();
@@ -18,28 +14,10 @@ export function ErpOrderLabel({
   headerId?: unknown;
   orderNumber?: unknown;
 }) {
-  const [baseUrl, setBaseUrl] = useState(
-    defaultAutoTaskEndpointConfig.sdmsWebBaseUrl
-  );
+  const baseUrl = useSdmsBaseUrl();
   const label = display(orderNumber);
   const id = String(headerId ?? "").trim();
   const href = id ? buildSdmsOmViewUrl(baseUrl, id) : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    void getAuthEndpointConfig()
-      .then((config) => {
-        if (!cancelled && config.sdmsWebBaseUrl) {
-          setBaseUrl(config.sdmsWebBaseUrl);
-        }
-      })
-      .catch(() => {
-        /* keep default */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return (
     <span>
