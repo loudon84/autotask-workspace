@@ -95,6 +95,9 @@ class StatementBillDetail(StatementBillListItem):
     stage_history: list[ProcessStageHistoryResponse] = Field(
         default_factory=list, serialization_alias="stageHistory"
     )
+    scanned_file_paths: list[str] = Field(
+        default_factory=list, serialization_alias="scannedFilePaths"
+    )
 
 
 class StatementInvoicePathsRequest(CamelModel):

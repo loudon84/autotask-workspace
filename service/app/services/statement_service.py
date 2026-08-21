@@ -12,6 +12,7 @@ import re
 import uuid
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -458,6 +459,31 @@ def sdms_check_num_from_summary(summary: object) -> str | None:
     return text or None
 
 
+def invoice_scan_from_summary(summary: object) -> dict[str, Any]:
+    data = summary if isinstance(summary, dict) else loads_json(summary, {})
+    if not isinstance(data, dict):
+        return {}
+    scan = data.get("invoice_scan")
+    return scan if isinstance(scan, dict) else {}
+
+
+def scanned_file_paths_from_summary(summary: object) -> list[str]:
+    raw = invoice_scan_from_summary(summary).get("filePaths")
+    if not isinstance(raw, list):
+        return []
+    return [str(path).strip() for path in raw if str(path).strip()]
+
+
+def normalize_invoice_file_paths(paths: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for item in paths:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        normalized.append(str(Path(text).expanduser()).casefold())
+    return normalized
+
+
 def to_list_item(
     bill: StatementBill,
     instance: ProcessInstance | None = None,
@@ -498,6 +524,9 @@ def to_detail(
             **item.model_dump(),
             "sdms_check_head_id": bill.sdms_check_head_id,
             "sdms_check_num": sdms_check_num_from_summary(
+                instance.summary if instance else None
+            ),
+            "scanned_file_paths": scanned_file_paths_from_summary(
                 instance.summary if instance else None
             ),
             "lines": receipt_lines_from_summary(instance.summary if instance else None),
@@ -558,7 +587,6 @@ async def upload_invoice(
     file_paths: list[str],
     actor: str,
 ) -> AutomationTask:
-    _ = (file_paths, actor)
     bill = await get_bill(db, tenant_id, bill_id)
     if bill.check_status == "VOID":
         raise BadRequestError(
@@ -570,10 +598,25 @@ async def upload_invoice(
             message="待生成草稿尚未在 SRM 生成成功，不能上传发票",
             message_key="errors.autotask.statement.draft_no_invoice",
         )
-    raise BadRequestError(
-        message="SRM 发票扫描不能单独执行。请选择发票后点「提交审核」，由一次 RPA 完成扫描解析并提交。",
-        message_key="errors.autotask.statement.invoice_must_submit_together",
+    paths = require_invoice_file_paths(file_paths)
+    task = await _create_standalone_task(
+        db,
+        tenant_id=tenant_id,
+        portal_account_id=bill.portal_account_id,
+        template_code=process_svc.STMT_UPLOAD_INVOICE_TEMPLATE_CODE,
+        title="对账单：扫描发票",
+        task_input={
+            "checkDate": bill.check_date.isoformat(),
+            "checkAmount": str(bill.check_amount),
+            "filePaths": paths,
+            "billId": bill.id,
+        },
+        actor=actor,
+        process_instance_id=bill.process_instance_id,
     )
+    await db.commit()
+    await db.refresh(task)
+    return task
 
 
 async def submit_review(
@@ -596,8 +639,25 @@ async def submit_review(
             message="待生成草稿尚未在 SRM 生成成功，不能提交审核",
             message_key="errors.autotask.statement.draft_no_submit",
         )
+    expected_no = str(bill.invoice_no or "").strip()
+    expected_amount = bill.invoice_amount
+    if not expected_no or expected_amount is None:
+        raise BadRequestError(
+            message="请先扫描发票，并核对页面上的发票号和发票总额后再提交",
+            message_key="errors.autotask.statement.scan_before_submit",
+        )
     paths = require_invoice_file_paths(file_paths)
     instance = await get_bill_instance(db, bill.process_instance_id)
+    scanned_paths = scanned_file_paths_from_summary(
+        instance.summary if instance else None
+    )
+    if scanned_paths and normalize_invoice_file_paths(paths) != normalize_invoice_file_paths(
+        scanned_paths
+    ):
+        raise BadRequestError(
+            message="发票文件已更换，请重新扫描后再提交审核",
+            message_key="errors.autotask.statement.invoice_files_changed",
+        )
     task = await _create_standalone_task(
         db,
         tenant_id=tenant_id,
@@ -609,6 +669,8 @@ async def submit_review(
             "checkAmount": str(bill.check_amount),
             "filePaths": paths,
             "billId": bill.id,
+            "expectedInvoiceNo": expected_no,
+            "expectedInvoiceAmount": str(expected_amount),
             "sdmsCheckNum": sdms_check_num_from_summary(
                 instance.summary if instance else None
             ),
@@ -698,6 +760,15 @@ def _parse_check_date(value: object) -> date:
     return date.fromisoformat(text[:10])
 
 
+def is_uncommitted_output(output: Any) -> bool:
+    """演练 dryRun 找到写按钮但不 click 时，output.committed 为 False。"""
+    return isinstance(output, dict) and output.get("committed") is False
+
+
+def is_uncommitted_generate_output(output: Any) -> bool:
+    return is_uncommitted_output(output)
+
+
 async def on_generate_finished(db: AsyncSession, task: AutomationTask, run: RpaRun) -> None:
     if not task.process_instance_id:
         return
@@ -731,6 +802,24 @@ async def on_generate_finished(db: AsyncSession, task: AutomationTask, run: RpaR
         return
 
     output = run.output if isinstance(run.output, dict) else {}
+    if is_uncommitted_generate_output(output):
+        summary = loads_json(instance.summary, {})
+        if not isinstance(summary, dict):
+            summary = {}
+        summary["drill"] = {
+            "uncommitted": True,
+            "blockedAction": output.get("blockedAction") or "generate_statement",
+            "generateButtonFound": bool(output.get("generateButtonFound")),
+        }
+        instance.summary = dumps_json(summary)
+        instance.last_error_code = None
+        instance.last_error_message = None
+        instance.status = ProcessInstanceStatus.ACTIVE.value
+        if bill is not None:
+            bill.check_status = "DRAFT"
+            bill.last_error = None
+        return
+
     check_date = _parse_check_date(output.get("checkDate") or output.get("check_date"))
     raw_amount = output.get("checkAmount") or output.get("check_amount")
     if raw_amount is None:
@@ -791,10 +880,49 @@ async def on_upload_finished(db: AsyncSession, task: AutomationTask, run: RpaRun
         return
 
     if run.status != RunStatus.SUCCESS.value:
-        bill.last_error = run.error_message or "上传发票失败"
+        bill.last_error = run.error_message or "扫描发票失败"
         return
 
-    bill.last_error = "发票扫描不能单独落态；请选择发票后点提交审核，由一次 RPA 完成扫描并提交"
+    output = run.output if isinstance(run.output, dict) else {}
+    invoice_no = str(output.get("invoiceNo") or output.get("invoice_no") or "").strip() or None
+    raw_amount = output.get("invoiceAmount")
+    if raw_amount is None:
+        raw_amount = output.get("invoice_amount")
+    invoice_amount = parse_optional_money(raw_amount)
+    if not invoice_no or invoice_amount is None:
+        bill.last_error = "扫描成功但未回写发票号或发票总额"
+        return
+    bill.invoice_no = invoice_no
+    bill.invoice_amount = invoice_amount
+    bill.invoice_status = "UPLOADED"
+    bill.check_status = "UNCHECKED"
+    bill.last_error = None
+    if task.process_instance_id:
+        instance = (
+            await db.execute(
+                select(ProcessInstance).where(
+                    ProcessInstance.id == task.process_instance_id,
+                    not_deleted(ProcessInstance),
+                )
+            )
+        ).scalar_one_or_none()
+        if instance is not None:
+            summary = loads_json(instance.summary, {})
+            if not isinstance(summary, dict):
+                summary = {}
+            summary["invoice_scan"] = {
+                "filePaths": [
+                    str(path).strip()
+                    for path in (task_input.get("filePaths") or [])
+                    if str(path).strip()
+                ],
+                "invoiceNo": invoice_no,
+                "invoiceAmount": str(invoice_amount),
+            }
+            instance.summary = dumps_json(summary)
+            instance.last_error_code = None
+            instance.last_error_message = None
+            instance.status = ProcessInstanceStatus.ACTIVE.value
 
 
 async def on_submit_finished(db: AsyncSession, task: AutomationTask, run: RpaRun) -> None:
@@ -817,6 +945,38 @@ async def on_submit_finished(db: AsyncSession, task: AutomationTask, run: RpaRun
         return
 
     output = run.output if isinstance(run.output, dict) else {}
+    if is_uncommitted_output(output):
+        instance = None
+        if task.process_instance_id:
+            instance = (
+                await db.execute(
+                    select(ProcessInstance).where(
+                        ProcessInstance.id == task.process_instance_id,
+                        not_deleted(ProcessInstance),
+                    )
+                )
+            ).scalar_one_or_none()
+        if instance is not None:
+            summary = loads_json(instance.summary, {})
+            if not isinstance(summary, dict):
+                summary = {}
+            existing_drill = summary.get("drill") if isinstance(summary.get("drill"), dict) else {}
+            summary["drill"] = {
+                "uncommitted": True,
+                "shadow": bool(existing_drill.get("shadow")),
+                "step": "srm.stmt.submit_review",
+                "blockedAction": output.get("blockedAction") or "submit_review",
+                "submitButtonFound": bool(output.get("submitButtonFound")),
+            }
+            instance.summary = dumps_json(summary)
+            instance.last_error_code = None
+            instance.last_error_message = None
+            instance.status = ProcessInstanceStatus.ACTIVE.value
+        bill.check_status = "UNCHECKED"
+        bill.invoice_status = "NOT_UPLOADED"
+        bill.last_error = None
+        return
+
     invoice_no = str(output.get("invoiceNo") or output.get("invoice_no") or "").strip() or None
     raw_amount = output.get("invoiceAmount")
     if raw_amount is None:

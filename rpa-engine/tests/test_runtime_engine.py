@@ -217,6 +217,7 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
         observed["portal"] = ctx.portal_url
         observed["config"] = dict(ctx.config["browserSession"])
         observed["dryRun"] = ctx.config.get("dryRun")
+        observed["searches"] = ctx.config.get("searches")
         await ctx.log.info(
             "safe log",
             {"password": "must-not-leak", "visible": "value"},
@@ -224,13 +225,27 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
         await ctx.events.emit("FLOW_STEP", message="step")
 
     handler, browser, artifacts, events = runtime(tmp_path, flow)
-    result = await handler.handle(command(dry_run=True))
+    result = await handler.handle(
+        command(
+            dry_run=True,
+            extra_config={
+                "searches": [
+                    {"replyStatus": "待签章"},
+                    {"poNo": "POJS2607170008", "treatAsPending": True},
+                ]
+            },
+        )
+    )
 
     assert result.status is AttemptStatus.SUCCESS
     assert observed["input"] == "record-1"
     assert observed["selector"] == "#search"
     assert observed["portal"] == "http://mock.test"
     assert observed["dryRun"] is True
+    assert observed["searches"] == [
+        {"replyStatus": "待签章"},
+        {"poNo": "POJS2607170008", "treatAsPending": True},
+    ]
     assert "profileRef" not in observed["config"]
     assert "cdpEndpointRef" not in observed["config"]
     assert browser.session.closed is True

@@ -375,6 +375,41 @@ async def test_on_generate_finished_success_promotes_draft() -> None:
 
 
 @pytest.mark.asyncio
+async def test_on_generate_finished_dry_run_keeps_draft() -> None:
+    instance = MagicMock()
+    instance.summary = '{"sdms_check_head_id":"36599"}'
+    instance.status = "ACTIVE"
+    instance.last_error_code = "old"
+    bill = MagicMock()
+    bill.check_status = "DRAFT"
+    bill.last_error = "old"
+    task = MagicMock()
+    task.process_instance_id = "inst-1"
+    run = MagicMock()
+    run.status = "SUCCESS"
+    run.output = {
+        "checkDate": "2026-08-21",
+        "checkAmount": "10.00",
+        "committed": False,
+        "dryRun": True,
+        "blockedAction": "generate_statement",
+        "generateButtonFound": True,
+    }
+    db = MagicMock()
+    exec_instance = MagicMock()
+    exec_instance.scalar_one_or_none.return_value = instance
+    exec_bill = MagicMock()
+    exec_bill.scalar_one_or_none.return_value = bill
+    db.execute = AsyncMock(side_effect=[exec_instance, exec_bill])
+    with patch("app.services.statement_service.process_svc._change_stage") as change_stage:
+        await svc.on_generate_finished(db, task, run)
+    assert bill.check_status == "DRAFT"
+    assert bill.last_error is None
+    assert instance.status == "ACTIVE"
+    change_stage.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_on_generate_finished_failure_keeps_draft_active() -> None:
     instance = MagicMock()
     instance.status = "ACTIVE"
@@ -408,33 +443,61 @@ def test_parse_optional_money_accepts_ocr_noise() -> None:
 
 
 @pytest.mark.asyncio
-async def test_on_upload_finished_does_not_advance_stage() -> None:
+async def test_on_upload_finished_writes_invoice_keeps_unchecked() -> None:
+    from app.services.json_utils import dumps_json, loads_json
+
     bill = MagicMock()
+    bill.check_status = "UNCHECKED"
     bill.invoice_status = "NOT_UPLOADED"
     bill.last_error = None
+    instance = MagicMock()
+    instance.summary = "{}"
+    instance.status = "ACTIVE"
     task = MagicMock()
-    task.input = '{"billId":"bill-1"}'
+    task.input = dumps_json({"billId": "bill-1", "filePaths": [r"C:\invoices\a.pdf"]})
     task.process_instance_id = "inst-1"
     run = MagicMock()
     run.status = "SUCCESS"
     run.output = {"invoiceNo": "INV001", "invoiceAmount": "10.00"}
     db = MagicMock()
-    db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=bill)))
+    db.execute = AsyncMock(side_effect=[_scalar_result(bill), _scalar_result(instance)])
     with patch("app.services.statement_service.process_svc._change_stage") as change_stage:
         await svc.on_upload_finished(db, task, run)
-    assert bill.invoice_status == "NOT_UPLOADED"
-    assert "提交审核" in bill.last_error
+    assert bill.invoice_no == "INV001"
+    assert bill.invoice_amount == Decimal("10.00")
+    assert bill.invoice_status == "UPLOADED"
+    assert bill.check_status == "UNCHECKED"
+    assert bill.last_error is None
     change_stage.assert_not_called()
+    summary = loads_json(instance.summary, {})
+    assert summary["invoice_scan"]["invoiceNo"] == "INV001"
 
 
 @pytest.mark.asyncio
-async def test_upload_invoice_rejects_standalone() -> None:
+async def test_upload_invoice_queues_scan_task() -> None:
     bill = MagicMock()
     bill.check_status = "UNCHECKED"
-    with patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)):
-        with pytest.raises(BadRequestError) as exc:
-            await svc.upload_invoice(MagicMock(), "t1", "bill-1", file_paths=["a.pdf"], actor="u1")
-        assert "提交审核" in exc.value.message
+    bill.process_instance_id = "inst-1"
+    bill.portal_account_id = "pa1"
+    bill.check_date = date(2026, 4, 1)
+    bill.check_amount = Decimal("10.00")
+    bill.id = "bill-1"
+    task = MagicMock()
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    with (
+        patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)),
+        patch(
+            "app.services.statement_service._create_standalone_task",
+            AsyncMock(return_value=task),
+        ) as create_task,
+    ):
+        result = await svc.upload_invoice(
+            db, "t1", "bill-1", file_paths=["a.pdf"], actor="u1"
+        )
+    assert result is task
+    assert create_task.await_args.kwargs["template_code"] == "srm_stmt_upload_invoice"
 
 
 @pytest.mark.asyncio
@@ -458,13 +521,47 @@ async def test_retry_generate_draft_only() -> None:
 
 
 @pytest.mark.asyncio
+async def test_submit_review_requires_prior_scan() -> None:
+    bill = MagicMock()
+    bill.check_status = "UNCHECKED"
+    bill.invoice_no = None
+    bill.invoice_amount = None
+    with patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)):
+        with pytest.raises(BadRequestError) as exc:
+            await svc.submit_review(MagicMock(), "t1", "bill-1", file_paths=["a.pdf"], actor="u1")
+        assert "扫描发票" in exc.value.message
+
+
+@pytest.mark.asyncio
 async def test_submit_review_requires_files() -> None:
     bill = MagicMock()
     bill.check_status = "UNCHECKED"
+    bill.invoice_no = "INV1"
+    bill.invoice_amount = Decimal("10.00")
     with patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)):
         with pytest.raises(BadRequestError) as exc:
             await svc.submit_review(MagicMock(), "t1", "bill-1", file_paths=[], actor="u1")
         assert "发票文件" in exc.value.message
+
+
+@pytest.mark.asyncio
+async def test_submit_review_rejects_changed_files() -> None:
+    bill = MagicMock()
+    bill.check_status = "UNCHECKED"
+    bill.invoice_no = "INV1"
+    bill.invoice_amount = Decimal("10.00")
+    bill.process_instance_id = "inst-1"
+    instance = MagicMock()
+    instance.summary = '{"invoice_scan":{"filePaths":["C:\\\\invoices\\\\a.pdf"]}}'
+    with (
+        patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)),
+        patch("app.services.statement_service.get_bill_instance", AsyncMock(return_value=instance)),
+    ):
+        with pytest.raises(BadRequestError) as exc:
+            await svc.submit_review(
+                MagicMock(), "t1", "bill-1", file_paths=["C:\\invoices\\b.pdf"], actor="u1"
+            )
+        assert "重新扫描" in exc.value.message
 
 
 @pytest.mark.asyncio
@@ -636,3 +733,48 @@ async def test_on_submit_finished_keeps_submitted_when_sdms_attach_fails() -> No
     assert bill.check_status == "CHECKED"
     assert instance.status == "COMPLETED"
     assert "SDMS" in (bill.last_error or "")
+
+
+@pytest.mark.asyncio
+async def test_on_submit_finished_dry_run_keeps_unchecked() -> None:
+    from app.services.json_utils import dumps_json
+
+    bill = MagicMock()
+    bill.check_status = "UNCHECKED"
+    bill.invoice_status = "NOT_UPLOADED"
+    bill.last_error = "old"
+    instance = MagicMock()
+    instance.summary = dumps_json({"drill": {"shadow": True}})
+    instance.status = "ACTIVE"
+    instance.last_error_code = "old"
+    task = MagicMock()
+    task.process_instance_id = "inst-1"
+    task.input = dumps_json({"billId": "bill-1", "filePaths": [r"C:\invoices\a.pdf"]})
+    run = MagicMock()
+    run.status = "SUCCESS"
+    run.output = {
+        "invoiceNo": "INV1",
+        "invoiceAmount": "10.00",
+        "committed": False,
+        "dryRun": True,
+        "blockedAction": "submit_review",
+        "submitButtonFound": True,
+    }
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(bill), _scalar_result(instance)])
+
+    with (
+        patch("app.services.statement_service.process_svc._change_stage") as change_stage,
+        patch(
+            "app.services.statement_service.upload_statement_invoices_to_sdms",
+            AsyncMock(return_value=None),
+        ) as upload,
+    ):
+        await svc.on_submit_finished(db, task, run)
+
+    assert bill.check_status == "UNCHECKED"
+    assert bill.invoice_status == "NOT_UPLOADED"
+    assert bill.last_error is None
+    assert instance.status == "ACTIVE"
+    change_stage.assert_not_called()
+    upload.assert_not_awaited()

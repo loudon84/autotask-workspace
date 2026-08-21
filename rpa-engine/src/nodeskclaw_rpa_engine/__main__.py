@@ -6,6 +6,9 @@ from nodeskclaw_rpa_engine.core.config import Settings
 
 
 def main() -> None:
+    from nodeskclaw_rpa_engine.runtime.browser import ensure_playwright_browsers_path
+
+    ensure_playwright_browsers_path()
     settings = Settings()
     uvicorn.run(
         "nodeskclaw_rpa_engine.main:app",

@@ -20,7 +20,7 @@ from nodeskclaw_rpa_engine.flows.schemas import ErrorBody, ErrorResponse
 from nodeskclaw_rpa_engine.flows.service import FlowRegistryService
 from nodeskclaw_rpa_engine.object_storage.factory import build_object_storage
 from nodeskclaw_rpa_engine.runtime.artifacts import TaskArtifactSink
-from nodeskclaw_rpa_engine.runtime.browser import ManagedBrowserSessionManager
+from nodeskclaw_rpa_engine.runtime.browser import ManagedBrowserSessionManager, ensure_playwright_browsers_path
 from nodeskclaw_rpa_engine.runtime.callbacks import TaskRuntimeEventSink
 from nodeskclaw_rpa_engine.runtime.credentials import build_credential_resolver
 from nodeskclaw_rpa_engine.runtime.engine import RpaRuntime
@@ -70,6 +70,7 @@ def create_app(
     run_command_handler: RunCommandHandler | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
+    ensure_playwright_browsers_path()
     configure_logging(resolved_settings)
 
     if readiness_service is None:

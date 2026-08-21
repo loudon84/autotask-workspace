@@ -1,8 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { selectInvoiceFiles } from "@/actions/shell";
+import { MAX_INVOICE_FILE_COUNT } from "@/ipc/shell/schemas";
 import { MockLoading } from "@/components/common/mock-loading";
 import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -54,10 +56,51 @@ type SelectedInvoiceFile = {
   size: number;
 };
 
+function filesFromPaths(paths: string[]): SelectedInvoiceFile[] {
+  return paths.map((path) => ({
+    name: path.split(/[/\\]/).pop() || path,
+    path,
+    size: 0,
+  }));
+}
+
+function mergeInvoiceFiles(
+  existing: SelectedInvoiceFile[],
+  incoming: SelectedInvoiceFile[],
+  maxCount: number
+): {
+  files: SelectedInvoiceFile[];
+  added: number;
+  skippedDuplicate: number;
+  skippedLimit: number;
+} {
+  const files = [...existing];
+  const seen = new Set(existing.map((file) => file.path));
+  let added = 0;
+  let skippedDuplicate = 0;
+  let skippedLimit = 0;
+  for (const file of incoming) {
+    if (seen.has(file.path)) {
+      skippedDuplicate += 1;
+      continue;
+    }
+    if (files.length >= maxCount) {
+      skippedLimit += 1;
+      continue;
+    }
+    seen.add(file.path);
+    files.push(file);
+    added += 1;
+  }
+  return { files, added, skippedDuplicate, skippedLimit };
+}
+
 export function StatementDetailPage({ billId }: { billId: string }) {
   const queryClient = useQueryClient();
   const { data, isLoading, refetch } = useStatement(billId);
-  const [selectedFiles, setSelectedFiles] = useState<SelectedInvoiceFile[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<
+    SelectedInvoiceFile[] | null
+  >(null);
   const [acting, setActing] = useState(false);
 
   if (isLoading) {
@@ -94,6 +137,10 @@ export function StatementDetailPage({ billId }: { billId: string }) {
     lineNumber: task.lineNumber,
   }));
 
+  const scannedPaths = data.scannedFilePaths ?? [];
+  const scannedAsFiles = filesFromPaths(scannedPaths);
+  const workingFiles = selectedFiles ?? scannedAsFiles;
+
   const onUpdated = async () => {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.statements.all,
@@ -107,12 +154,28 @@ export function StatementDetailPage({ billId }: { billId: string }) {
       if (result.cancelled) {
         return null;
       }
-      setSelectedFiles(result.files);
-      return result.files;
+      const merged = mergeInvoiceFiles(
+        workingFiles,
+        result.files,
+        MAX_INVOICE_FILE_COUNT
+      );
+      setSelectedFiles(merged.files);
+      if (merged.skippedLimit > 0) {
+        toast.error(`最多 ${MAX_INVOICE_FILE_COUNT} 个发票文件，超出的未加入`);
+      } else if (merged.added === 0 && merged.skippedDuplicate > 0) {
+        toast.error("所选文件已在列表中");
+      }
+      return merged.files;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "选择文件失败");
       return null;
     }
+  };
+
+  const removeInvoice = (filePath: string) => {
+    setSelectedFiles(
+      workingFiles.filter((file) => file.path !== filePath)
+    );
   };
 
   const retryGenerate = async () => {
@@ -144,15 +207,40 @@ export function StatementDetailPage({ billId }: { billId: string }) {
     }
   };
 
-  const submitReview = async (files?: SelectedInvoiceFile[]) => {
-    const targets = files ?? selectedFiles;
+  const scanInvoice = async (files?: SelectedInvoiceFile[]) => {
+    const targets = files ?? workingFiles;
     if (targets.length === 0) {
       const picked = await chooseInvoices();
       if (!picked || picked.length === 0) {
         toast.error("请先选择发票文件");
         return;
       }
-      await submitReview(picked);
+      await scanInvoice(picked);
+      return;
+    }
+    setActing(true);
+    try {
+      await autotaskApi.statements.uploadInvoicePaths({
+        billId,
+        filePaths: targets.map((file) => file.path),
+      });
+      toast.success("已发起扫描发票：完成后请核对发票号和发票总额");
+      await onUpdated();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "扫描失败");
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const submitReview = async (files?: SelectedInvoiceFile[]) => {
+    const targets = files ?? workingFiles;
+    if (targets.length === 0) {
+      toast.error("请先选择发票并扫描");
+      return;
+    }
+    if (!data.invoiceNo || data.invoiceAmount == null || data.invoiceAmount === "") {
+      toast.error("请先扫描发票，并核对页面上的发票号和发票总额");
       return;
     }
     setActing(true);
@@ -160,7 +248,7 @@ export function StatementDetailPage({ billId }: { billId: string }) {
       await autotaskApi.statements.submitReview(billId, {
         filePaths: targets.map((file) => file.path),
       });
-      toast.success("已发起提交审核：将扫描发票并提交");
+      toast.success("已发起提交审核：将再次扫描并核对后提交");
       await onUpdated();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "提交失败");
@@ -168,6 +256,14 @@ export function StatementDetailPage({ billId }: { billId: string }) {
       setActing(false);
     }
   };
+
+  const selectedPathKey = workingFiles.map((file) => file.path).join("|");
+  const scannedPathKey = scannedPaths.join("|");
+  const filesChanged =
+    selectedFiles !== null && selectedPathKey !== scannedPathKey;
+  const hasVerifiedInvoice = Boolean(data.invoiceNo && data.invoiceAmount);
+  const canScan = workingFiles.length > 0;
+  const canSubmit = hasVerifiedInvoice && workingFiles.length > 0 && !filesChanged;
 
   return (
     <div className="space-y-4">
@@ -182,12 +278,21 @@ export function StatementDetailPage({ billId }: { billId: string }) {
             </Button>
           ) : null}
           {needsInvoiceWorkspace ? (
-            <Button
-              disabled={acting || selectedFiles.length === 0}
-              onClick={() => void submitReview()}
-            >
-              提交审核
-            </Button>
+            <>
+              <Button
+                disabled={acting || !canScan}
+                onClick={() => void scanInvoice()}
+                variant="outline"
+              >
+                扫描发票
+              </Button>
+              <Button
+                disabled={acting || !canSubmit}
+                onClick={() => void submitReview()}
+              >
+                提交审核
+              </Button>
+            </>
           ) : null}
           {canCancel ? (
             <Button
@@ -333,24 +438,44 @@ export function StatementDetailPage({ billId }: { billId: string }) {
       {needsInvoiceWorkspace ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">提交审核</CardTitle>
+            <CardTitle className="text-base">扫描发票并提交审核</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-muted-foreground text-sm">
-              SRM 不会单独保存未提交的发票。请先选择发票，再点「提交审核」；一次
-              RPA 会扫描解析发票号/金额并立即提交。最多 10 个文件，支持 png、jpg、jpeg、pdf、ofd，单个不超过
-              20MB。
+              可分多次选择发票，列表里可删除单张。先扫描，在上方核对发票号和发票总额。点「提交审核」表示已核对通过；RPA
+              会用同一批文件再扫一次，必须与页面结果一致才会提交。门户刷新后附件可能消失，这是预期。最多{" "}
+              {MAX_INVOICE_FILE_COUNT}{" "}
+              个文件，支持 png、jpg、jpeg、pdf、ofd，单个不超过 20MB。
             </p>
-            {selectedFiles.length > 0 ? (
+            {filesChanged ? (
+              <p className="text-sm text-destructive">
+                发票文件已更换，请先重新扫描，再提交审核。
+              </p>
+            ) : null}
+            {workingFiles.length > 0 ? (
               <ul className="rounded-md border px-3 py-2 text-sm">
-                {selectedFiles.map((file) => (
+                {workingFiles.map((file) => (
                   <li
                     className="flex items-center justify-between gap-3 py-1"
                     key={file.path}
                   >
                     <span className="truncate">{file.name}</span>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {formatFileSize(file.size)}
+                    <span className="flex shrink-0 items-center gap-2">
+                      {file.size > 0 ? (
+                        <span className="text-muted-foreground text-xs">
+                          {formatFileSize(file.size)}
+                        </span>
+                      ) : null}
+                      <Button
+                        aria-label={`删除 ${file.name}`}
+                        disabled={acting}
+                        onClick={() => removeInvoice(file.path)}
+                        size="icon-sm"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </span>
                   </li>
                 ))}
@@ -365,7 +490,13 @@ export function StatementDetailPage({ billId }: { billId: string }) {
                 选择发票
               </Button>
               <Button
-                disabled={acting || selectedFiles.length === 0}
+                disabled={acting || !canScan}
+                onClick={() => void scanInvoice()}
+              >
+                扫描发票
+              </Button>
+              <Button
+                disabled={acting || !canSubmit}
                 onClick={() => void submitReview()}
               >
                 提交审核

@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-20
+最后更新：2026-08-21
 
 ## 1. 用途
 
@@ -39,6 +39,7 @@
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
 10. 可以准备数据库设计和 DDL，但目前尚未授权创建数据库或执行 DDL。
+11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
 
@@ -63,7 +64,7 @@
 | 天地伟业对账单 SOP 体验（v3.01） | 详情已补回勾选明细；需重启唯一 Task 4520 | 六步进度：填单页待创建/SDMS核准；列表按 stage；详情对齐客户订单并展示 `summary.lines`。 |
 | 天地伟业对账单优化（v3.02） | 代码已改，需重启唯一 Task 4520 | 详情「对账明细」；展示 SDMS `check_num` 链接；SRM 提交成功后 HTTP 把发票传到 SDMS（`flag=SDMS_ARR`）。 |
 | 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
-| 天地伟业切正式演练（v4.0） | 正式门户已建；三只读 Flow **1.1.0 已发布并只绑正式演练** | 扫单/回签/收货 1.1.0 无 `data-rpa`；演示门户仍 1.0.x。建单/下合同/写闸未做。 |
+| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.4 dryRun=true** 已绑正式演练 | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
 
 ## 5. 未决问题
@@ -104,6 +105,7 @@
 16. **对账单**：查询 RPA 已通，后续生成/发票/提交改由 Client 操作；SDMS 当月无单时生成会被拦住。
 17. **v4.0 阶段 1 已落地**：正式门户「天地伟业-国际-正式演练」已绑扫单/回签/收货 **1.1.0**（正式选择器）。演示 Binding 仍 1.0.x。下一步：Client 手动扫单验收；阶段 2 出正式建单+下合同（不设 dryRun），阶段 3 写步骤 + dryRun。
 18. **v5.0**：PRD 已扩。换人/换门户不准改 `.env` 和 Flow 源码。门户存密码；ERP/SDMS 地址进 Binding.config；Engine `mock_env` 去掉。探测脚本硬编码不纳入本期。
+19. **正式 Flow 演练/上线**：现行说明见 v4.1 SOP。扫描正式 **1.1.3**（Binding 已写 `searches`，无包内默认 PO）、提交正式 **1.1.4 dryRun** 已绑。选文件后必须点弹窗「确定」才识别。dryRun 对「提交审核」做 trial click，不真点。填交期/签章正式包未绑。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -226,15 +228,170 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-08-21
+
+- **扫单 Binding `searches` 落地（1.1.3）**
+  - 问题：SOP 写 Binding 控样例单号，实际 1.1.2 把 `POJS2607170008` 写死在 `flow.py`；正式 Binding 也从未写入 `searches`。Task 租约原先只传 `portalUrl` / `browserSession` / `dryRun`。
+  - Task：租约 `config.searches`；同时写入任务 `input.searches`（兼容尚未重启的 Engine）。
+  - Engine：`RunConfig` / `_safe_config` 透传 `searches`。
+  - 正式扫单 **1.1.3** Registry `73eb83a7-…`，checksum `sha256:1344dc32…`。Binding `2f3a6e10-…` 已写 `searches`：待签章 + `POJS2607170008`/`treatAsPending`。演示仍 1.0.2。
+  - 签章 `temp_e2e_backfill_dates` 只给演示门户 URL（`192.168.102.247`）。
+  - 计划：`.cursor/plans/binding_searches_对齐_2026-08-21.plan.md`。**需重启唯一 Task 4520**。建议重启 Engine 4610。Client 打开正式演练扫单 Binding 应能看到 `searches`；换第二条 `poNo` 再扫才会换单。
+  - 未做：正式填交期/签章包（演示 1.0.3 不读 dryRun，禁止绑正式站）。
+
+- **v4.1 正式演练与上线 SOP**
+  - 新文档 `project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`：演练/上线 Binding 怎么配；两条 SOP 每步谁点、SRM 会不会改；哪些现在能演练、哪些要人核对、哪些等待签章或关 dryRun。
+  - v4.0 与「演练与上线同一份包」改为指向 v4.1。对账单扫描+提交演练已跑通；填交期/签章仍等正式站待签章；真生成/真提交仍等关闸。
+
+- **扫描发票必须点弹窗「确定」才会识别（1.1.2 / 提交 1.1.4）**
+  - 旧逻辑：`set_input_files` 后「确定」点不到就 `pass`，接着读发票号；读失败重试又回到列表。
+  - 现改为必等可见、未禁用、必点「确定」，弹窗关掉再读发票号/总额。点不到直接失败，不再默默跳过。
+  - 扫描 **1.1.2** Registry `806b0a20-…`，checksum `sha256:6d066355…`。Binding `b36b5628-…`。提交 **1.1.4** Registry `92226c2c-…`，checksum `sha256:4dc9a393…`。Binding `e64d3354-…`，`dryRun: true`。演示未改。
+
+- **dryRun 提交审核改为 trial click（1.1.3），脚本已在正式门户验证「能看就能点」**
+  - 看得见不等于能点。Playwright `click(trial=True)` 检查可见、可用、稳定、中心点不被挡住，但不真点。再加 `elementFromPoint` 命中检测。
+  - Engine：`runtime/actionability.py` 的 `inspect_clickable` / `assert_clickable`。
+  - 正式门户探针（未点提交）：`2026-04-01` / `5768205.32` 收货应付真点 ok；「扫描发票信息」「提交审核」均 `trialOk=true`、`hitsSelf=true`、未禁用。
+  - 提交包 **1.1.3** Registry `2b9e25b7-…`，checksum `sha256:58f9b894…`。Binding `e64d3354-…` 1.1.2→1.1.3，`dryRun: true`。演示仍 1.0.7。
+  - 生成对账单 1.1.0 仍只查可见+未禁用，尚未 trial click。
+
+- **正式门户脚本已点通「收货应付」（1.1.1 JS，不经 Client）**
+  - 先前包内 pytest 只扫源码字符串，不能证明按钮能点。补了正式门户探针：`service/scripts/run_official_stmt_payable_click.py` → Engine `scripts/probe_official_stmt_payable_click.py`。只打开收货应付，不点提交审核。
+  - 实测：`2026-04-01` / `5768205.32` 匹配 `rowIndex=0`；冻结列 `fixed-right` 的 `body-wrapper` 行数 0、`fixed-body-wrapper` 行数 1；`CLICK_PAYABLE_JS` 返回 `ok`；扫描发票/提交审核按钮可见。结果 `rpa-engine/runtime-cache/tiandy-stmt-payable-click.json`。
+  - 包内补了冻结列表选择器回归：`rpa-flows/rpa_flow_srm_stmt_upload_invoice/1.1.1/tests/test_payable_click_js.py`。
+
+- **扫描点「收货应付」失败：冻结列可见按钮（1.1.1）**
+  - 1.1.0 能按日期+金额匹配（入参 `2026-04-01` / `5768205.32`），但点不到冻结操作列里的「收货应付」。
+  - 扫描 **1.1.1** Registry `acdc426b-…`。提交 **1.1.2** 同样改点击，Registry `d25d744d-…`，`dryRun: true`。匹配成功会把日期/金额写进步骤日志。演示包未改。请再点扫描发票。
+  - 点「提交审核」= 客服已核对页面上的发票号/总额。第二次扫描必须与页面一致，否则失败、不点门户提交。
+  - Client：扫描发票 + 提交审核。提交在有发票字段且文件未换时才可点。
+  - Task：`upload_invoice` 真排队扫描；成功回写发票号/总额，仍未对账。`submit_review` 带 `expectedInvoiceNo` / `expectedInvoiceAmount`。
+  - 正式扫描包 **1.1.0** Registry `0fd304e3-…`，checksum `sha256:af9d9911…`。Binding `b36b5628-…` 新插入，无 dryRun。
+  - 正式提交包 **1.1.1** Registry `87138a09-…`，checksum `sha256:aa273235…`。Binding `e64d3354-…` 1.1.0→1.1.1，`dryRun: true`。
+  - 演示扫描仍 1.0.6、提交仍 1.0.7（演示提交包尚未加二次比对）。
+  - 需求已写入 v3.0 #26–#28、v3.01 S7、v4.0 §4.2 / §12。**需重启唯一 Task 4520**。演练：详情先扫描，核对页面后再点提交；门户提交不会点下去。
+
+- **正式提交审核 1.1.0：扫描真做，dryRun 不点门户提交**
+  - 生成演练成功后门户没有对账单。待生成草稿不得改成未对账。下一节点用门户已有未对账当替身。
+  - 种子：`service/scripts/seed_official_unchecked_statement.py`（`--check-date` + `--check-amount` 必须与门户那行一致）。阶段待上传发票。Client「提交审核」必须能点。
+  - 正式包 1.1.0：对账列表 `#/reconciliation/reconciliationStatement` 按日期+金额找行 → 收货应付 → 真扫描 → 等到「提交审核」可见可点，截图后不点。正式不绑单独上传包。演示提交仍 1.0.7。
+  - Task `on_submit_finished` 见 `committed: false` 保持未对账 / 未上传，不传发票到 SDMS。
+  - Registry `d96d7674-…`，checksum `sha256:d44d3153…`。Binding `e64d3354-…` 新插入，`dryRun: true`。演示提交仍 1.0.7。
+  - 需求修订已写入 `prd/AutoTask v4.0 天地伟业正式演练.md` §4.2 / §5.4 / §12 与 `prd/正式门户 Flow 演练与上线.md` §6。
+  - **需重启唯一 Task 4520**。种子写库后，详情选发票再点提交审核。不要点门户提交。
+
+- **正式生成对账单 1.1.0：真找按钮，dryRun 不 click**
+  - 演练若只查收货不跑生成，上线才会第一次碰「生成对账单」，选择器问题会漏掉。
+  - 正式包 1.1.0：同一套日期面板 + 未提交 + 勾选行，等到「生成对账单」可见且可点，截图后不点。缺按钮或禁用算失败。
+  - Binding `dryRun: true` 只挂正式演练。演示生成仍 1.0.7。Task `on_generate_finished` 见 `committed: false` 保持待生成草稿，不改未对账。
+  - Registry `1f83e5e3-…`，checksum `sha256:acf471d2…`。**需重启唯一 Task 4520** 后，填单页勾选三行再点生成。
+
+- **正式收货查询 1.1.3：开始必须是 00:00:00**
+  - 1.1.2 点日历后再 click 时间框，时间面板把输入下标打乱，起止都写成 `23:59:59`，当天没有数据。
+  - 1.1.3：日历只选日期；开始写 `YYYY-MM-DD 00:00:00`，结束写 `YYYY-MM-DD 23:59:59`。不 click 时间框。确定后回读，不对就失败。
+  - Registry `64790d58-…`，checksum `sha256:df8bb497…`。Binding `37628f8c-…` 1.1.2→1.1.3。演示收货仍 1.0.4。
+  - 单测 24 通过。请用 `2026-08-01`～`2026-08-01` 再搜一次。
+
+- **正式收货查询 1.1.2：日期面板与正式站一致，筛未提交后导出 Excel**
+  - Client 仍只传 `YYYY-MM-DD`。Flow 点开「入库确认时间」范围面板，日历点起止日，时间保持 `00:00:00` / `23:59:59`，再点面板「确定」。
+  - 查询前在表单选对账状态=未提交，再点查询；结果走「导出」xlsx，解析给填单页并落 Artifact。不再翻页刮 HTML。
+  - Registry `c3d2e6cf-…`，checksum `sha256:4d403c85…`。Binding `37628f8c-…` 1.1.1→1.1.2。演示收货仍 1.0.4。
+  - 单测 21 通过。请在正式演练填单页选 `2026-08-01`～`2026-08-01` 再搜一次（预期约 3 行未提交）。不要点生成对账单。
+
 ### 2026-08-20
 
-- **门户登录会话缓存（Engine，已写代码，需重启 Engine）**
+- **正式回签/下合同：列表筛已回签+单号，详情不再读状态（回签 1.1.4、下合同 1.3.2）**
+  - 原先在详情等 `.el-tag` 找「已回签」是演示站写法。正式站「已回签」是列表筛选项；筛到再进详情，进了就是已回签。
+  - 回签探测 1.1.4：查询条件=回复状态已回签+订单编号；有行则进详情并输出已回签；没有行则输出待回签、不进详情。Registry `3357b19d-…`。Binding `fef4ea03-…` 1.1.3→1.1.4。
+  - 下合同 1.3.2：同样先筛已回签+单号；能进详情后只点「查看签章」下载，不再读状态。Registry `c2f9a81b-…`。Binding `ffa96cad-…` 1.3.0→1.3.2。演示回签仍 1.0.1、下合同仍 1.2.5。
+  - 实例已在已回签的，请点「手动触发签章合同下载」或重试失败的下合同任务。
+
+- **正式回签探测不再等 `.el-tag`（1.1.3 已发布并只绑正式演练）**
+  - 1.1.2 已能打开详情，但 `reply_status` 仍 `wait_for` `.el-tag:visible`。正式已回签详情没有演示站那种 Element UI tag，10 秒超时 → `ORDER_REPLY_STATUS_UNAVAILABLE`。
+  - 1.1.3：详情可见「查看签章」即视为已回签；否则读「回复状态」旁的 `已回签/待回签/待签章`。不再等待 `.el-tag`。Registry `6fad94a0-…`，checksum `sha256:b2daf4b3…`。Binding `fef4ea03-…` 1.1.2→1.1.3。演示回签仍 1.0.1。
+  - 单测 11 通过。请再点「立即回签轮询」；认出已回签后会自动排下合同 1.3.0。
+
+- **正式回签探测详情点击与建单对齐（1.1.2 已发布并只绑正式演练）**
+  - 1.1.1 点隐藏「详情」后空等 `.el-drawer / .el-tag`，列表页没有抽屉所以超时。建单 1.2.15 已改可见点击，回签探测当时没跟上。
+  - 1.1.2 共用同一套冻结列可见「详情」；进详情认「查看签章」或「导出订单明细」。Registry `95f0b13d-…`。Binding `fef4ea03-…` 1.1.1→1.1.2。演示回签仍 1.0.1。
+  - 单测 10 通过。请再点「立即回签轮询」。
+
+- **正式下合同认「查看签章」（1.3.0 已发布并只绑正式演练）**
+  - 正式详情已回签单有「查看签章」，即下载双方签章合同。演示包 `data-rpa` 不能绑正式站。
+  - 正式包 1.3.0：OCR 登录、`#/order/list`、可见「详情」、点「查看签章」下载后真传到测试 SDMS。无 `dryRun`。Registry `1abe0ae0-…`，checksum `sha256:07e87504…`。Binding `ffa96cad-…` 新建。演示下合同仍 1.2.5。
+  - 单测 12 通过。`POJS2607170008` 已在待回签。请在 Client 点「立即回签轮询」；认出已回签后会自动排下合同。
+  - 轮询上传 SDMS 的 `username`：优先实例创建人工号，没有则固定 `SMC-SZ-HR15563`。该字段不敏感，只要非空。**需重启唯一 Task 4520**。
+
+- **正式演练跳过填交期/签章，实例改到待回签**
+  - `POJS2607170008` / `5face9c4-…`：正式站已回签，无交期输入、保存、签章。不编造填写成功。
+  - 实例 `SDMS_CREATED` → `SIGN_REQUESTED`（待回签）。回签探测 Binding 已是正式包 1.1.1。
+  - Task 默认未开 30 分钟调度。请在 Client 客户订单列表点「立即回签轮询」。
+  - 下合同正式包 1.3.0 已绑；轮询认出已回签后会自动排下载上传。
+
+- **正式建单详情没点开（1.2.15 已发布并只绑正式演练）**
+  - `failure.png` 仍是订单列表：`POJS2607170008` 已查出，绿色「详情」在冻结操作列。列表没有「导出订单明细」，所以 1.2.14 空等该按钮是因为根本没进详情。
+  - 原因：Element UI 冻结列后，主表体「详情」是隐藏副本。`force=True` 点到它会报成功，页面不跳转。
+  - 1.2.15 改为按订单号对齐行号，再点 `.el-table__fixed-right` 里可见的「详情」，不用 force。Registry `a6e63298-…`，checksum `sha256:8539bc65…`。Binding `30a451be-…` 1.2.14→1.2.15。演示建单仍 1.2.11。
+  - 单测 58 通过。请在 Client 对失败实例 `5face9c4-…` / `POJS2607170008` 点重试。
+
+- **正式建单附件按钮是「导出订单明细」（1.2.14 已发布并只绑正式演练）**
+  - 详情已打开后仍等 `下载订单` 15 秒失败。正式站文案是「导出订单明细」，演示站才是「下载订单」。
+  - 1.2.14 选择器已改；打开详情确认和下载都认这四个字。Registry `fb5742a1-…`。Binding `30a451be-…` 1.2.13→1.2.14。演示建单仍 1.2.11。
+  - `POJS2607170008` 已自动重试。单测 58 通过。
+
+- **正式建单已登录却还在等验证码（Engine 已换新进程）**
+  - 会话缓存进了正式站首页（顶栏有「订单」），登录仍 `wait_for` 验证码图 1 秒超时，报 `SRM_LOGIN_PAGE_UNAVAILABLE`。
+  - 已登录判断改为：验证码不在时，认 `#/dashboard`/`#/order` 或顶栏「订单」「主页」「个人中心」。不再对已登录页死等验证码。
+  - 单测：official login 16、browser 相关一并 16 通过。Engine 已重启。后续建单登录事件为 `reusedSession`。
+
+- **正式建单 1.2.13 已发布并只绑正式演练**
+  - 原先卡在「建单中」无子任务、明细为空：正式门户没有 `srm_prepare_erp_order` Binding，扫单 `allow_missing_prepare_binding` 吞掉缺绑定。
+  - 正式包 1.2.13：OCR 登录、无 `data-rpa`、点该行「详情」并用「下载订单」确认详情。Registry `fc22a74a-…`。Binding `30a451be-…`。演示芯云test / 国际test 建单仍 1.2.11。
+  - `POJS2607170008` 已重试；登录已过，详情点击在 1.2.12 上会空等到 `RUNTIME_TIMEOUT`（列表已搜到该单）。请看本次 1.2.13 重试。
+
+- **正式门户 Flow：演练与上线同一份包（设计已确认，已写 PRD）**
+  - 演示/正式因页面不同继续拆包。演练/上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding，上线改配置不换包。
+  - 扫单：Binding `searches` 先待签章导出，演练再加一条订单编号；生产只留待签章。不要 Task 空列表造单，不要 `flow.py` 里 `if drill`。
+  - 文档：`project-docs/prd/正式门户 Flow 演练与上线.md`。扫单 1.1.2 样例单号仍在源码默认值，尚未收到 Binding。
+
+- **正式扫单改为查询后导出 Excel（1.1.2 已发布并只绑正式演练，4520 已换新进程）**
+  - 原先：翻页读页面表格，再在内存里筛「待签章」；空列表时 Task 直接造 `POJS2607170008`。
+  - 现流程：回复状态选待签章（不加其它条件）→ 查询 → 导出 Excel → 用 Excel 建客户订单。无待签章时重置，按订单编号 `POJS2607170008` 查询再导出，把该单当成待签章扫入。不改 SRM 状态。
+  - Registry 扫单 `09293dee-…` checksum `sha256:2488edca…`。Binding `2f3a6e10-…` 1.1.1→1.1.2。演示芯云test / 国际test 扫单仍 1.0.2。
+  - 单测：Flow 16、Task process-instances 33 通过。
+  - **待验收**：Client 选正式演练再扫一次。应看到导出制品；无待签章时应出现 `POJS2607170008`。正式演练尚未绑定建 SDMS，实例会停在「建 SDMS」。
+
+- **正式站无待签章时当成 POJS2607170008 走 SOP（已由 1.1.2 导出回退替代，不再在 Task 空列表造单）**
+  - 需求：正式演练扫单成功但 `orders=[]` 时，把 `POJS2607170008` 当成待签章，创建客户订单并走后续节点。
+  - 处理：已改到扫单 Flow 改搜索条件后导出，不再由 Task 合成订单。
+
+- **托管浏览器起不来 BROWSER_LAUNCH_FAILED（已修，Engine 已换新进程）**
+  - 原因：Agent 拉起 Engine 时带了不存在的 `PLAYWRIGHT_BROWSERS_PATH`（TEMP 下 sandbox 缓存），Chromium 找不到可执行文件。独立探测脚本会改回本机 `%LOCALAPPDATA%\ms-playwright`，所以探测能登录、Worker 不能。
+  - 处理：启动时若该路径不是目录则丢弃，改用本机 ms-playwright；启动失败打完整异常。Engine 已重启。可再扫一次。
+
+- **正式站登录没勾「我已阅读并同意」（已修，Engine 已换新进程）**
+  - 失败截图协议勾选为空。Playwright 报 `label:has-text('用户注册协议') input[type=checkbox]` 的 `is_checked` 空等 30 秒：协议文字在 checkbox **旁边**（`.userAgree` 里兄弟 span），不在 label 内，选择器匹配不到；异常被吞掉，登录未勾协议。
+  - 登录改为点 `.userAgree .el-checkbox__inner`。独立探测已进正式站 `#/dashboard`（第 2 次验证码通过）。Engine 已重启加载该逻辑。请再扫一次。
+
+- **运行队列卡死（已解开，Task 4520 已换新进程）**
+  - 现象：运行监控三条「排队中」不动。队头是已禁用芯云test 的回签探测，旧 4520（10:34 起）领取仍返回 400「门户未启用」，Worker 整池卡住，正式演练扫单排在后面领不到。
+  - 处理：停 PID 59300 后用当前代码重启 4520。领取改为跳过并取消禁用门户任务（连同 Run）；回签轮询只选 ENABLED 门户，启动时候选 0、未再给 test 建探测。芯云test 那条被领取循环取消；国际test 任务已取消但 Run 仍 QUEUED 的孤儿已改 CANCELLED。
+  - 正式演练扫单 `5c1642ce-…` 已领到并执行，登录验证码三次未识别，以 `CAPTCHA_OCR_FAILED` 结束（队列本身已通）。刷新运行监控后不应再看到那三条卡死排队。
+
+- **正式门户只读 Flow 切 OCR 1.1.1（已发布并只绑正式演练）**
+  - 演示 OCR + 会话缓存已验收；芯云test / 国际test 由用户禁用。正式门户 `天地伟业-国际-正式演练`（`https://supplier.tiandy.com`）保持 ENABLED。
+  - 三只读包 1.1.1：扫单 `130ee81f-…`、回签 `2bf6d600-…`、收货 `5061d2a4-…`，均为 `PUBLISHED`。登录走 `login_official_srm`（ddddocr，最多 3 次，失败可重试，不停待人工）。无 `data-rpa`。
+  - Binding 只更新正式演练三条：扫单/回签/收货 **1.1.0 → 1.1.1**。禁用的 test 门户绑定仍是 1.0.x，未改。未绑建单/填交期/签章/对账写步骤（正式 SRM 不写）。
+  - 单测 12+10+10 通过。取消禁用门户及 phase5 mock 的排队任务 3 条，避免旧 4520 再被队头 400 卡住。
+  - **待验收**：Client 选正式演练手动扫单（待签章空列表也算成功）；收货查未提交行；回签探测可用样例 `POJS2607170008`。正式站会话缓存与演示站按 URL 隔离。
+
+- **门户登录会话缓存（Engine，已验收）**
   - 目的：SOP 连续任务不再每个都 OCR 登录。浏览器进程仍 `CLOSE_ON_FINISH`，只把 Playwright `storage_state`（cookies）按「规范化门户 URL + 登录账号」缓存在 `runtime-cache/sessions/`。
   - 同 URL 不同登录（芯云 vs 国际）分开；演示 IP 与正式 `supplier.tiandy.com` 因 URL 不同自然隔离。同一 `(url, login)` 全程文件锁，禁止并发写。
   - 登录失败 `SRM_LOGIN_FAILED` 删除该缓存；验证码失败不覆盖已有文件。密码不进键、不进 `meta.json`。
   - 登录等待改为 success/error 竞速 `wait_for`，减少「其实已登录却整段 Flow 重试」。
   - 单测：session cache / browser / runtime / config 相关 65 项通过。计划：`.cursor/plans/engine_门户会话缓存_2026-08-20.plan.md`。
-  - **待验收**：重启 Engine 后，芯云test 连续两个需登录任务，第二个日志应有 `reusedSession: true`，不再打验证码。
+  - **已验收**：正确重启 Engine 后，芯云test 扫单/建单/填交期连续任务均为 `reusedSession`，扫单约 12.5 秒（此前约 75 秒）。必须先停旧 4610 再起新进程，否则端口占用会导致新代码起不来。
 
 - **禁用国际test 后排队卡住（已解开）**
   - 原因：领取按排队时间取队头。国际test 禁用后仍有回签探测排在最前，Worker 领取返回「门户未启用」400，整条队列（含芯云test）都不走。

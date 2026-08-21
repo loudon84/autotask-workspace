@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from nodeskclaw_rpa_engine.runtime.browser import ManagedBrowserSessionManager
+from nodeskclaw_rpa_engine.runtime.browser import (
+    ManagedBrowserSessionManager,
+    ensure_playwright_browsers_path,
+)
 from nodeskclaw_rpa_engine.runtime.errors import RpaFatalError
 from nodeskclaw_rpa_engine.workers.schemas import BrowserSessionConfig
 
@@ -189,3 +192,21 @@ async def test_managed_browser_rejects_unsupported_configuration(
             trace_enabled=False,
         )
     assert captured.value.code == code
+
+
+def test_ensure_playwright_ignores_missing_browser_path(monkeypatch, tmp_path: Path) -> None:
+    missing = tmp_path / "cursor-sandbox-playwright"
+    fallback = tmp_path / "ms-playwright"
+    fallback.mkdir()
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(missing))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    result = ensure_playwright_browsers_path()
+    assert result == str(fallback)
+    assert Path(result).is_dir()
+
+
+def test_ensure_playwright_keeps_existing_browser_path(monkeypatch, tmp_path: Path) -> None:
+    existing = tmp_path / "real-browsers"
+    existing.mkdir()
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(existing))
+    assert ensure_playwright_browsers_path() == str(existing)

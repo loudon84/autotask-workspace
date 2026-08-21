@@ -87,6 +87,11 @@ class OfficialPackageGuardTests(unittest.TestCase):
         raw = (FLOW_DIR / "selectors.json").read_text(encoding="utf-8")
         self.assertNotIn("data-rpa", raw)
 
+    def test_agreement_targets_visible_checkbox(self):
+        selectors = json.loads((FLOW_DIR / "selectors.json").read_text(encoding="utf-8"))
+        self.assertIn(".userAgree", selectors["agreement"])
+        self.assertNotIn("input[type='checkbox']", selectors["agreement"])
+
     def test_collect_js_has_no_data_rpa(self):
         self.assertNotIn("data-rpa", flow_module.COLLECT_ORDERS_JS)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,29 @@ from nodeskclaw_rpa_engine.runtime.errors import RpaFatalError
 from nodeskclaw_rpa_engine.workers.schemas import BrowserSessionConfig
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_playwright_browsers_path() -> str | None:
+    """Drop unusable PLAYWRIGHT_BROWSERS_PATH values (empty sandbox dirs).
+
+    Cursor agent shells may inject a TEMP playwright cache that does not exist.
+    Playwright then fails to launch Chromium. Prefer a real local install.
+    """
+    current = (os.environ.get("PLAYWRIGHT_BROWSERS_PATH") or "").strip()
+    if current and Path(current).is_dir():
+        return current
+    if current:
+        os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+        logger.warning(
+            "Ignoring unusable PLAYWRIGHT_BROWSERS_PATH",
+            extra={"configuredPath": current},
+        )
+    if os.name == "nt":
+        fallback = Path(os.environ.get("LOCALAPPDATA", "")) / "ms-playwright"
+        if fallback.is_dir():
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(fallback)
+            return str(fallback)
+    return None
 
 
 @dataclass(slots=True)
@@ -71,6 +95,7 @@ class ManagedBrowserSessionManager:
         trace_enabled: bool,
         storage_state: Path | None = None,
     ) -> BrowserSession:
+        ensure_playwright_browsers_path()
         self._validate_config(config)
         await asyncio.to_thread(
             run_directory.mkdir,
@@ -120,6 +145,7 @@ class ManagedBrowserSessionManager:
                 trace_started=trace_enabled,
             )
         except Exception as exc:
+            logger.exception("Managed browser launch failed")
             if context is not None:
                 await context.close()
             if browser is not None:

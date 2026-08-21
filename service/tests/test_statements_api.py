@@ -91,5 +91,6 @@ def test_detail_includes_stage_history_alias() -> None:
     ).model_dump(by_alias=True)
     assert payload["stage"] == "STMT_PENDING_INVOICE"
     assert payload["stageHistory"] == []
+    assert payload["scannedFilePaths"] == []
     assert payload["subTasks"] == []
     assert payload["lines"][0]["receiptNo"] == "R1"

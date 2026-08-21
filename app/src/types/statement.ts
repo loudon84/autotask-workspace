@@ -64,6 +64,7 @@ export interface StatementBillDetail extends StatementBillListItem {
   lines?: StatementReceiptLine[];
   subTasks?: StatementSubTask[];
   stageHistory?: StatementStageHistoryItem[];
+  scannedFilePaths?: string[];
 }
 
 export interface StatementTaskResult {

@@ -17,6 +17,7 @@ from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
 from app.models.enums import (
     BindingStatus,
+    PortalAccountStatus,
     ProcessInstanceStatus,
     ProcessLineStatus,
     ProcessStage,
@@ -54,10 +55,10 @@ STMT_SUBMIT_REVIEW_TEMPLATE_CODE = "srm_stmt_submit_review"
 SCAN_OUTPUT_SCHEMA = "SRM_PENDING_ORDERS_OUTPUT_V1"
 SIGNED_REPLY_STATUS = "已回签"
 
-# 临时写死归档上传 SDMS 用的 Auth 登录工号。
-# 自动回签轮询无真人 actor，取不到工号，先用此固定工号兜底；
-# 待门户「当前所属用户」权限优化需求落地后，改为从 portal.owner_user_id 取工号。
+# 归档上传 SDMS 的 username：有登录人用登录工号；轮询无登录人时用实例创建人；
+# 创建人也没有时用此固定工号。该字段 SDMS 只要求非空，值不敏感。
 _FALLBACK_ARCHIVE_SDMS_USERNAME = "SMC-SZ-HR15563"
+_DEMO_PORTAL_HOST = "192.168.102.247"
 
 _ARCHIVE_SKIP_STATUSES = {
     TaskStatus.QUEUED.value,
@@ -174,6 +175,20 @@ async def list_line_items(db: AsyncSession, instance_id: str) -> list[ProcessLin
         .order_by(ProcessLineItem.line_number.asc())
     )
     return list(result.scalars().all())
+
+
+async def _is_demo_portal(db: AsyncSession, portal_account_id: str | None) -> bool:
+    if not portal_account_id:
+        return False
+    portal_url = (
+        await db.execute(
+            select(PortalAccount.portal_url).where(
+                PortalAccount.id == portal_account_id,
+                not_deleted(PortalAccount),
+            )
+        )
+    ).scalar_one_or_none()
+    return _DEMO_PORTAL_HOST in str(portal_url or "")
 
 
 async def list_stage_history(db: AsyncSession, instance_id: str) -> list[ProcessStageHistory]:
@@ -330,6 +345,11 @@ async def _create_sub_task(
     ).scalar_one_or_none()
     if portal is None:
         raise NotFoundError(message="Portal 账号不存在", message_key="errors.autotask.portal_not_found")
+    if portal.status != PortalAccountStatus.ENABLED.value:
+        raise BadRequestError(
+            message="门户账号未启用",
+            message_key="errors.autotask.portal_disabled",
+        )
     binding = await _find_binding(db, instance.tenant_id, instance.portal_account_id, template_code)
     task = AutomationTask(
         tenant_id=instance.tenant_id,
@@ -359,6 +379,45 @@ async def _create_sub_task(
     return task
 
 
+async def _ensure_prepare_sub_task(
+    db: AsyncSession,
+    instance: ProcessInstance,
+    *,
+    actor: str,
+    allow_missing_prepare_binding: bool = False,
+) -> AutomationTask | None:
+    """建单中且还没有建 SDMS 子任务时补建一条（正式演练曾缺 Binding）。"""
+    if instance.status != ProcessInstanceStatus.ACTIVE.value:
+        return None
+    if instance.stage != ProcessStage.CREATING_SDMS.value:
+        return None
+    existing_task = (
+        await db.execute(
+            select(AutomationTask.id).where(
+                AutomationTask.process_instance_id == instance.id,
+                AutomationTask.task_type == CREATE_SDMS_TEMPLATE_CODE,
+                not_deleted(AutomationTask),
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if existing_task is not None:
+        return None
+    po_no = instance.biz_key
+    try:
+        return await _create_sub_task(
+            db,
+            instance,
+            template_code=CREATE_SDMS_TEMPLATE_CODE,
+            title=f"1. 建 SDMS 销售订单 - {po_no}",
+            task_input={"po_no": po_no},
+            actor=actor,
+        )
+    except BadRequestError as exc:
+        if not allow_missing_prepare_binding or exc.message_key != "errors.autotask.process_binding_missing":
+            raise
+        return None
+
+
 async def create_from_scan(
     db: AsyncSession,
     tenant_id: str,
@@ -367,6 +426,7 @@ async def create_from_scan(
     *,
     actor: str,
     commit: bool = True,
+    allow_missing_prepare_binding: bool = False,
 ) -> list[ProcessInstance]:
     """扫单结果幂等创建主任务；已存在 (portal, process_code, po_no) 直接跳过。"""
     portal = (
@@ -394,6 +454,12 @@ async def create_from_scan(
             )
         ).scalar_one_or_none()
         if existing is not None:
+            await _ensure_prepare_sub_task(
+                db,
+                existing,
+                actor=actor,
+                allow_missing_prepare_binding=allow_missing_prepare_binding,
+            )
             continue
         instance = ProcessInstance(
             tenant_id=tenant_id,
@@ -417,14 +483,18 @@ async def create_from_scan(
                 note="扫单发现待签章订单",
             )
         )
-        await _create_sub_task(
-            db,
-            instance,
-            template_code=CREATE_SDMS_TEMPLATE_CODE,
-            title=f"1. 建 SDMS 销售订单 - {po_no}",
-            task_input={"po_no": po_no},
-            actor=actor,
-        )
+        try:
+            await _create_sub_task(
+                db,
+                instance,
+                template_code=CREATE_SDMS_TEMPLATE_CODE,
+                title=f"1. 建 SDMS 销售订单 - {po_no}",
+                task_input={"po_no": po_no},
+                actor=actor,
+            )
+        except BadRequestError as exc:
+            if not allow_missing_prepare_binding or exc.message_key != "errors.autotask.process_binding_missing":
+                raise
         created.append(instance)
     if commit:
         await db.commit()
@@ -504,7 +574,7 @@ async def request_sign(db: AsyncSession, tenant_id: str, instance_id: str, user:
             message_key="errors.autotask.process_sign_not_ready",
         )
     # TEMP_E2E_ONLY: 演示门户不落库时，把 AutoTask 已写交期传给签章 Flow 做签章前回填。
-    # 门户保存持久化可用后必须删除 temp_e2e_backfill_dates / order_lines。
+    # 只给演示站。正式站没有交期框/签章，不得回填。门户保存持久化后删除本段。
     lines = await list_line_items(db, instance.id)
     written_lines = [
         {
@@ -515,7 +585,7 @@ async def request_sign(db: AsyncSession, tenant_id: str, instance_id: str, user:
         if item.line_status == ProcessLineStatus.WRITTEN.value and item.expected_delivery_date
     ]
     task_input: dict = {"po_no": instance.biz_key}
-    if written_lines:
+    if written_lines and await _is_demo_portal(db, instance.portal_account_id):
         task_input["temp_e2e_backfill_dates"] = True
         task_input["order_lines"] = written_lines
     await _create_sub_task(
@@ -704,16 +774,20 @@ async def create_check_reply_task(
 
 
 async def list_sign_poll_candidates(db: AsyncSession) -> list[ProcessInstance]:
-    """回签轮询候选：ACTIVE 且阶段为待回签或待签章。"""
+    """回签轮询候选：ACTIVE 且阶段为待回签或待签章，且门户仍启用。"""
     result = await db.execute(
-        select(ProcessInstance).where(
+        select(ProcessInstance)
+        .join(PortalAccount, PortalAccount.id == ProcessInstance.portal_account_id)
+        .where(
             ProcessInstance.process_code == PROCESS_CODE_SRM_CUSTOMER_ORDER,
             ProcessInstance.status == ProcessInstanceStatus.ACTIVE.value,
             or_(
                 ProcessInstance.stage == ProcessStage.SIGN_REQUESTED.value,
                 ProcessInstance.stage == ProcessStage.DATES_COMPLETE.value,
             ),
+            PortalAccount.status == PortalAccountStatus.ENABLED.value,
             not_deleted(ProcessInstance),
+            not_deleted(PortalAccount),
         )
     )
     return list(result.scalars().all())
@@ -826,16 +900,39 @@ async def _handle_scan_success(db: AsyncSession, task: AutomationTask, run: RpaR
     if output.get("schemaVersion") != SCAN_OUTPUT_SCHEMA:
         return
     orders = output.get("orders")
-    if not isinstance(orders, list):
+    if not isinstance(orders, list) or not orders:
         return
-    await create_from_scan(
+    drill = output.get("drill") if isinstance(output.get("drill"), dict) else {}
+    assumed = bool(drill.get("assumedPending"))
+    created = await create_from_scan(
         db,
         task.tenant_id,
         task.portal_account_id,
         orders,
         actor=task.created_by,
         commit=False,
+        allow_missing_prepare_binding=assumed,
     )
+    if assumed:
+        for instance in created:
+            _mark_assumed_pending_drill(instance, instance.biz_key)
+
+
+def _mark_assumed_pending_drill(instance: ProcessInstance, po_no: str) -> None:
+    summary = loads_json(instance.summary, {})
+    if not isinstance(summary, dict):
+        summary = {}
+    summary["poNo"] = po_no
+    summary["drill"] = {
+        "uncommitted": False,
+        "shadow": True,
+        "assumedPending": True,
+        "step": "srm.scan_pending_orders",
+        "blockedAction": None,
+        "at": datetime.now(UTC).isoformat(),
+        "note": "正式站无待签章，演练按订单编号导出后当成待签章扫入",
+    }
+    instance.summary = dumps_json(summary)
 
 
 async def _handle_create_sdms_finished(
@@ -990,11 +1087,13 @@ async def _handle_check_reply_finished(
     reply_status = _optional_str(output.get("replyStatus"))
     if reply_status == SIGNED_REPLY_STATUS:
         _clear_instance_error(instance)
+        username = await _resolve_archive_username(db, instance, "")
         await _trigger_archive_if_needed(
             db,
             instance,
             actor="sign-poll-scheduler",
             note="轮询发现 SRM 已回签，自动归档",
+            sdms_username=username,
         )
 
 
@@ -1034,6 +1133,11 @@ async def create_scan_task(
     ).scalar_one_or_none()
     if portal is None:
         raise NotFoundError(message="Portal 账号不存在", message_key="errors.autotask.portal_not_found")
+    if portal.status != PortalAccountStatus.ENABLED.value:
+        raise BadRequestError(
+            message="门户账号未启用",
+            message_key="errors.autotask.portal_disabled",
+        )
     binding = await _find_binding(db, tenant_id, portal_account_id, SCAN_TASK_TYPE)
     task = AutomationTask(
         tenant_id=tenant_id,

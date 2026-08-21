@@ -1,6 +1,7 @@
 """Phase 5 Worker lease / renew / finish / events contract tests."""
 
 import os
+import json
 
 os.environ.setdefault("SKIP_AUTO_MIGRATE", "1")
 os.environ.setdefault("SEED_DATA_ENABLED", "false")
@@ -110,6 +111,7 @@ def test_build_command_snapshot_includes_dry_run_from_binding():
     assert snapshot["config"]["customerName"] == "天地伟业"
     assert snapshot["config"]["businessEntity"] == "深圳市芯云信息科技有限公司"
     assert snapshot["config"]["ou"] == "104"
+    assert snapshot["config"]["searches"] is None
     assert snapshot["credentials"] == {"username": "02556", "password": "srm-password"}
     assert snapshot["credentialRef"] == ""
 
@@ -155,6 +157,64 @@ def test_build_command_snapshot_dry_run_false_when_absent():
     assert snapshot["config"]["dryRun"] is False
     assert snapshot["config"]["businessEntity"] is None
     assert snapshot["config"]["ou"] is None
+    assert snapshot["config"]["searches"] is None
+
+
+def test_build_command_snapshot_copies_searches_from_binding():
+    task = MagicMock()
+    task.id = "t1"
+    task.tenant_id = "tenant-1"
+    binding = MagicMock()
+    binding.id = "b1"
+    binding.config = json.dumps(
+        {
+            "portalUrl": "https://supplier.tiandy.com",
+            "browserSession": {"mode": "MANAGED", "channel": "chrome"},
+            "searches": [
+                {"replyStatus": "待签章"},
+                {"poNo": "POJS2607170008", "treatAsPending": True},
+            ],
+        },
+        ensure_ascii=False,
+    )
+    binding.rpa_engine_type = "PLAYWRIGHT_CDP"
+    binding.rpa_flow_id = "rpa_flow_srm_scan_pending_orders"
+    binding.rpa_flow_version = "1.1.3"
+    binding.rpa_flow_version_id = "fv-scan"
+    binding.flow_checksum_snapshot = "abc"
+    template = MagicMock()
+    template.id = "tpl1"
+    template.code = "srm_scan_pending_orders"
+    portal = MagicMock()
+    portal.id = "p1"
+    portal.portal_url = "https://supplier.tiandy.com"
+    portal.credential_ref = "srm-password"
+    portal.login_account = "02556"
+    portal.erp_entity_name = "天地伟业"
+    portal.erp_entity_code = "C007193-01_104"
+    portal.business_entity = "深圳市芯云信息科技有限公司"
+    portal.ou = "104"
+
+    with patch.object(dispatch_service, "task_input_dict", return_value={}):
+        snapshot = dispatch_service._build_command_snapshot(
+            task=task, binding=binding, template=template, portal=portal
+        )
+    assert snapshot["config"]["searches"] == [
+        {"replyStatus": "待签章"},
+        {"poNo": "POJS2607170008", "treatAsPending": True},
+    ]
+    assert snapshot["input"]["searches"] == snapshot["config"]["searches"]
+    response = dispatch_service._response_from_snapshot(
+        snapshot=snapshot,
+        run_id="r1",
+        lease_id="l1",
+        lease_expires_at=datetime.now(UTC),
+    )
+    assert response.config.searches == [
+        {"replyStatus": "待签章"},
+        {"poNo": "POJS2607170008", "treatAsPending": True},
+    ]
+    assert response.model_dump(by_alias=True)["config"]["searches"][1]["poNo"] == "POJS2607170008"
 
 
 def test_build_command_snapshot_copies_task_env_bases(monkeypatch):

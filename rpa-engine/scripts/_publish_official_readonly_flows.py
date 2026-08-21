@@ -116,7 +116,7 @@ def main() -> None:
                 raise RuntimeError(f"validate-binding failed for {job['workflow']}: {body}")
             results.append(out)
 
-    combined = FLOWS / "_publish_1.1.0.json"
+    combined = FLOWS / "_publish_1.1.1.json"
     combined.write_text(
         json.dumps(results, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

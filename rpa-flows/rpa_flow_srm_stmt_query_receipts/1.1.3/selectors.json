@@ -1,0 +1,23 @@
+{
+  "username": "input[placeholder='账号或手机号码']:visible",
+  "password": "input[type='password']:visible",
+  "captcha": "input[placeholder='验证码']:visible",
+  "captcha_image": ".el-form-item:has(input[placeholder='验证码']) img:visible",
+  "agreement": ".userAgree .el-checkbox:visible .el-checkbox__inner, .userAgree .el-checkbox:visible",
+  "login_button": "button:has-text('登录'):visible",
+  "login_error": ".el-message--error",
+  "login_success": ".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible",
+  "receipt_page": ".el-table:visible",
+  "date_range": ".el-form-item:has-text('入库确认') .el-date-editor:visible",
+  "date_picker": ".el-date-range-picker:visible",
+  "date_picker_confirm": ".el-date-range-picker:visible .el-picker-panel__footer button:has-text('确定')",
+  "date_picker_prev_year": ".el-date-range-picker:visible .el-icon-d-arrow-left",
+  "date_picker_prev_month": ".el-date-range-picker:visible .el-icon-arrow-left",
+  "date_picker_next_month": ".el-date-range-picker:visible .el-icon-arrow-right",
+  "date_picker_next_year": ".el-date-range-picker:visible .el-icon-d-arrow-right",
+  "search_button": "button:has-text('查询'):visible",
+  "export_button": "button:has-text('导出'):visible",
+  "export_confirm": ".el-dialog:visible button:has-text('确定'), .el-message-box:visible button:has-text('确定')",
+  "empty_text": ".el-table__empty-text:visible, .el-empty:visible, .el-table__empty-block:visible",
+  "loading_mask": ".el-loading-mask:visible"
+}

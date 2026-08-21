@@ -3,10 +3,11 @@
 | 项 | 内容 |
 | --- | --- |
 | 版本 | **v4.0** |
-| 状态 | **方案已确认（2026-08-18）**；实施前以本文为准 |
+| 状态 | 方案基线（2026-08-18）；**现行操作说明见 [v4.1 SOP](./AutoTask%20v4.1%20天地伟业正式演练与上线SOP.md)** |
 | 基线 | 客户订单 v2.02；对账单 v3.0 / v3.01 / v3.02 |
 | 计划 | [`.cursor/plans/v4.0_天地伟业_正式演练_2026-08-18.plan.md`](../../.cursor/plans/v4.0_天地伟业_正式演练_2026-08-18.plan.md) |
 | 原则 | 正式 SRM **只读+下载合同**；SDMS（测试环境）**真写**；写步骤停在按钮前并标「演练未提交」 |
+| Flow 演练/上线 | [正式门户 Flow 演练与上线](./正式门户%20Flow%20演练与上线.md)：同一份正式包，差别进 Binding |
 
 ---
 
@@ -112,7 +113,7 @@ finish 钩子：committed=false → 不改 stage / check_status
 | 步骤 | 正式 SRM | 演练 | 本地状态 |
 | --- | --- | --- | --- |
 | 登录 | 选择器/验证码与演示不同 | 真登录；未知验证码走 `WAITING_HUMAN` | — |
-| 扫待签章 | 当前无单 | 进订单列表并筛选；**空列表 SUCCESS** | 不创建实例（现行 `create_from_scan` 对空列表已是空操作） |
+| 扫待签章 | 当前无单 | 待签章查询后导出 Excel；无结果则 Binding `searches` 再按样例订单编号导出 | 用 Excel 建实例；生产 Binding 只留待签章。见 [演练与上线](./正式门户%20Flow%20演练与上线.md) |
 | 建 SDMS 销售订单 | 从正式站下载订单 | **真建 SDMS**（测试环境允许） | 阶段推进到 SDMS_CREATED |
 | 填交期 | 无待签章则可能无保存按钮 | 有可编辑详情则填框、定位保存后停；没有保存按钮则记「选择器未覆盖」，不编造成功 | 行不标 WRITTEN；阶段不进 DATES_COMPLETE |
 | 签章 | 同上 | 定位签章按钮后停 | 不进 SIGN_REQUESTED |
@@ -131,10 +132,18 @@ finish 钩子：committed=false → 不改 stage / check_status
 | SDMS 金额校验 | 我方接口 | 真调；不写 SRM | 校验失败仍不落库（v3.0 不变） |
 | 勾选 + 生成 | 不能点生成 | 勾选并定位「生成对账单」后停 | 若 SDMS 已通过，仍可落 **待生成草稿**；生成 RPA 演练成功后 **仍为待生成**，不改未对账 |
 | 未对账详情 | 已有 1 条 | 用这条当「生成后」替身，进收货应付 | 影子账单 `check_status=UNCHECKED`，匹配键 = 对账日期 + 对账金额 |
-| 扫描发票 | 允许 | 真扫描 | 刷新后 SRM 附件消失是预期，不修 |
-| 提交审批 | 不能提交 | 定位按钮后停 | 不改已对账 / 审批中；不传发票到 SDMS |
+| 扫描发票 | 允许 | 真扫描，回写到 Client 供核验 | 本地可有发票号/总额；门户刷新附件消失是预期 |
+| 提交审批 | 不能提交 | 再扫一次，必须与页面一致；定位按钮后停 | 不一致则失败不点提交；一致也不改已对账（dryRun） |
 
-生产规则「扫描和提交必须同一次 RPA」仍然有效。演练闸里故意拆开：扫可以做，提交必须停。`dryRun=false` 时行为与 v3.01 完全一致。
+生产：客服先扫后核，再点提交。提交 RPA 二次扫描必须等于页面已核对的发票号/总额。`dryRun=false` 时一致才点门户提交。
+
+**2026-08-21 会话修订（相对本节原文）：**
+
+1. 生成演练成功只证明「找到生成按钮」。门户**没有**对应未对账单。那张本地待生成草稿是相对 SRM 的假数据，**禁止**把它改成未对账、也禁止拿它去上传发票。
+2. 下一节点必须另插影子账单：门户当前那条未对账的日期+金额。脚本是 `seed_official_unchecked_statement.py`（不是 `seed_tiandi_drill.py`，后者只种客户订单）。
+3. Client 详情先「扫描发票」回写发票号/总额供核验，再点「提交审核」。提交表示页面结果已通过。
+4. 正式站**要绑** `srm_stmt_upload_invoice` 1.1.0（第一次扫描，无 dryRun）。提交仍 1.1.1 + `dryRun: true`。二次扫描必须与页面发票号/总额一致，否则不点提交。
+5. 演练提交成功后本地仍待上传发票 / 未对账；不传发票到 SDMS。上线同一包，Binding 去掉 `dryRun` 才真点提交。
 
 ---
 
@@ -165,7 +174,7 @@ Task 租约把 `dryRun` 放进 `config`（与 `portalUrl` 并列）。Engine 写
 {
   "committed": false,
   "dryRun": true,
-  "blockedAction": "generate_statement"
+  "blockedAction": "generate_statement | submit_review"
 }
 ```
 
@@ -191,10 +200,17 @@ Task 租约把 `dryRun` 放进 `config`（与 `portalUrl` 并列）。Engine 写
 
 ### 5.4 影子数据
 
-脚本 `service/scripts/seed_tiandi_drill.py`（默认预览，`--yes` 才写库）：
+客户订单：`service/scripts/seed_tiandi_drill.py`（默认预览，`--yes` 才写库）
 
-- 入参：portal_account_id、可选已回签 PO、未对账的对账日期与金额。
-- 创建带 `summary.drill.shadow=true` 的客户订单实例和/或 `statement_bills`。
+- 入参：portal_account_id、可选已回签 PO。
+- 创建带 `summary.drill.shadow=true` 的客户订单实例。
+- 不写凭据、不调 SRM。
+
+对账单未对账替身：`service/scripts/seed_official_unchecked_statement.py`（2026-08-21 从「一个脚本兼顾订单/对账单」拆出）
+
+- 入参：`--check-date`、`--check-amount`（必须与门户那条未对账一致）、可选 portal_account_id。
+- 创建 `statement_bills.check_status=UNCHECKED`、流程阶段 `STMT_PENDING_INVOICE`，`summary.drill.shadow=true`。
+- 不把生成演练的待生成草稿改成未对账。
 - 不写凭据、不调 SRM。
 
 ---
@@ -277,8 +293,29 @@ Task 租约把 `dryRun` 放进 `config`（与 `portalUrl` 并列）。Engine 写
 | 正式 Portal | ✅ 完成 | 「天地伟业-国际-正式演练」`fbf07b4e-…`，URL `https://supplier.tiandy.com` |
 | 正式只读 Binding | ✅ 完成 | 扫单 / 回签探测 / 收货查询均为 **1.1.0 正式包**；未设 `dryRun` |
 | 建 SDMS Flow 1.2.7 | ✅ 源码完成 | 正式站选择器适配；**未发布、未绑正式门户**（阶段 2） |
-| 验收 | ⏳ 待做 | Client 选手动扫单；POJS2607170008 回签探测；收货未提交行 |
+| 生成对账单 1.1.0 | ✅ 完成 | 正式 Binding `dryRun: true`；演示仍 1.0.7 |
+| 提交审核 1.1.0 | ✅ 源码/发布 | 正式 Binding `dryRun: true`；扫描真做；演示仍 1.0.7 |
+| 未对账影子种子 | ✅ 完成 | `seed_official_unchecked_statement.py`；需门户真实日期+金额 |
+| 验收 | ⏳ 待做 | 种子写库后 Client 选发票点提交审核；门户仍未对账 |
 
 **禁止混绑：** 演示门户（芯云test / 国际test）仍用扫单 `1.0.1`、回签 `1.0.0`、收货 `1.0.3`。正式 1.1.0 不得绑 `192.168.102.247`。
 
-**下一步：** Client 选「天地伟业-国际-正式演练」手动扫单（验证码可能 `WAITING_HUMAN`）。阶段 2：正式建单（1.2.7 选择器 + 1.2.9 `orgName`）与下合同，不设 `dryRun`。
+**下一步：** 对账单提交审核演练。先用 `seed_official_unchecked_statement.py` 按门户未对账日期+金额写库；Client 选发票后点「提交审核」。正式包 1.1.0 扫描真做、提交 dryRun 不 click。演示提交仍 1.0.7。
+
+---
+
+## 12. 相对原文的会话修订（便于反查 / 上线）
+
+原文（§4.2 / §5.4）写「生成后用已有未对账当替身」和「`seed_tiandi_drill.py` 可种对账单」，但没有写清生成演练单与门户未对账是两张单。2026-08-21 确认并归档：
+
+| 点 | 原文 | 现口径 |
+| --- | --- | --- |
+| 生成演练成功 | 可落待生成草稿 | 草稿保留；门户无对账单；**不得**把草稿改成未对账 |
+| 未对账替身 | 用已有 1 条 | 另跑种子脚本，匹配键 = 门户那条的日期+金额 |
+| 种子脚本 | `seed_tiandi_drill.py` 兼顾订单和 `statement_bills` | 订单仍用该脚本；对账单用 `seed_official_unchecked_statement.py` |
+| Client 提交审核 | 能进详情、能扫描 | 先扫后核；点提交 = 页面发票已通过；二次扫描必须一致 |
+| 上传发票包 | 曾写正式不绑 upload | **要绑** 扫描 1.1.0（无 dryRun）；提交 1.1.1 |
+| 提交演练成功 | 不改已对账、不传 SDMS | 同；`committed: false`；阶段仍待上传发票 |
+| 上线 | dryRun 改为 false | 同一份 submit 1.1.1，去掉 `dryRun` 才点门户提交 |
+
+禁止混绑：演示门户提交仍 `1.0.7`。正式 1.1.0 不得绑 `192.168.102.247`。

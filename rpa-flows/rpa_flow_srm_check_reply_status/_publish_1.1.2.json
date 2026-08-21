@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_check_reply_status",
+  "rpaFlowVersion": "1.1.2",
+  "rpaFlowVersionId": "95f0b13d-66b9-455e-926b-7ef0e6a327ea",
+  "packageChecksum": "sha256:aa2d4109c28ef2baa6c8e631d68e544cbcd6f2c3d5707cca0bba054c0a390aef",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_check_reply_status"
+}

@@ -38,14 +38,11 @@ async def resolve_portal(db, portal_id: str | None) -> PortalAccount:
     if portal_id:
         query = query.where(PortalAccount.id == portal_id)
     else:
-        query = query.where(PortalAccount.portal_name.contains("天地伟业"))
+        query = query.where(PortalAccount.portal_name == "天地伟业-国际-正式演练")
     rows = (await db.execute(query.order_by(PortalAccount.created_at.asc()))).scalars().all()
     if not rows:
-        raise SystemExit("找不到天地伟业 PortalAccount，请传 --portal-id")
-    if portal_id:
-        return rows[0]
-    demo = [row for row in rows if "正式" not in (row.portal_name or "")]
-    return demo[0] if demo else rows[0]
+        raise SystemExit("找不到天地伟业-国际-正式演练 PortalAccount，请传 --portal-id")
+    return rows[0]
 
 
 async def find_instance(db, portal_id: str, po_no: str) -> ProcessInstance | None:
@@ -120,6 +117,7 @@ async def main() -> int:
             ],
             actor=ACTOR,
             commit=False,
+            allow_missing_prepare_binding=True,
         )
         if not created:
             print("create_from_scan 未创建（可能并发已存在）")

@@ -42,7 +42,7 @@ export const CHECK_STATUS_LABEL: Record<StatementCheckStatus, string> = {
 
 export const INVOICE_STATUS_LABEL: Record<string, string> = {
   NOT_UPLOADED: "未上传",
-  UPLOADED: "已上传",
+  UPLOADED: "已扫描",
   REVIEWING: "审批中",
 };
 
@@ -75,7 +75,7 @@ export const STATEMENT_STAGE_BUTTON: Record<string, string | null> = {
 export const STATEMENT_SUBTASK_NODES = [
   { taskType: "srm_stmt_query_receipts", label: "待创建 · 查询收货" },
   { taskType: "srm_stmt_generate", label: "待生成" },
-  { taskType: "srm_stmt_upload_invoice", label: "历史上传发票" },
+  { taskType: "srm_stmt_upload_invoice", label: "扫描发票" },
   { taskType: "srm_stmt_submit_review", label: "提交审核" },
 ];
 

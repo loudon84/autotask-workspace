@@ -550,6 +550,9 @@ class RpaRuntime:
             value = str(getattr(config, attr, "") or "").strip()
             if value:
                 safe[key] = value
+        searches = getattr(config, "searches", None)
+        if isinstance(searches, list):
+            safe["searches"] = [dict(item) for item in searches if isinstance(item, dict)]
         return safe
 
     @staticmethod

@@ -23,6 +23,26 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 MAX_CAPTCHA_ATTEMPTS = 3
 _CLEAN = re.compile(r"\s+")
+_AGREEMENT_BOX_SELECTORS = (
+    ".userAgree .el-checkbox:visible",
+    ".el-checkbox:visible",
+)
+_AUTHENTICATED_CHROME_SELECTORS = (
+    ".el-menu-item:has-text('订单')",
+    "span:has-text('订单')",
+    "a:has-text('订单')",
+    ".el-menu-item:has-text('主页')",
+    "span:has-text('个人中心')",
+    "a:has-text('个人中心')",
+)
+_LOGIN_HASH_PREFIXES = ("/login", "/sso", "/passport")
+_AUTHENTICATED_HASH_PREFIXES = (
+    "/dashboard",
+    "/order",
+    "/home",
+    "/index",
+    "/notice",
+)
 
 
 def _clean(value: Any) -> str:
@@ -92,6 +112,96 @@ async def _redact_login_fields(page: Any, selector: Callable[..., str]) -> None:
             continue
 
 
+async def _locator_count(locator: Any) -> int:
+    count = getattr(locator, "count", None)
+    if not callable(count):
+        return 0
+    try:
+        return int(await count())
+    except Exception:
+        return 0
+
+
+async def _ensure_agreement(page: Any, selector: Callable[..., str]) -> None:
+    """Tick the visible agreement checkbox.
+
+    Official SRM puts the text in sibling spans, not inside the label:
+    `.userAgree > .el-checkbox` (empty label) + `我已阅读并同意` + `《用户注册协议》`.
+    `label:has-text('用户注册协议') input` matches nothing and `is_checked()` waits 30s.
+    """
+    box = None
+    for css in _AGREEMENT_BOX_SELECTORS:
+        candidate = page.locator(css).first
+        if await _locator_count(candidate) > 0:
+            box = candidate
+            break
+    if box is not None:
+        classes = ""
+        try:
+            classes = (await box.get_attribute("class")) or ""
+        except Exception:
+            classes = ""
+        if "is-checked" in classes:
+            return
+        inner = box.locator(".el-checkbox__inner").first
+        target = inner if await _locator_count(inner) > 0 else box
+        await target.click(timeout=3000)
+        return
+
+    loc = page.locator(selector("agreement")).first
+    if await _locator_count(loc) == 0:
+        return
+    try:
+        already = await loc.is_checked(timeout=2000)
+    except Exception:
+        already = False
+    if already:
+        return
+    try:
+        await loc.check(force=True, timeout=3000)
+    except Exception:
+        await loc.click(force=True, timeout=3000)
+
+
+def is_authenticated_portal_url(url: str | None) -> bool:
+    text = url or ""
+    hash_part = text.split("#", 1)[-1] if "#" in text else ""
+    if any(hash_part.startswith(prefix) for prefix in _LOGIN_HASH_PREFIXES):
+        return False
+    return any(hash_part.startswith(prefix) for prefix in _AUTHENTICATED_HASH_PREFIXES)
+
+
+async def _locator_is_visible(locator: Any) -> bool:
+    try:
+        return bool(await locator.first.is_visible())
+    except Exception:
+        return False
+
+
+async def _authenticated_chrome_visible(
+    page: Any, selector: Callable[..., str]
+) -> bool:
+    candidates = (selector("login_success"), *_AUTHENTICATED_CHROME_SELECTORS)
+    for css in candidates:
+        if await _locator_is_visible(page.locator(css)):
+            return True
+    return False
+
+
+async def _session_already_authenticated(
+    page: Any, selector: Callable[..., str]
+) -> bool:
+    try:
+        captcha = page.locator(selector("captcha_image"))
+        if await _locator_is_visible(captcha):
+            return False
+    except Exception:
+        pass
+    if is_authenticated_portal_url(getattr(page, "url", None)):
+        return True
+    return await _authenticated_chrome_visible(page, selector)
+
+
 async def login_official_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
     step_id = "srm.login"
     page = ctx.page
@@ -110,9 +220,7 @@ async def login_official_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
         {"stepId": step_id, "stepType": step_id},
     )
     try:
-        already = page.locator(selector("login_success"))
-        captcha_probe = page.locator(selector("captcha_image"))
-        if await already.is_visible() and not await captcha_probe.is_visible():
+        if await _session_already_authenticated(page, selector):
             await _emit(
                 ctx,
                 "STEP_SUCCEEDED",
@@ -124,13 +232,10 @@ async def login_official_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
         pass
 
     await page.goto(ctx.portal_url, wait_until="domcontentloaded")
-    captcha_image = page.locator(selector("captcha_image"))
-    success = page.locator(selector("login_success"))
+    captcha_image = page.locator(selector("captcha_image")).first
     try:
         for _ in range(50):
-            if await captcha_image.is_visible():
-                break
-            if await success.is_visible() and not await captcha_image.is_visible():
+            if await _session_already_authenticated(page, selector):
                 await _emit(
                     ctx,
                     "STEP_SUCCEEDED",
@@ -138,9 +243,24 @@ async def login_official_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
                     {"stepId": step_id, "reusedSession": True},
                 )
                 return
+            if await captcha_image.is_visible():
+                break
             await page.wait_for_timeout(200)
         else:
-            await captcha_image.wait_for(state="visible", timeout=1000)
+            if await _session_already_authenticated(page, selector):
+                await _emit(
+                    ctx,
+                    "STEP_SUCCEEDED",
+                    "Supplier portal session already authenticated",
+                    {"stepId": step_id, "reusedSession": True},
+                )
+                return
+            raise RpaRetryableError(
+                "SRM_LOGIN_PAGE_UNAVAILABLE",
+                "Supplier portal login page could not be loaded",
+            )
+    except RpaRetryableError:
+        raise
     except Exception as exc:
         raise RpaRetryableError(
             "SRM_LOGIN_PAGE_UNAVAILABLE",
@@ -149,12 +269,7 @@ async def login_official_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
 
     await page.fill(selector("username"), username)
     await page.fill(selector("password"), password)
-    agreement = page.locator(selector("agreement"))
-    try:
-        if not await agreement.is_checked():
-            await agreement.check()
-    except Exception:
-        pass
+    await _ensure_agreement(page, selector)
 
     last_reason = "CAPTCHA_OCR_FAILED"
     for attempt in range(1, MAX_CAPTCHA_ATTEMPTS + 1):
@@ -263,21 +378,37 @@ async def _wait_visible(locator: Any, timeout_ms: int) -> bool:
     return False
 
 
+async def _wait_already_authenticated(
+    page: Any, selector: Callable[..., str], timeout_ms: int
+) -> bool:
+    deadline = asyncio.get_event_loop().time() + timeout_ms / 1000
+    while asyncio.get_event_loop().time() < deadline:
+        if await _session_already_authenticated(page, selector):
+            return True
+        await asyncio.sleep(0.2)
+    return False
+
+
 async def _wait_for_login_result(
     page: Any, selector: Callable[..., str]
 ) -> tuple[str, str | None]:
-    success = page.locator(selector("login_success"))
-    error = page.locator(selector("login_error"))
+    success = page.locator(selector("login_success")).first
+    error = page.locator(selector("login_error")).first
     success_task = asyncio.create_task(_wait_visible(success, 15_000))
     error_task = asyncio.create_task(_wait_visible(error, 15_000))
+    chrome_task = asyncio.create_task(
+        _wait_already_authenticated(page, selector, 15_000)
+    )
     done, pending = await asyncio.wait(
-        {success_task, error_task},
+        {success_task, error_task, chrome_task},
         return_when=asyncio.FIRST_COMPLETED,
     )
     for task in pending:
         task.cancel()
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)
+    if chrome_task in done and chrome_task.result():
+        return "success", None
     if success_task in done and success_task.result():
         return "success", None
     if error_task in done and error_task.result():

@@ -106,6 +106,7 @@ def _build_command_snapshot(
         portal_url = binding_config["portalUrl"]
     password = (portal.credential_ref or "").strip()
     username = (portal.login_account or "").strip()
+    searches = binding_config.get("searches") if isinstance(binding_config.get("searches"), list) else None
     lease_config: dict[str, Any] = {
         "portalUrl": portal_url,
         "browserSession": browser_session.model_dump(by_alias=True),
@@ -114,8 +115,12 @@ def _build_command_snapshot(
         "customerCode": _optional_text(getattr(portal, "erp_entity_code", None)),
         "businessEntity": _optional_text(getattr(portal, "business_entity", None)),
         "ou": _optional_text(getattr(portal, "ou", None)),
+        "searches": searches,
     }
     lease_config.update(integration_lease_config())
+    task_input = dict(task_input_dict(task))
+    if searches is not None and "searches" not in task_input:
+        task_input["searches"] = searches
     return {
         "taskId": task.id,
         "workflowBindingId": binding.id,
@@ -130,7 +135,7 @@ def _build_command_snapshot(
         "flowChecksumSnapshot": binding.flow_checksum_snapshot,
         "credentialRef": "",
         "credentials": {"username": username, "password": password},
-        "input": task_input_dict(task),
+        "input": task_input,
         "config": lease_config,
     }
 
@@ -159,6 +164,7 @@ def _lease_config_from_snapshot(config_raw: dict[str, Any]) -> LeaseCommandConfi
         erp_client_id=config_raw.get("erpClientId") or config_raw.get("erp_client_id"),
         erp_client_secret=config_raw.get("erpClientSecret")
         or config_raw.get("erp_client_secret"),
+        searches=config_raw.get("searches") if isinstance(config_raw.get("searches"), list) else None,
     )
 
 
@@ -251,6 +257,27 @@ async def _expire_stale_leases(db: AsyncSession) -> None:
     if stale_leases:
         await db.flush()
 
+    # 任务已取消但 Run 仍停在 QUEUED 时，运行监控会一直显示「排队中」。
+    orphaned_runs = (
+        await db.execute(
+            select(RpaRun)
+            .join(AutomationTask, AutomationTask.id == RpaRun.task_id)
+            .where(
+                RpaRun.status == RunStatus.QUEUED,
+                AutomationTask.status == TaskStatus.CANCELLED,
+                not_deleted(RpaRun),
+                not_deleted(AutomationTask),
+            )
+        )
+    ).scalars().all()
+    if orphaned_runs:
+        now = datetime.now(UTC)
+        for run in orphaned_runs:
+            run.status = RunStatus.CANCELLED
+            if run.ended_at is None:
+                run.ended_at = now
+        await db.flush()
+
 
 async def _load_binding_context(
     db: AsyncSession, task: AutomationTask
@@ -321,6 +348,19 @@ async def lease_task(db: AsyncSession, body: WorkerLeaseRequest) -> WorkerLeaseR
         except (BadRequestError, NotFoundError):
             # 禁用门户/无效绑定不能 400 整条领取队列，否则后面可跑的任务永远卡住。
             transition(task, TaskStatus.CANCELLED)
+            stuck_runs = (
+                await db.execute(
+                    select(RpaRun).where(
+                        RpaRun.task_id == task.id,
+                        RpaRun.status.in_([RunStatus.QUEUED, RunStatus.RUNNING]),
+                        not_deleted(RpaRun),
+                    )
+                )
+            ).scalars().all()
+            for run in stuck_runs:
+                run.status = RunStatus.CANCELLED
+                if run.ended_at is None:
+                    run.ended_at = datetime.now(UTC)
             skipped = True
             await db.flush()
             continue

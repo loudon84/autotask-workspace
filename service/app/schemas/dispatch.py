@@ -56,6 +56,7 @@ class LeaseCommandConfig(CamelModel):
     doc_base_url: str | None = Field(None, serialization_alias="docBaseUrl")
     erp_client_id: str | None = Field(None, serialization_alias="erpClientId")
     erp_client_secret: str | None = Field(None, serialization_alias="erpClientSecret")
+    searches: list[dict[str, Any]] | None = None
 
 
 class LeaseCredentials(CamelModel):

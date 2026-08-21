@@ -1,0 +1,22 @@
+{
+  "username": "input[placeholder='账号或手机号码']:visible",
+  "password": "input[type='password']:visible",
+  "captcha": "input[placeholder='验证码']:visible",
+  "captcha_image": ".el-form-item:has(input[placeholder='验证码']) img:visible",
+  "agreement": ".userAgree .el-checkbox:visible .el-checkbox__inner, .userAgree .el-checkbox:visible",
+  "login_button": "button:has-text('登录'):visible",
+  "login_error": ".el-message--error",
+  "login_success": ".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible",
+  "login_ready": "input[placeholder='账号或手机号码']:visible, input[type='password']:visible",
+  "order_page": ".el-table",
+  "po_number": ".el-form-item:has-text('订单编号') input:visible",
+  "search_button": "button:has-text('查询'):visible",
+  "order_row": ".el-table__body-wrapper tbody tr:has-text('{po_no}'):visible",
+  "order_detail": ".el-table__fixed-right a:has-text('详情'):visible, .el-table__fixed-right button:has-text('详情'):visible, .el-table__fixed-right .el-button:has-text('详情'):visible",
+  "detail_page": "#app",
+  "detail_po_number": "text={po_no}",
+  "detail_rows": ".el-table__body-wrapper tbody tr",
+  "reply_status": ".el-tag:visible",
+  "view_sign": "button:has-text('查看签章'):visible, a:has-text('查看签章'):visible, .el-button:has-text('查看签章'):visible, .el-link:has-text('查看签章'):visible",
+  "loading_mask": ".el-loading-mask"
+}

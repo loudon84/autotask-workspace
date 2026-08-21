@@ -78,16 +78,57 @@ def test_stage_definitions_cover_all_stages() -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_instances_only_queries_customer_orders() -> None:
-    db = MagicMock()
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = []
-    db.execute = AsyncMock(return_value=result)
-    await svc.list_instances(db, "tenant-1")
-    stmt = db.execute.await_args.args[0]
-    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-    assert svc.PROCESS_CODE_SRM_CUSTOMER_ORDER in compiled
-    assert svc.PROCESS_CODE_SRM_TIANDI_STATEMENT not in compiled
+async def test_handle_scan_success_empty_orders_does_not_create(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    task = MagicMock()
+    run = MagicMock()
+    run.output = {"schemaVersion": svc.SCAN_OUTPUT_SCHEMA, "orders": []}
+    created = False
+
+    async def _create(*_a, **_k):  # noqa: ANN001
+        nonlocal created
+        created = True
+        return []
+
+    monkeypatch.setattr(svc, "create_from_scan", _create)
+    await svc._handle_scan_success(MagicMock(), task, run)
+    assert created is False
+
+
+@pytest.mark.asyncio
+async def test_handle_scan_success_marks_drill_from_flow_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    task = MagicMock()
+    task.tenant_id = "tenant-1"
+    task.portal_account_id = "portal-1"
+    task.created_by = "user-1"
+    run = MagicMock()
+    run.output = {
+        "schemaVersion": svc.SCAN_OUTPUT_SCHEMA,
+        "orders": [{"poNo": "POJS2607170008", "replyStatus": "待签章"}],
+        "source": "xlsx",
+        "drill": {"assumedPending": True, "poNo": "POJS2607170008"},
+    }
+    instance = _instance(biz_key="POJS2607170008")
+    instance.summary = "{}"
+    captured: dict = {}
+
+    async def _create(_db, _tenant, _portal_id, orders, **kwargs):  # noqa: ANN001
+        captured["orders"] = orders
+        captured["kwargs"] = kwargs
+        return [instance]
+
+    monkeypatch.setattr(svc, "create_from_scan", _create)
+    await svc._handle_scan_success(MagicMock(), task, run)
+    assert captured["orders"][0]["poNo"] == "POJS2607170008"
+    assert captured["kwargs"]["allow_missing_prepare_binding"] is True
+    from app.services.json_utils import loads_json
+
+    summary = loads_json(instance.summary, {})
+    assert summary["drill"]["assumedPending"] is True
+    assert summary["poNo"] == "POJS2607170008"
 
 
 @pytest.mark.asyncio
@@ -171,6 +212,7 @@ async def test_request_sign_passes_temp_e2e_backfill_payload(monkeypatch: pytest
         return task
 
     monkeypatch.setattr(svc, "_create_sub_task", _fake_create_sub_task)
+    monkeypatch.setattr(svc, "_is_demo_portal", AsyncMock(return_value=True))
     await svc.request_sign(db, "tenant-1", "inst-1", _user())
     assert captured["template_code"] == svc.SIGN_TEMPLATE_CODE
     assert captured["task_input"]["po_no"] == "PO-001"
@@ -179,6 +221,39 @@ async def test_request_sign_passes_temp_e2e_backfill_payload(monkeypatch: pytest
         {"line_number": "10", "expected_delivery_date": "2026-09-15"},
         {"line_number": "20", "expected_delivery_date": "2026-09-20"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_request_sign_skips_temp_e2e_backfill_on_official_portal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _instance(stage=ProcessStage.DATES_COMPLETE.value)
+    lines = [
+        ProcessLineItem(
+            id="line-10",
+            instance_id="inst-1",
+            line_number="10",
+            material_number="MAT-001",
+            line_status=ProcessLineStatus.WRITTEN.value,
+            expected_delivery_date="2026-09-15",
+        ),
+    ]
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(instance), _scalars_result(lines)])
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    captured: dict = {}
+
+    async def _fake_create_sub_task(db_arg, inst, **kwargs):  # noqa: ANN001
+        captured.update(kwargs)
+        task = MagicMock()
+        task.id = "task-sign-1"
+        return task
+
+    monkeypatch.setattr(svc, "_create_sub_task", _fake_create_sub_task)
+    monkeypatch.setattr(svc, "_is_demo_portal", AsyncMock(return_value=False))
+    await svc.request_sign(db, "tenant-1", "inst-1", _user())
+    assert captured["task_input"] == {"po_no": "PO-001"}
 
 
 @pytest.mark.asyncio
@@ -205,8 +280,22 @@ async def test_archive_requires_sdms_username() -> None:
 
 
 @pytest.mark.asyncio
+async def test_resolve_archive_username_uses_creator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """轮询无登录人时，用流程实例创建人的工号即可。"""
+    instance = _instance(created_by="creator-1")
+
+    async def _creator_username(_db, user_id):
+        assert user_id == "creator-1"
+        return "CREATOR-JOB-ID"
+
+    monkeypatch.setattr(svc, "username_from_user_cache", _creator_username)
+    username = await svc._resolve_archive_username(MagicMock(), instance, "")
+    assert username == "CREATOR-JOB-ID"
+
+
+@pytest.mark.asyncio
 async def test_resolve_archive_username_falls_back_to_hardcoded(monkeypatch: pytest.MonkeyPatch) -> None:
-    """自动轮询无真人 actor 且 UserCache 取不到工号时，兜底用写死的工号。"""
+    """创建人工号也没有时，兜底固定工号，避免轮询上传缺 username。"""
     instance = _instance(created_by="scripts/seed_sign_poll_test")
 
     async def _empty_username(_db, _user_id):
@@ -528,8 +617,14 @@ async def test_check_reply_signed_triggers_archive(monkeypatch: pytest.MonkeyPat
         return True
 
     monkeypatch.setattr(svc, "_trigger_archive_if_needed", _fake_trigger)
+
+    async def _username(_db, _instance, _given):
+        return "CREATOR-JOB-ID"
+
+    monkeypatch.setattr(svc, "_resolve_archive_username", _username)
     await svc._handle_check_reply_finished(db, instance, run, succeeded=True)
     assert called["actor"] == "sign-poll-scheduler"
+    assert called["sdms_username"] == "CREATOR-JOB-ID"
 
 
 @pytest.mark.asyncio
@@ -588,6 +683,25 @@ async def test_create_check_reply_skips_non_poll_stages() -> None:
     db = MagicMock()
     task = await svc.create_check_reply_task(db, instance, actor="sign-poll-scheduler")
     assert task is None
+
+
+@pytest.mark.asyncio
+async def test_create_sub_task_rejects_disabled_portal() -> None:
+    instance = _instance(stage=ProcessStage.SIGN_REQUESTED.value)
+    portal = MagicMock()
+    portal.status = "DISABLED"
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result(portal))
+    with pytest.raises(BadRequestError) as exc:
+        await svc._create_sub_task(
+            db,
+            instance,
+            template_code="srm_check_reply_status",
+            title="回签探测 - PO-001",
+            task_input={"po_no": "PO-001"},
+            actor="sign-poll-scheduler",
+        )
+    assert exc.value.message_key == "errors.autotask.portal_disabled"
 
 
 @pytest.mark.asyncio
@@ -716,3 +830,77 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
     count = await scheduler.process_once()
     assert count == 1
     assert captured_portal_ids == ["portal-bound"]
+
+
+@pytest.mark.asyncio
+async def test_ensure_prepare_sub_task_creates_when_stuck_without_task(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _instance(stage=ProcessStage.CREATING_SDMS.value, biz_key="POJS2607170008")
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result(None))
+    captured: dict = {}
+
+    async def _create(_db, inst, **kwargs):  # noqa: ANN001
+        captured["instance"] = inst
+        captured.update(kwargs)
+        return MagicMock(id="task-prepare")
+
+    monkeypatch.setattr(svc, "_create_sub_task", _create)
+    task = await svc._ensure_prepare_sub_task(db, instance, actor="user-1")
+    assert task.id == "task-prepare"
+    assert captured["template_code"] == svc.CREATE_SDMS_TEMPLATE_CODE
+    assert captured["task_input"] == {"po_no": "POJS2607170008"}
+
+
+@pytest.mark.asyncio
+async def test_ensure_prepare_sub_task_skips_when_task_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _instance(stage=ProcessStage.CREATING_SDMS.value)
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result("task-existing"))
+    created = False
+
+    async def _create(*_a, **_k):  # noqa: ANN001
+        nonlocal created
+        created = True
+        return MagicMock()
+
+    monkeypatch.setattr(svc, "_create_sub_task", _create)
+    result = await svc._ensure_prepare_sub_task(db, instance, actor="user-1")
+    assert result is None
+    assert created is False
+
+
+@pytest.mark.asyncio
+async def test_create_from_scan_repairs_stuck_existing_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    portal = MagicMock()
+    portal.portal_name = "天地伟业-国际-正式演练"
+    existing = _instance(stage=ProcessStage.CREATING_SDMS.value, biz_key="POJS2607170008")
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(portal), _scalar_result(existing)])
+    db.commit = AsyncMock()
+    repaired = False
+
+    async def _ensure(_db, inst, **kwargs):  # noqa: ANN001
+        nonlocal repaired
+        repaired = True
+        assert inst is existing
+        assert kwargs["allow_missing_prepare_binding"] is True
+        return MagicMock()
+
+    monkeypatch.setattr(svc, "_ensure_prepare_sub_task", _ensure)
+    created = await svc.create_from_scan(
+        db,
+        "tenant-1",
+        "portal-1",
+        [{"poNo": "POJS2607170008"}],
+        actor="user-1",
+        allow_missing_prepare_binding=True,
+    )
+    assert created == []
+    assert repaired is True
+
