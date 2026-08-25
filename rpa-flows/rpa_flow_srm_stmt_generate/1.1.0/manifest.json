@@ -1,0 +1,17 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_generate",
+  "name": "SRM Statement Generate (Official Portal)",
+  "version": "1.1.0",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": ["srm_stmt_generate"],
+  "supportedPortalTypes": ["MOCK_SRM"],
+  "inputSchema": [
+    {"name": "dateStart", "type": "string", "required": true},
+    {"name": "dateEnd", "type": "string", "required": true},
+    {"name": "lines", "type": "array", "required": true},
+    {"name": "localAmount", "type": "string", "required": false}
+  ],
+  "capabilities": ["PLAYWRIGHT_CDP", "BROWSER_SESSION_MANAGED", "SCREENSHOT"],
+  "minimumEngineVersion": "0.5.0"
+}

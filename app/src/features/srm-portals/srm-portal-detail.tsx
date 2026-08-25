@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePortalAccount } from "@/features/srm-portals/api/use-portal-accounts";
 import { PortalAccountFormDialog } from "@/features/srm-portals/components/portal-account-form-dialog";
+import { formatOwnerLabel } from "@/features/srm-portals/owner-label";
 import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-portal-write-permission";
 import { WorkflowBindingManager } from "@/features/workflows/workflow-binding-manager";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -80,11 +81,31 @@ export function SrmPortalDetailPage({ portalId }: { portalId: string }) {
 
       <Card>
         <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
-          <Field label="客户编码" value={portal.erpEntityCode} />
-          <Field label="客户名称" value={portal.erpEntityName} />
+          <Field
+            label="实体类型"
+            value={portal.entityType === "SUPPLIER" ? "供应商" : "客户"}
+          />
+          <Field
+            label={portal.entityType === "SUPPLIER" ? "供应商编号" : "客户编号"}
+            value={portal.erpEntityCode}
+          />
+          <Field
+            label={portal.entityType === "SUPPLIER" ? "供应商名称" : "客户名称"}
+            value={portal.erpEntityName}
+          />
+          <Field label="业务实体" value={portal.businessEntity || "—"} />
+          <Field label="我方公司编号" value={portal.ou || "—"} />
           <Field label="门户名称" value={portal.portalName} />
           <Field label="门户地址" value={portal.portalUrl} />
           <Field label="登录账号" value={portal.loginAccount || "-"} />
+          <Field
+            label="归属人"
+            value={
+              formatOwnerLabel(portal.ownerName, portal.ownerUsername) ||
+              portal.ownerUserId ||
+              "—"
+            }
+          />
           <Field
             label="打开方式"
             value={openModeLabels[portal.clientOpenMode]}

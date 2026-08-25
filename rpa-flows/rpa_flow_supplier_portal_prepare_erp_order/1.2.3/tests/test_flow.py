@@ -284,31 +284,26 @@ class FakeNavigationPage:
         self.timeline.append(("click", selector))
 
 
-class FakeIdentityRowsLocator:
-    def __init__(self, raw_lines, timeline):
-        self.raw_lines = raw_lines
+class FakeIdentityTableLocator:
+    def __init__(self, timeline):
         self.timeline = timeline
-
-    @property
-    def first(self):
-        return self
 
     async def wait_for(self, *, state, timeout):  # noqa: ASYNC109
         self.timeline.append(("wait", state, timeout))
 
-    async def evaluate_all(self, script):
-        self.timeline.append(("evaluate_all", "querySelectorAll" in script))
-        return self.raw_lines
-
 
 class FakeIdentityPage:
     def __init__(self, raw_lines, timeline):
-        self.rows = FakeIdentityRowsLocator(raw_lines, timeline)
+        self.raw_lines = raw_lines
         self.timeline = timeline
 
     def locator(self, selector):
         self.timeline.append(("locator", selector))
-        return self.rows
+        return FakeIdentityTableLocator(self.timeline)
+
+    async def evaluate(self, script, selector):
+        self.timeline.append(("evaluate", selector))
+        return self.raw_lines
 
 
 class NavigationCompatibilityTests(unittest.IsolatedAsyncioTestCase):
@@ -397,7 +392,7 @@ class OrderLineIdentityCollectionTests(unittest.IsolatedAsyncioTestCase):
         adapter = flow_module.SupplierPortalAdapter(
             SimpleNamespace(
                 page=page,
-                selectors={"detail_rows": "detail-rows"},
+                selectors={"lines_table": "lines-table"},
             )
         )
 
@@ -419,9 +414,9 @@ class OrderLineIdentityCollectionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             timeline,
             [
-                ("locator", "detail-rows"),
+                ("locator", "lines-table"),
                 ("wait", "visible", 10000),
-                ("evaluate_all", True),
+                ("evaluate", "lines-table"),
             ],
         )
 
@@ -429,7 +424,7 @@ class OrderLineIdentityCollectionTests(unittest.IsolatedAsyncioTestCase):
         adapter = flow_module.SupplierPortalAdapter(
             SimpleNamespace(
                 page=FakeIdentityPage([], []),
-                selectors={"detail_rows": "detail-rows"},
+                selectors={"lines_table": "lines-table"},
             )
         )
 
@@ -463,6 +458,10 @@ class PackageContractTests(unittest.TestCase):
         )
         self.assertIn(
             "pend-order-detail-lines-table",
+            selectors["lines_table"],
+        )
+        self.assertIn(
+            "pend-order-detail-lines-table",
             selectors["detail_rows"],
         )
         source = (FLOW_DIR / "flow.py").read_text(encoding="utf-8")
@@ -478,7 +477,7 @@ class DetailStabilityTests(unittest.IsolatedAsyncioTestCase):
             "download_dialog": "dialog",
             "detail_page": "detail",
             "download_order": "download",
-            "detail_rows": "rows",
+            "lines_table": "lines-table",
             "loading_mask": "loading",
         }
         page = FakeStablePage(
@@ -497,17 +496,23 @@ class DetailStabilityTests(unittest.IsolatedAsyncioTestCase):
                 ("wait", "download_dialog", "hidden", 10000),
                 ("wait", "detail_page", "visible", 10000),
                 ("wait", "download_order", "visible", 10000),
-                ("wait", "detail_rows", "visible", 10000),
+                ("wait", "lines_table", "visible", 10000),
                 ("wait", "loading_mask", "hidden", 10000),
                 ("assets", "detail"),
                 (
                     "layout",
-                    {"detailSelector": "detail", "rowSelector": "rows"},
+                    {
+                        "detailSelector": "detail",
+                        "rowSelector": "lines-table .el-table__body-wrapper tbody tr",
+                    },
                 ),
                 ("timeout", 150),
                 (
                     "layout",
-                    {"detailSelector": "detail", "rowSelector": "rows"},
+                    {
+                        "detailSelector": "detail",
+                        "rowSelector": "lines-table .el-table__body-wrapper tbody tr",
+                    },
                 ),
                 ("timeout", 300),
             ],

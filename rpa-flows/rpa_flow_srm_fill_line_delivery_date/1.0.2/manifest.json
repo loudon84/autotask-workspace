@@ -1,0 +1,39 @@
+{
+  "rpaFlowId": "rpa_flow_srm_fill_line_delivery_date",
+  "name": "SRM Fill Single Line Expected Delivery Date",
+  "version": "1.0.2",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_fill_line_delivery_date"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "po_no",
+      "type": "string",
+      "required": true,
+      "description": "Customer purchase order number"
+    },
+    {
+      "name": "line_number",
+      "type": "string",
+      "required": true,
+      "description": "Order line number to fill"
+    },
+    {
+      "name": "expected_delivery_date",
+      "type": "string",
+      "required": true,
+      "description": "Expected delivery date (YYYY-MM-DD)"
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

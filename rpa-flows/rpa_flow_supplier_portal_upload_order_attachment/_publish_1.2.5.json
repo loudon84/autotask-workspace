@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_supplier_portal_upload_order_attachment",
+  "rpaFlowVersion": "1.2.5",
+  "rpaFlowVersionId": "7d2661f9-251e-4143-8365-2b73bc93cce0",
+  "packageChecksum": "sha256:15fd5133f863f80be7a0b714e646b57b75a97acaaa82c126aef2e3a2964b8b2f",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_upload_order_attachment"
+}

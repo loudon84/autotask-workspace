@@ -21,5 +21,97 @@
       }
     },
     "createdBy": "seed-user-001"
+  },
+  {
+    "id": "binding-stmt-query",
+    "portalAccountId": "portal-001",
+    "workflowTemplateId": "wf-template-stmt-query",
+    "workflowTemplateVersion": "1.0.0",
+    "rpaEngineType": "PLAYWRIGHT_CDP",
+    "rpaFlowId": "rpa_flow_srm_stmt_query_receipts",
+    "rpaFlowVersion": "1.0.0",
+    "rpaFlowVersionId": "flow-version-stmt-query-001",
+    "flowChecksumSnapshot": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "status": "ENABLED",
+    "config": {
+      "browserSession": {
+        "mode": "MANAGED",
+        "headless": true,
+        "channel": "chrome",
+        "profileRef": null,
+        "cdpEndpointRef": null,
+        "closePolicy": "CLOSE_ON_FINISH"
+      }
+    },
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "binding-stmt-generate",
+    "portalAccountId": "portal-001",
+    "workflowTemplateId": "wf-template-stmt-generate",
+    "workflowTemplateVersion": "1.0.0",
+    "rpaEngineType": "PLAYWRIGHT_CDP",
+    "rpaFlowId": "rpa_flow_srm_stmt_generate",
+    "rpaFlowVersion": "1.0.0",
+    "rpaFlowVersionId": "flow-version-stmt-generate-001",
+    "flowChecksumSnapshot": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "status": "ENABLED",
+    "config": {
+      "browserSession": {
+        "mode": "MANAGED",
+        "headless": true,
+        "channel": "chrome",
+        "profileRef": null,
+        "cdpEndpointRef": null,
+        "closePolicy": "CLOSE_ON_FINISH"
+      }
+    },
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "binding-stmt-upload",
+    "portalAccountId": "portal-001",
+    "workflowTemplateId": "wf-template-stmt-upload",
+    "workflowTemplateVersion": "1.0.0",
+    "rpaEngineType": "PLAYWRIGHT_CDP",
+    "rpaFlowId": "rpa_flow_srm_stmt_upload_invoice",
+    "rpaFlowVersion": "1.0.0",
+    "rpaFlowVersionId": "flow-version-stmt-upload-001",
+    "flowChecksumSnapshot": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "status": "ENABLED",
+    "config": {
+      "browserSession": {
+        "mode": "MANAGED",
+        "headless": true,
+        "channel": "chrome",
+        "profileRef": null,
+        "cdpEndpointRef": null,
+        "closePolicy": "CLOSE_ON_FINISH"
+      }
+    },
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "binding-stmt-submit",
+    "portalAccountId": "portal-001",
+    "workflowTemplateId": "wf-template-stmt-submit",
+    "workflowTemplateVersion": "1.0.0",
+    "rpaEngineType": "PLAYWRIGHT_CDP",
+    "rpaFlowId": "rpa_flow_srm_stmt_submit_review",
+    "rpaFlowVersion": "1.0.0",
+    "rpaFlowVersionId": "flow-version-stmt-submit-001",
+    "flowChecksumSnapshot": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "status": "ENABLED",
+    "config": {
+      "browserSession": {
+        "mode": "MANAGED",
+        "headless": true,
+        "channel": "chrome",
+        "profileRef": null,
+        "cdpEndpointRef": null,
+        "closePolicy": "CLOSE_ON_FINISH"
+      }
+    },
+    "createdBy": "seed-user-001"
   }
 ]

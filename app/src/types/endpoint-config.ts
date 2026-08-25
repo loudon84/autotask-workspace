@@ -38,11 +38,11 @@ export function normalizeAutoTaskEndpointConfig(
 ): AutoTaskEndpointConfig {
   const merged = { ...defaultAutoTaskEndpointConfig, ...config };
   return {
-    ...merged,
     authBackendUrl: normalizeBaseUrl(
       merged.authBackendUrl,
       defaultAutoTaskEndpointConfig.authBackendUrl
     ),
+    authPrefix: merged.authPrefix,
     rpaEngineUrl: normalizeBaseUrl(
       merged.rpaEngineUrl,
       defaultAutoTaskEndpointConfig.rpaEngineUrl
@@ -51,6 +51,8 @@ export function normalizeAutoTaskEndpointConfig(
       merged.taskBackendUrl,
       defaultAutoTaskEndpointConfig.taskBackendUrl
     ),
+    taskPrefix: merged.taskPrefix,
+    aiosHomeUrl: merged.aiosHomeUrl,
   };
 }
 
@@ -88,4 +90,36 @@ export function buildRpaEngineUrl(
   const base = config.rpaEngineUrl.replace(TRAILING_SLASHES_PATTERN, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${base}/api/v1${normalizedPath}`;
+}
+
+/** SDMS 销售订单查看页：fdId = headerId */
+export function buildSdmsOmViewUrl(
+  baseUrl: string | undefined,
+  headerId: string
+): string | null {
+  const id = headerId.trim();
+  if (!id) {
+    return null;
+  }
+  const base = (baseUrl ?? "").trim().replace(TRAILING_SLASHES_PATTERN, "");
+  if (!base) {
+    return null;
+  }
+  return `${base}/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=${encodeURIComponent(id)}`;
+}
+
+/** SDMS 客户对账单查看页：fdId = check_head_id */
+export function buildSdmsCheckViewUrl(
+  baseUrl: string | undefined,
+  checkHeadId: string
+): string | null {
+  const id = checkHeadId.trim();
+  if (!id) {
+    return null;
+  }
+  const base = (baseUrl ?? "").trim().replace(TRAILING_SLASHES_PATTERN, "");
+  if (!base) {
+    return null;
+  }
+  return `${base}/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=${encodeURIComponent(id)}`;
 }

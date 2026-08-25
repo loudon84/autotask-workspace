@@ -13,6 +13,7 @@ from app.schemas.workflow import WorkflowBindingCreate, WorkflowBindingUpdate
 from app.services import rpa_engine_client
 from app.services.json_utils import dumps_json, loads_json
 from app.services.portal_account_service import get_portal_account
+from app.services import scheduler_job_service as scheduler_job_svc
 from app.services.task_successor_service import validate_successor_binding_config
 from app.services.workflow_template_service import get_workflow_template
 
@@ -106,6 +107,11 @@ async def create_workflow_binding(
         created_by=user.user_id,
     )
     db.add(binding)
+    await db.flush()
+    portal = await get_portal_account(db, tenant_id, body.portal_account_id)
+    await scheduler_job_svc.sync_scheduler_job_from_binding(
+        db, binding=binding, portal=portal, config=body.config
+    )
     await db.commit()
     await db.refresh(binding)
     return binding
@@ -149,6 +155,10 @@ async def update_workflow_binding(
 
     for field, value in data.items():
         setattr(binding, field, value)
+    portal = await get_portal_account(db, tenant_id, binding.portal_account_id)
+    await scheduler_job_svc.sync_scheduler_job_from_binding(
+        db, binding=binding, portal=portal, config=final_config
+    )
     await db.commit()
     await db.refresh(binding)
     return binding
@@ -172,6 +182,7 @@ async def enable_workflow_binding(db: AsyncSession, tenant_id: str, binding_id: 
 async def disable_workflow_binding(db: AsyncSession, tenant_id: str, binding_id: str) -> WorkflowBinding:
     binding = await get_workflow_binding(db, tenant_id, binding_id)
     binding.status = BindingStatus.DISABLED
+    await scheduler_job_svc.disable_job_for_binding(db, binding.id)
     await db.commit()
     await db.refresh(binding)
     return binding

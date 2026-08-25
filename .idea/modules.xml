@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/autotask-workspace.iml" filepath="$PROJECT_DIR$/.idea/autotask-workspace.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/gyp-next.iml" filepath="$PROJECT_DIR$/.idea/gyp-next.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/nodeskclaw-rpa-engine.iml" filepath="$PROJECT_DIR$/.idea/nodeskclaw-rpa-engine.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/nodeskclaw-task.iml" filepath="$PROJECT_DIR$/.idea/nodeskclaw-task.iml" />
+    </modules>
+  </component>
+</project>

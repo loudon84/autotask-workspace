@@ -50,9 +50,29 @@ class Settings(BaseSettings):
     SUCCESSOR_JOB_BATCH_SIZE: int = Field(default=10, ge=1, le=100)
     SUCCESSOR_JOB_MAX_ATTEMPTS: int = Field(default=10, ge=1, le=100)
 
+    SCAN_JOB_ENABLED: bool = False
+    SCAN_JOB_HOUR: int = Field(default=8, ge=0, le=23)
+    SCAN_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
+    SCAN_JOB_POLL_INTERVAL_SECONDS: float = Field(default=60.0, gt=0, le=3600)
+
+    SIGN_POLL_JOB_ENABLED: bool = False
+    SIGN_POLL_INTERVAL_SECONDS: float = Field(default=1800.0, gt=0, le=86400)
+
     SEED_DATA_ENABLED: bool = True
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"
+
+    # 环境级外部系统基址。测试/正式只改这里，不要写进 Binding、不要写进登录页。
+    # SMC_API_BASE_URL：公司内部 SQL→JSON 接口平台（对账单查询等）。
+    # SDMS_BASE_URL：SDMS 网页主机（Client 打开销售订单/对账单链接）。
+    # 以后 OA 可加 OA_BASE_URL，租约会透传 oaBaseUrl。
+    SMC_API_BASE_URL: str = ""
+    SDMS_BASE_URL: str = ""
+    ERP_BASE_URL: str = ""
+    OA_BASE_URL: str = ""
+    ERP_CLIENT_ID: str = ""
+    ERP_CLIENT_SECRET: str = ""
+    SDMS_ATTACHMENT_API_BASE_URL: str = ""
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

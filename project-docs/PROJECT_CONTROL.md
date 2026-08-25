@@ -38,7 +38,8 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-10. 可以准备数据库设计和 DDL，但目前尚未授权创建数据库或执行 DDL。
+10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行（当前 head）。**
+11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
 
@@ -59,6 +60,14 @@
 | 本地 Auth/Task/Engine 闭环 | 已运行验证 | 三个服务健康检查均为 HTTP 200；本地 Task/Run 已完成一次 `rpa_flow_mock_srm_fetch_po` SUCCESS |
 | Client 证据中心 | 已支持真实预览和下载 | 截图使用临时签名地址接近全屏预览；截图和 XLSX 通过 Electron 下载到用户下载目录 |
 | 供应商门户任务 2→任务 3 自动链 | Task 2 1.2.0 停在 WAITING_HUMAN；Task 3 1.0.1 已发布 | Task 2 Run `635a6af1-c0c3-4d79-adf1-3ff4f8d56adb` 未生成后继任务；Task 3 跳过“已回签”校验版本已发布，UUID `85a896c4-f2df-4683-b41a-073872cded46`、摘要 `sha256:8284930376c590b8138f2ef74495414b6217db3d582464595e6588ca02714f37`，现有 Task 3 Binding 尚未切换，也未单独运行 |
+| 天地伟业对账单（v3.0） | 生成 Flow 1.0.6 已切 Binding；Client 可重新生成 | 勾选：用订单编号 span 定位所在行，再点选择列 checkbox。 |
+| 天地伟业对账单 SOP 体验（v3.01） | 详情已补回勾选明细；需重启唯一 Task 4520 | 六步进度：填单页待创建/SDMS核准；列表按 stage；详情对齐客户订单并展示 `summary.lines`。 |
+| 天地伟业对账单优化（v3.02） | 代码已改，需重启唯一 Task 4520 | 详情「对账明细」；展示 SDMS `check_num` 链接；SRM 提交成功后 HTTP 把发票传到 SDMS（`flag=SDMS_ARR`）。 |
+| 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
+| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.4 dryRun=true** 已绑正式演练 | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
+| 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
+| 权限 v5.1（管人接口后补） | 代码已接 Auth：`/me` 的 `is_super_admin` / `is_task_admin`；登录拉 `GET /members/{id}/subordinate` 写入 `managed_user_ids`。模块管理员与超管在 AutoTask 内全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后新列与下属缓存才对运行中的进程生效。 |
+| 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
 
 ## 5. 未决问题
 
@@ -91,6 +100,16 @@
 9. 修正测试环境 Task Artifact 的 public/download base URL，并在部署版 Client 中复测截图预览及 PNG/XLSX 下载。
 10. 正式链路仍需修复演示门户的签章持久化契约；当前绕过方案已发布 Task 3 `1.0.1`，下一步需精确切换 Task 3 Binding，再由用户授权单独创建 Task 3。由于 Task 2 已是 `WAITING_HUMAN` 且没有成功输出，Task 服务不会自动创建后继任务；不得把独立 Task 3 成功记作 Task 2→3 自动链成功。
 11. 修正 Task 自动迁移开关，使 `.env` 的 `SKIP_AUTO_MIGRATE=1` 能在启动阶段生效，并增加启动配置测试。
+12. ~~**待授权**：执行 Alembic `b2e8a4c91f30`~~ **已执行（2026-08-13）**：`process_line_items` 已补齐 SRM 附件列；详情接口此前因缺列 500，现应可正常返回。
+13. **v2.02 运维（已完成）**：`prepare` Binding→**1.2.6**；`srm_check_reply_status` Template+Binding→**1.0.0**；本机 Task 已开 `SIGN_POLL_JOB_ENABLED=true`（见 2026-08-13 日志）。
+14. **R1 限制（已澄清）**：演示门户**当场签章**常不落库，该笔单据刷新后未必仍是「已回签」，不能拿它验轮询。初始化种子里另有单据本身就是「已回签」，可用这些 PO 把流程实例推到 `SIGN_REQUESTED` 再验 `check_reply`→自动归档。
+15. TEMP 签章回填（`rpa_flow_srm_sign_order` 1.0.1）仍待门户落库修复后删除。
+16. **对账单**：查询 RPA 已通，后续生成/发票/提交改由 Client 操作；SDMS 当月无单时生成会被拦住。
+17. **v4.0 阶段 1 已落地**：正式门户「天地伟业-国际-正式演练」已绑扫单/回签/收货 **1.1.0**（正式选择器）。演示 Binding 仍 1.0.x。下一步：Client 手动扫单验收；阶段 2 出正式建单+下合同（不设 dryRun），阶段 3 写步骤 + dryRun。
+18. **v5.0**：PRD 已扩。换人/换门户不准改 `.env` 和 Flow 源码。门户存密码；ERP/SDMS 地址进 Binding.config；Engine `mock_env` 去掉。探测脚本硬编码不纳入本期。
+19. **正式 Flow 演练/上线**：现行说明见 v4.1 SOP。扫描正式 **1.1.3**（Binding 已写 `searches`，无包内默认 PO）、提交正式 **1.1.4 dryRun** 已绑。选文件后必须点弹窗「确定」才识别。dryRun 对「提交审核」做 trial click，不真点。填交期/签章正式包未绑。
+20. **v5.1**：Auth `/me` 管理员字段与下属接口已到。代码已接：`is_task_admin` 全放开；登录缓存下属。迁移 `a7e4b2c81d09` **已执行**（`g3b8e2a91c40` → `a7e4b2c81d09`，当前 head）。**需重启唯一 Task 4520**。
+21. **v5.2 调度中心（Binding 任务）**：迁移与回填已完成。4520 已于 2026-08-25 09:48 换成 `JobScheduler`。正式演练回签 `*/5` 会到点开火，但无待回签候选时不建任务。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -215,6 +234,556 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-25
 
+- **正式演练回签 `*/5` 看起来没触发**：JobScheduler 已在 09:48 进程上运行。同门户扫单 `*/5` 曾于 10:15/10:20 真正建出任务（随后扫单 job 已停用）。回签 job `5517f5e8-…` 启用、cron=`*/5 * * * *`、Binding 为 `srm_check_reply_status`。客户订单 `POJS2607170008` 停在 `SDMS_CREATED`，候选=0，所以详情「执行任务」为空。已补开火日志与详情空列表说明。要把实例推进到待回签才会出现探测任务。
+- **v5.1 权限接上 Auth 接口**：`/me.is_super_admin` / `is_task_admin`；`GET /api/v1/members/{id}/subordinate` 登录写入 `managed_user_ids`。模块管理员 AutoTask 内全放开。
+- **v5.1 迁库（用户授权）**：已执行 `alembic upgrade head`（`g3b8e2a91c40` → `a7e4b2c81d09`）。`autotask_user_cache.is_task_admin` 已建。**未**重启 4520。
+- **v5.1 归属人全员接口**：Auth OpenAPI 已有 `GET /api/v1/orgs/{org_id}/members`。模块管理员走这条；人名在 `user_name`、工号在 `username`，归属必须用 `user_id` 不能用成员 `id`。下拉展示「姓名（工号）」可搜索。
+- **调度中心 v5.2 回填 Binding JSON**：用户授权维护 `config.schedule`。已执行 `backfill_scheduler_jobs.py --apply`，6 条 ENABLED 扫单/回签 Binding 写入默认 schedule，并插入 `scheduler_jobs`。扫单默认 `0 8 * * *` / 扫单；回签默认 `*/30 * * * *` / 回签轮询。门户：芯云test、国际test、芯云-正式演练（各扫单+回签）。库中无「天地伟业-国际-正式演练」扫单/回签 Binding。4520 未重启。
+- **扫单排队卡死**：用户要求去掉「扫单：SRM 待签章订单」排队中任务。旧 4520 全局扫单循环仍在跑，约每 2 分钟插一条，堆积 268 条 QUEUED。已走 `cancel_task` 全部取消（任务+Run）。当前 inflight=0。未重启 4520，旧循环可能继续插新单。
+
+### 2026-08-24
+
+- **调度中心 v5.2（扫单/回签轮询迁入 autotask_settings，cron 化热更新）**
+  - PRD：`prd/AutoTask v5.2 调度中心.md`（定稿，含范围/语义/验收/待办）。
+  - 痛点：扫单/回签轮询开关与时间参数在 `.env`，改一次要上服务器改文件并重启 Task。
+  - Task：新增 `scheduler_config_service`（读写 `autotask_settings`，键 `scheduler.signPoll.*` / `scheduler.scan.*`；表缺值回退 `.env` 默认）。`SignPollScheduler` / `ScanScheduler` 常驻启动，每个 tick 查库读配置；`main.py` 不再按 `.env` 开关决定是否创建。新增 `GET/PUT /api/v1/autotask/settings/schedulers`（门户 admin/operator/超管可改，写审计）。`SUCCESSOR_JOB_*` 仍走 `.env` 未动。
+  - 旧 `.env` 键（`SIGN_POLL_JOB_ENABLED` / `SIGN_POLL_INTERVAL_SECONDS` / `SCAN_JOB_ENABLED` / `SCAN_JOB_HOUR` / `SCAN_JOB_MINUTE`）降级为首次回退默认，**服务重启后即以表为准**。
+  - **迭代 2（同日）：调度模型统一为 5 段 cron（分 时 日 月 周，本地时间）**——上一版"回签=间隔秒、扫单=每天时刻"表达不了"每半小时扫一次"这类需求。改动：
+    - 新增 `cron_schedule.py`：自研解析器（`*`、`*/n`、`a-b`、`a-b/n`、`n/m`、逗号列表；dom/dow 双受限按 Vixie OR；7=周日；`previous_before` 支持补跑判断），无第三方依赖。
+    - 配置键改为 `scheduler.signPoll.enabled/cron` + `scheduler.scan.enabled/cron`（上一版 interval/hour/minute 键从未落库，直接替换无迁移负担）。`.env` 回退自动折算：`SIGN_POLL_INTERVAL_SECONDS=1800` → `*/30 * * * *`，`SCAN_JOB_HOUR/MINUTE` → `M H * * *`。
+    - 两调度器统一"30s tick + `_next_fire` 到点触发"：改 cron 只换计划不重启；到点后 10 分钟内重启会补触发一次（防停机错过当天扫单）；开关关闭清计划，重开即时按新计划走。
+    - API/DTO：`GET/PUT` 返回并校验 cron（解析失败 422），响应含 `next_run_at`（下次触发预览）。
+    - Client 调度中心卡片改「开关 + 预设下拉（每15/30分钟、每1/2小时、每天8点、每天8&14点、工作日8点）+ 自定义 cron 输入 + 下次触发展示」，两个调度器同一套交互。
+    - 验证：Task pytest 214 passed（含 cron 解析/配置回退/调度器触发与热更 24 项）；Client tsc 无本次改动文件错误。
+  - **迭代 3（同日）：Client 修复三连**——① `fromDTO` 读 snake_case 但 `mapItemResponse` 已转 camelCase，导致 `Cannot read properties of undefined (reading 'enabled')`，DTO 改 camelCase；② 调度中心两个 Select 缺 `SelectTrigger/SelectContent` 包裹层，整页崩溃（`SelectItem must be used within SelectContent`），已补齐；③ 加 custom 模式状态 + 前端 cron 解析器（`features/settings/cron.ts`，与后端同语义）实现「自定义」切换与下次触发实时预览。
+  - **未决**：用户现场反馈自定义模式/实时预览仍不生效；已确认 4520 运行 cron 版代码（openapi `SignPollSettings` 含 `cron` 字段）、Vite 5173 分发新版模块。新增组件测试 `scheduler-settings.test.tsx` 7 例 4 过 3 挂，挂点为无障碍关联（combobox/按钮无可访问名，`Field` 的 Label 未 htmlFor 关联、保存按钮文案为「保存调度配置」与用例不符），下一步修 Label 关联与 aria 后复测。
+  - 待办：重启唯一 Task 4520 后生效；首次 PUT 前表中无这些键，GET 返回 `.env` 折算值。
+  - **迭代 4（同日，按现场口径收窄）**：调度配置是全局一份，页面读写不再跟登录组织走。非法/无下次触发的 cron 保存拒绝。Client 补 Label/aria。不按租户做多套调度。
+  - **迭代 5（同日，准时触发）**：`*/5` 现场 15:04:27 提前跑（加载 cron 把 10 分钟内的上个到点当补跑）、15:10:22 延后跑（固定每 30 秒才醒）。已去掉补跑；到点前按剩余秒数睡醒。改完需重启 4520。
+  - **迭代 6（同日，需求重定）**：全局两开关方案废弃。定时器挂 Binding id；`config.schedule` 仅首次插入默认 cron；调度中心列表/详情维护变量并看任务日志；用户不新建。PRD 已整篇替换；计划 `.cursor/plans/v5.2_调度中心_binding任务.plan.md`。代码未改；DDL 未执行。
+  - **迭代 7（同日，按 Binding 任务方案开发中）**：落地 `scheduler_jobs` 模型与 Alembic `g3b8e2a91c40`。保存 Binding 时按 `config.schedule` 首次插入 job；再改 JSON 不覆盖 cron；停用 Binding 必停 job，重新启用 Binding 不自动打开 job。`JobScheduler` 替换全局扫单/回签循环，按门户开火。REST `GET/PATCH /scheduler-jobs` 与任务日志。Client 管理中心「调度中心」列表/详情，无新建按钮；设置页全局调度卡片已撤。回填脚本 `scripts/backfill_scheduler_jobs.py` 默认 dry-run。
+  - **迭代 8（同日，用户授权迁库）**：已执行 `alembic upgrade head`（`f1a9c3e74b20` → `g3b8e2a91c40`）。`scheduler_jobs` 已建（含 `uq_scheduler_jobs_binding_id`）。**未** `--apply` 回填；**未**重启 4520。
+- **v5.1 权限代码（管人接口后补）**
+  - Task：门户加 `owner_user_id`；登录缓存 `managed_user_ids`（Auth `/me` 尚未返回时当空）。
+  - 列表/详情按归属人过滤：admin/超管全开；其他人只看自己名下。停用 grants 鉴权。
+  - 任务/对账单/人工操作/看板补齐同一套可见性；改归属人由 Task 校验。
+  - 归属人下拉：普通人只有自己；admin 走组织成员接口。
+  - 归档工号改走门户归属人，去掉写死工号。
+  - Client：门户列表/详情/编辑展示归属人。
+  - 迁移 `f1a9c3e74b20`：**用户授权后已执行** `alembic upgrade head`（`e2b7c14a3d05` → `f1a9c3e74b20`，当前 head）。已有门户回填 `owner_user_id = created_by`；`autotask_user_cache` 增加 `managed_user_ids`。未重启 Task。
+  - 验证：Task pytest 60 passed（permission / portal / user_sync / process_instances）。
+
+### 2026-08-21
+
+- **v5.1 权限定稿（文档）**
+  - 门户只认 `owner_user_id`；能看 = 归属人是自己或自己管的人。`portal_org_role=admin` 全放开。停用 `portal_access_grants` 鉴权。任务/订单/对账单同一过滤。
+  - Auth `/me` 需后补「管理的人」；登录写入 Task 缓存。未补前非 admin 只看自己名下。
+  - 加列须授权才迁库。未改代码。
+
+- **扫单 Binding `searches` 落地（1.1.3）**
+  - 问题：SOP 写 Binding 控样例单号，实际 1.1.2 把 `POJS2607170008` 写死在 `flow.py`；正式 Binding 也从未写入 `searches`。Task 租约原先只传 `portalUrl` / `browserSession` / `dryRun`。
+  - Task：租约 `config.searches`；同时写入任务 `input.searches`（兼容尚未重启的 Engine）。
+  - Engine：`RunConfig` / `_safe_config` 透传 `searches`。
+  - 正式扫单 **1.1.3** Registry `73eb83a7-…`，checksum `sha256:1344dc32…`。Binding `2f3a6e10-…` 已写 `searches`：待签章 + `POJS2607170008`/`treatAsPending`。演示仍 1.0.2。
+  - 签章 `temp_e2e_backfill_dates` 只给演示门户 URL（`192.168.102.247`）。
+  - 计划：`.cursor/plans/binding_searches_对齐_2026-08-21.plan.md`。**需重启唯一 Task 4520**。建议重启 Engine 4610。Client 打开正式演练扫单 Binding 应能看到 `searches`；换第二条 `poNo` 再扫才会换单。
+  - 未做：正式填交期/签章包（演示 1.0.3 不读 dryRun，禁止绑正式站）。
+
+- **v4.1 正式演练与上线 SOP**
+  - 新文档 `project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`：演练/上线 Binding 怎么配；两条 SOP 每步谁点、SRM 会不会改；哪些现在能演练、哪些要人核对、哪些等待签章或关 dryRun。
+  - v4.0 与「演练与上线同一份包」改为指向 v4.1。对账单扫描+提交演练已跑通；填交期/签章仍等正式站待签章；真生成/真提交仍等关闸。
+
+- **扫描发票必须点弹窗「确定」才会识别（1.1.2 / 提交 1.1.4）**
+  - 旧逻辑：`set_input_files` 后「确定」点不到就 `pass`，接着读发票号；读失败重试又回到列表。
+  - 现改为必等可见、未禁用、必点「确定」，弹窗关掉再读发票号/总额。点不到直接失败，不再默默跳过。
+  - 扫描 **1.1.2** Registry `806b0a20-…`，checksum `sha256:6d066355…`。Binding `b36b5628-…`。提交 **1.1.4** Registry `92226c2c-…`，checksum `sha256:4dc9a393…`。Binding `e64d3354-…`，`dryRun: true`。演示未改。
+
+- **dryRun 提交审核改为 trial click（1.1.3），脚本已在正式门户验证「能看就能点」**
+  - 看得见不等于能点。Playwright `click(trial=True)` 检查可见、可用、稳定、中心点不被挡住，但不真点。再加 `elementFromPoint` 命中检测。
+  - Engine：`runtime/actionability.py` 的 `inspect_clickable` / `assert_clickable`。
+  - 正式门户探针（未点提交）：`2026-04-01` / `5768205.32` 收货应付真点 ok；「扫描发票信息」「提交审核」均 `trialOk=true`、`hitsSelf=true`、未禁用。
+  - 提交包 **1.1.3** Registry `2b9e25b7-…`，checksum `sha256:58f9b894…`。Binding `e64d3354-…` 1.1.2→1.1.3，`dryRun: true`。演示仍 1.0.7。
+  - 生成对账单 1.1.0 仍只查可见+未禁用，尚未 trial click。
+
+- **正式门户脚本已点通「收货应付」（1.1.1 JS，不经 Client）**
+  - 先前包内 pytest 只扫源码字符串，不能证明按钮能点。补了正式门户探针：`service/scripts/run_official_stmt_payable_click.py` → Engine `scripts/probe_official_stmt_payable_click.py`。只打开收货应付，不点提交审核。
+  - 实测：`2026-04-01` / `5768205.32` 匹配 `rowIndex=0`；冻结列 `fixed-right` 的 `body-wrapper` 行数 0、`fixed-body-wrapper` 行数 1；`CLICK_PAYABLE_JS` 返回 `ok`；扫描发票/提交审核按钮可见。结果 `rpa-engine/runtime-cache/tiandy-stmt-payable-click.json`。
+  - 包内补了冻结列表选择器回归：`rpa-flows/rpa_flow_srm_stmt_upload_invoice/1.1.1/tests/test_payable_click_js.py`。
+
+- **扫描点「收货应付」失败：冻结列可见按钮（1.1.1）**
+  - 1.1.0 能按日期+金额匹配（入参 `2026-04-01` / `5768205.32`），但点不到冻结操作列里的「收货应付」。
+  - 扫描 **1.1.1** Registry `acdc426b-…`。提交 **1.1.2** 同样改点击，Registry `d25d744d-…`，`dryRun: true`。匹配成功会把日期/金额写进步骤日志。演示包未改。请再点扫描发票。
+  - 点「提交审核」= 客服已核对页面上的发票号/总额。第二次扫描必须与页面一致，否则失败、不点门户提交。
+  - Client：扫描发票 + 提交审核。提交在有发票字段且文件未换时才可点。
+  - Task：`upload_invoice` 真排队扫描；成功回写发票号/总额，仍未对账。`submit_review` 带 `expectedInvoiceNo` / `expectedInvoiceAmount`。
+  - 正式扫描包 **1.1.0** Registry `0fd304e3-…`，checksum `sha256:af9d9911…`。Binding `b36b5628-…` 新插入，无 dryRun。
+  - 正式提交包 **1.1.1** Registry `87138a09-…`，checksum `sha256:aa273235…`。Binding `e64d3354-…` 1.1.0→1.1.1，`dryRun: true`。
+  - 演示扫描仍 1.0.6、提交仍 1.0.7（演示提交包尚未加二次比对）。
+  - 需求已写入 v3.0 #26–#28、v3.01 S7、v4.0 §4.2 / §12。**需重启唯一 Task 4520**。演练：详情先扫描，核对页面后再点提交；门户提交不会点下去。
+
+- **正式提交审核 1.1.0：扫描真做，dryRun 不点门户提交**
+  - 生成演练成功后门户没有对账单。待生成草稿不得改成未对账。下一节点用门户已有未对账当替身。
+  - 种子：`service/scripts/seed_official_unchecked_statement.py`（`--check-date` + `--check-amount` 必须与门户那行一致）。阶段待上传发票。Client「提交审核」必须能点。
+  - 正式包 1.1.0：对账列表 `#/reconciliation/reconciliationStatement` 按日期+金额找行 → 收货应付 → 真扫描 → 等到「提交审核」可见可点，截图后不点。正式不绑单独上传包。演示提交仍 1.0.7。
+  - Task `on_submit_finished` 见 `committed: false` 保持未对账 / 未上传，不传发票到 SDMS。
+  - Registry `d96d7674-…`，checksum `sha256:d44d3153…`。Binding `e64d3354-…` 新插入，`dryRun: true`。演示提交仍 1.0.7。
+  - 需求修订已写入 `prd/AutoTask v4.0 天地伟业正式演练.md` §4.2 / §5.4 / §12 与 `prd/正式门户 Flow 演练与上线.md` §6。
+  - **需重启唯一 Task 4520**。种子写库后，详情选发票再点提交审核。不要点门户提交。
+
+- **正式生成对账单 1.1.0：真找按钮，dryRun 不 click**
+  - 演练若只查收货不跑生成，上线才会第一次碰「生成对账单」，选择器问题会漏掉。
+  - 正式包 1.1.0：同一套日期面板 + 未提交 + 勾选行，等到「生成对账单」可见且可点，截图后不点。缺按钮或禁用算失败。
+  - Binding `dryRun: true` 只挂正式演练。演示生成仍 1.0.7。Task `on_generate_finished` 见 `committed: false` 保持待生成草稿，不改未对账。
+  - Registry `1f83e5e3-…`，checksum `sha256:acf471d2…`。**需重启唯一 Task 4520** 后，填单页勾选三行再点生成。
+
+- **正式收货查询 1.1.3：开始必须是 00:00:00**
+  - 1.1.2 点日历后再 click 时间框，时间面板把输入下标打乱，起止都写成 `23:59:59`，当天没有数据。
+  - 1.1.3：日历只选日期；开始写 `YYYY-MM-DD 00:00:00`，结束写 `YYYY-MM-DD 23:59:59`。不 click 时间框。确定后回读，不对就失败。
+  - Registry `64790d58-…`，checksum `sha256:df8bb497…`。Binding `37628f8c-…` 1.1.2→1.1.3。演示收货仍 1.0.4。
+  - 单测 24 通过。请用 `2026-08-01`～`2026-08-01` 再搜一次。
+
+- **正式收货查询 1.1.2：日期面板与正式站一致，筛未提交后导出 Excel**
+  - Client 仍只传 `YYYY-MM-DD`。Flow 点开「入库确认时间」范围面板，日历点起止日，时间保持 `00:00:00` / `23:59:59`，再点面板「确定」。
+  - 查询前在表单选对账状态=未提交，再点查询；结果走「导出」xlsx，解析给填单页并落 Artifact。不再翻页刮 HTML。
+  - Registry `c3d2e6cf-…`，checksum `sha256:4d403c85…`。Binding `37628f8c-…` 1.1.1→1.1.2。演示收货仍 1.0.4。
+  - 单测 21 通过。请在正式演练填单页选 `2026-08-01`～`2026-08-01` 再搜一次（预期约 3 行未提交）。不要点生成对账单。
+
+### 2026-08-20
+
+- **正式回签/下合同：列表筛已回签+单号，详情不再读状态（回签 1.1.4、下合同 1.3.2）**
+  - 原先在详情等 `.el-tag` 找「已回签」是演示站写法。正式站「已回签」是列表筛选项；筛到再进详情，进了就是已回签。
+  - 回签探测 1.1.4：查询条件=回复状态已回签+订单编号；有行则进详情并输出已回签；没有行则输出待回签、不进详情。Registry `3357b19d-…`。Binding `fef4ea03-…` 1.1.3→1.1.4。
+  - 下合同 1.3.2：同样先筛已回签+单号；能进详情后只点「查看签章」下载，不再读状态。Registry `c2f9a81b-…`。Binding `ffa96cad-…` 1.3.0→1.3.2。演示回签仍 1.0.1、下合同仍 1.2.5。
+  - 实例已在已回签的，请点「手动触发签章合同下载」或重试失败的下合同任务。
+
+- **正式回签探测不再等 `.el-tag`（1.1.3 已发布并只绑正式演练）**
+  - 1.1.2 已能打开详情，但 `reply_status` 仍 `wait_for` `.el-tag:visible`。正式已回签详情没有演示站那种 Element UI tag，10 秒超时 → `ORDER_REPLY_STATUS_UNAVAILABLE`。
+  - 1.1.3：详情可见「查看签章」即视为已回签；否则读「回复状态」旁的 `已回签/待回签/待签章`。不再等待 `.el-tag`。Registry `6fad94a0-…`，checksum `sha256:b2daf4b3…`。Binding `fef4ea03-…` 1.1.2→1.1.3。演示回签仍 1.0.1。
+  - 单测 11 通过。请再点「立即回签轮询」；认出已回签后会自动排下合同 1.3.0。
+
+- **正式回签探测详情点击与建单对齐（1.1.2 已发布并只绑正式演练）**
+  - 1.1.1 点隐藏「详情」后空等 `.el-drawer / .el-tag`，列表页没有抽屉所以超时。建单 1.2.15 已改可见点击，回签探测当时没跟上。
+  - 1.1.2 共用同一套冻结列可见「详情」；进详情认「查看签章」或「导出订单明细」。Registry `95f0b13d-…`。Binding `fef4ea03-…` 1.1.1→1.1.2。演示回签仍 1.0.1。
+  - 单测 10 通过。请再点「立即回签轮询」。
+
+- **正式下合同认「查看签章」（1.3.0 已发布并只绑正式演练）**
+  - 正式详情已回签单有「查看签章」，即下载双方签章合同。演示包 `data-rpa` 不能绑正式站。
+  - 正式包 1.3.0：OCR 登录、`#/order/list`、可见「详情」、点「查看签章」下载后真传到测试 SDMS。无 `dryRun`。Registry `1abe0ae0-…`，checksum `sha256:07e87504…`。Binding `ffa96cad-…` 新建。演示下合同仍 1.2.5。
+  - 单测 12 通过。`POJS2607170008` 已在待回签。请在 Client 点「立即回签轮询」；认出已回签后会自动排下合同。
+  - 轮询上传 SDMS 的 `username`：优先实例创建人工号，没有则固定 `SMC-SZ-HR15563`。该字段不敏感，只要非空。**需重启唯一 Task 4520**。
+
+- **正式演练跳过填交期/签章，实例改到待回签**
+  - `POJS2607170008` / `5face9c4-…`：正式站已回签，无交期输入、保存、签章。不编造填写成功。
+  - 实例 `SDMS_CREATED` → `SIGN_REQUESTED`（待回签）。回签探测 Binding 已是正式包 1.1.1。
+  - Task 默认未开 30 分钟调度。请在 Client 客户订单列表点「立即回签轮询」。
+  - 下合同正式包 1.3.0 已绑；轮询认出已回签后会自动排下载上传。
+
+- **正式建单详情没点开（1.2.15 已发布并只绑正式演练）**
+  - `failure.png` 仍是订单列表：`POJS2607170008` 已查出，绿色「详情」在冻结操作列。列表没有「导出订单明细」，所以 1.2.14 空等该按钮是因为根本没进详情。
+  - 原因：Element UI 冻结列后，主表体「详情」是隐藏副本。`force=True` 点到它会报成功，页面不跳转。
+  - 1.2.15 改为按订单号对齐行号，再点 `.el-table__fixed-right` 里可见的「详情」，不用 force。Registry `a6e63298-…`，checksum `sha256:8539bc65…`。Binding `30a451be-…` 1.2.14→1.2.15。演示建单仍 1.2.11。
+  - 单测 58 通过。请在 Client 对失败实例 `5face9c4-…` / `POJS2607170008` 点重试。
+
+- **正式建单附件按钮是「导出订单明细」（1.2.14 已发布并只绑正式演练）**
+  - 详情已打开后仍等 `下载订单` 15 秒失败。正式站文案是「导出订单明细」，演示站才是「下载订单」。
+  - 1.2.14 选择器已改；打开详情确认和下载都认这四个字。Registry `fb5742a1-…`。Binding `30a451be-…` 1.2.13→1.2.14。演示建单仍 1.2.11。
+  - `POJS2607170008` 已自动重试。单测 58 通过。
+
+- **正式建单已登录却还在等验证码（Engine 已换新进程）**
+  - 会话缓存进了正式站首页（顶栏有「订单」），登录仍 `wait_for` 验证码图 1 秒超时，报 `SRM_LOGIN_PAGE_UNAVAILABLE`。
+  - 已登录判断改为：验证码不在时，认 `#/dashboard`/`#/order` 或顶栏「订单」「主页」「个人中心」。不再对已登录页死等验证码。
+  - 单测：official login 16、browser 相关一并 16 通过。Engine 已重启。后续建单登录事件为 `reusedSession`。
+
+- **正式建单 1.2.13 已发布并只绑正式演练**
+  - 原先卡在「建单中」无子任务、明细为空：正式门户没有 `srm_prepare_erp_order` Binding，扫单 `allow_missing_prepare_binding` 吞掉缺绑定。
+  - 正式包 1.2.13：OCR 登录、无 `data-rpa`、点该行「详情」并用「下载订单」确认详情。Registry `fc22a74a-…`。Binding `30a451be-…`。演示芯云test / 国际test 建单仍 1.2.11。
+  - `POJS2607170008` 已重试；登录已过，详情点击在 1.2.12 上会空等到 `RUNTIME_TIMEOUT`（列表已搜到该单）。请看本次 1.2.13 重试。
+
+- **正式门户 Flow：演练与上线同一份包（设计已确认，已写 PRD）**
+  - 演示/正式因页面不同继续拆包。演练/上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding，上线改配置不换包。
+  - 扫单：Binding `searches` 先待签章导出，演练再加一条订单编号；生产只留待签章。不要 Task 空列表造单，不要 `flow.py` 里 `if drill`。
+  - 文档：`project-docs/prd/正式门户 Flow 演练与上线.md`。扫单 1.1.2 样例单号仍在源码默认值，尚未收到 Binding。
+
+- **正式扫单改为查询后导出 Excel（1.1.2 已发布并只绑正式演练，4520 已换新进程）**
+  - 原先：翻页读页面表格，再在内存里筛「待签章」；空列表时 Task 直接造 `POJS2607170008`。
+  - 现流程：回复状态选待签章（不加其它条件）→ 查询 → 导出 Excel → 用 Excel 建客户订单。无待签章时重置，按订单编号 `POJS2607170008` 查询再导出，把该单当成待签章扫入。不改 SRM 状态。
+  - Registry 扫单 `09293dee-…` checksum `sha256:2488edca…`。Binding `2f3a6e10-…` 1.1.1→1.1.2。演示芯云test / 国际test 扫单仍 1.0.2。
+  - 单测：Flow 16、Task process-instances 33 通过。
+  - **待验收**：Client 选正式演练再扫一次。应看到导出制品；无待签章时应出现 `POJS2607170008`。正式演练尚未绑定建 SDMS，实例会停在「建 SDMS」。
+
+- **正式站无待签章时当成 POJS2607170008 走 SOP（已由 1.1.2 导出回退替代，不再在 Task 空列表造单）**
+  - 需求：正式演练扫单成功但 `orders=[]` 时，把 `POJS2607170008` 当成待签章，创建客户订单并走后续节点。
+  - 处理：已改到扫单 Flow 改搜索条件后导出，不再由 Task 合成订单。
+
+- **托管浏览器起不来 BROWSER_LAUNCH_FAILED（已修，Engine 已换新进程）**
+  - 原因：Agent 拉起 Engine 时带了不存在的 `PLAYWRIGHT_BROWSERS_PATH`（TEMP 下 sandbox 缓存），Chromium 找不到可执行文件。独立探测脚本会改回本机 `%LOCALAPPDATA%\ms-playwright`，所以探测能登录、Worker 不能。
+  - 处理：启动时若该路径不是目录则丢弃，改用本机 ms-playwright；启动失败打完整异常。Engine 已重启。可再扫一次。
+
+- **正式站登录没勾「我已阅读并同意」（已修，Engine 已换新进程）**
+  - 失败截图协议勾选为空。Playwright 报 `label:has-text('用户注册协议') input[type=checkbox]` 的 `is_checked` 空等 30 秒：协议文字在 checkbox **旁边**（`.userAgree` 里兄弟 span），不在 label 内，选择器匹配不到；异常被吞掉，登录未勾协议。
+  - 登录改为点 `.userAgree .el-checkbox__inner`。独立探测已进正式站 `#/dashboard`（第 2 次验证码通过）。Engine 已重启加载该逻辑。请再扫一次。
+
+- **运行队列卡死（已解开，Task 4520 已换新进程）**
+  - 现象：运行监控三条「排队中」不动。队头是已禁用芯云test 的回签探测，旧 4520（10:34 起）领取仍返回 400「门户未启用」，Worker 整池卡住，正式演练扫单排在后面领不到。
+  - 处理：停 PID 59300 后用当前代码重启 4520。领取改为跳过并取消禁用门户任务（连同 Run）；回签轮询只选 ENABLED 门户，启动时候选 0、未再给 test 建探测。芯云test 那条被领取循环取消；国际test 任务已取消但 Run 仍 QUEUED 的孤儿已改 CANCELLED。
+  - 正式演练扫单 `5c1642ce-…` 已领到并执行，登录验证码三次未识别，以 `CAPTCHA_OCR_FAILED` 结束（队列本身已通）。刷新运行监控后不应再看到那三条卡死排队。
+
+- **正式门户只读 Flow 切 OCR 1.1.1（已发布并只绑正式演练）**
+  - 演示 OCR + 会话缓存已验收；芯云test / 国际test 由用户禁用。正式门户 `天地伟业-国际-正式演练`（`https://supplier.tiandy.com`）保持 ENABLED。
+  - 三只读包 1.1.1：扫单 `130ee81f-…`、回签 `2bf6d600-…`、收货 `5061d2a4-…`，均为 `PUBLISHED`。登录走 `login_official_srm`（ddddocr，最多 3 次，失败可重试，不停待人工）。无 `data-rpa`。
+  - Binding 只更新正式演练三条：扫单/回签/收货 **1.1.0 → 1.1.1**。禁用的 test 门户绑定仍是 1.0.x，未改。未绑建单/填交期/签章/对账写步骤（正式 SRM 不写）。
+  - 单测 12+10+10 通过。取消禁用门户及 phase5 mock 的排队任务 3 条，避免旧 4520 再被队头 400 卡住。
+  - **待验收**：Client 选正式演练手动扫单（待签章空列表也算成功）；收货查未提交行；回签探测可用样例 `POJS2607170008`。正式站会话缓存与演示站按 URL 隔离。
+
+- **门户登录会话缓存（Engine，已验收）**
+  - 目的：SOP 连续任务不再每个都 OCR 登录。浏览器进程仍 `CLOSE_ON_FINISH`，只把 Playwright `storage_state`（cookies）按「规范化门户 URL + 登录账号」缓存在 `runtime-cache/sessions/`。
+  - 同 URL 不同登录（芯云 vs 国际）分开；演示 IP 与正式 `supplier.tiandy.com` 因 URL 不同自然隔离。同一 `(url, login)` 全程文件锁，禁止并发写。
+  - 登录失败 `SRM_LOGIN_FAILED` 删除该缓存；验证码失败不覆盖已有文件。密码不进键、不进 `meta.json`。
+  - 登录等待改为 success/error 竞速 `wait_for`，减少「其实已登录却整段 Flow 重试」。
+  - 单测：session cache / browser / runtime / config 相关 65 项通过。计划：`.cursor/plans/engine_门户会话缓存_2026-08-20.plan.md`。
+  - **已验收**：正确重启 Engine 后，芯云test 扫单/建单/填交期连续任务均为 `reusedSession`，扫单约 12.5 秒（此前约 75 秒）。必须先停旧 4610 再起新进程，否则端口占用会导致新代码起不来。
+
+- **禁用国际test 后排队卡住（已解开）**
+  - 原因：领取按排队时间取队头。国际test 禁用后仍有回签探测排在最前，Worker 领取返回「门户未启用」400，整条队列（含芯云test）都不走。
+  - 处理：取消国际test 那条排队任务；芯云test 回签/填交期/传合同已继续。`lease_task` 改为跳过并取消不可领取任务，避免再堵全队列（需重启 4520 才加载）。国际test 保持禁用。
+
+- **演示门户客户订单+对账单登录全改 OCR（已发布并只绑 test）**
+  - 范围：芯云test / 国际test 上所有 ENABLED、需要登录的 Flow。扫单 1.0.2 已是 OCR，其余从当前绑定包升版：回签 1.0.1、填交期 1.0.3、建单 1.2.11、签章 1.0.3、传合同 1.2.5、查收货 1.0.4、生成对账单 1.0.7、上传发票 1.0.6、提交审核 1.0.7。`srm_fetch_po` 仍 DISABLED 未动。
+  - 登录一律 `login_official_srm`（本机 ddddocr，最多 3 次，失败可重试，不停待人工）。对账单包从 Registry 下了当时绑定版再改登录，避免丢掉 1.0.3/1.0.5/1.0.6 的业务修补。
+  - Binding 只切 URL 含 `192.168.102.247` 的门户。正式演练扫单/回签/收货仍是 **1.1.0**。
+  - 单测 118 项通过。无需重启 4520；Engine 需继续用 `rpa-engine` 的 `.venv`（已装 ddddocr）。
+  - **待用户验收**：芯云test 或国际test 跑完整客户订单和对账单。
+
+- **天地伟业-芯云test 归属转到张站（已写库）**
+  - 原因：门户列表按 `portal_access_grants` 过滤，芯云test 原先只有苏宇威的 USER 授权，张站只能看到自己建的国际test。
+  - 处理：`created_by` 苏宇威 → 张站；补张站 USER 授权（与创建人同权）；苏宇威原授权保留。脚本 `service/scripts/transfer_portal_owner.py`。
+  - 效果：张站刷新 Client 后应能看到并操作芯云test。无需重启 4520。
+
+- **v4.0 阶段 1：正式门户只读 Flow 1.1.0 已发布并只绑正式演练**
+  - 计划：`.cursor/plans/v4.0_正式门户_只读flow_阶段1_2026-08-20.plan.md`。
+  - 三包均为正式站专用（无 `data-rpa`）：扫单 `rpa_flow_srm_scan_pending_orders/1.1.0`（`#/order/list`）、回签探测 `rpa_flow_srm_check_reply_status/1.1.0`、收货查询 `rpa_flow_srm_stmt_query_receipts/1.1.0`（`#/order/receivingList`）。未知验证码仍 `HUMAN_VERIFICATION_REQUIRED`。
+  - Registry：扫单 `24d05324-…`、回签 `8d24354a-…`、收货 `2a673d87-…`，均为 `PUBLISHED`，`validate-binding valid=true`。
+  - Binding 只插「天地伟业-国际-正式演练」（`fbf07b4e-…`，`portalUrl=https://supplier.tiandy.com`，无 `dryRun`）。演示芯云test / 国际test 扫单 1.0.1、回签 1.0.0、收货 1.0.3 **未改**。
+  - 单测：扫单 11、回签 10、收货 10，均通过。未提交 Git。
+  - **待用户验收**：Client 选该门户手动扫单；收货查未提交行；回签探测 `POJS2607170008`。阶段 2/3（建单、下合同、写闸）未做。
+
+- **建门户门槛改读 `portal_org_role`（已上线，治本）**
+  - **背景**：客服反映建不了门户。排查发现建门户门槛 `require_portal_manage_access` 只读 `org_role`（组织维度角色），而后端 `/me` 对客服账号返回 `org_role=null`（兜底成 `role="user"`）、`is_super_admin=false`，但 `portal_org_role=operator/admin`（门户维度角色）——这才是门户维护该看的角色，但门槛没读它。7-8 月能建是因为后端那时返回够格的 `org_role`/`super_admin`，后端改 `/me` 后 bug 暴露。
+  - **设计梳理**：本意三层权限——①组织层 `org_role`、②门户角色层 `portal_org_role`、③门户授权层 `portal_access_grants`。第②层一直没接通（门槛没读它，DEPARTMENT 类型授权又没数据），形同虚设。本次只接通"建/管门户门槛"这一处。
+  - **改法**：`security.require_portal_manage_access` 改为 `portal_org_role ∈ {admin,operator}` 放行；保留 `org_role ∈ {admin,operator}` 与 `is_super_admin` 兜底，不破坏组织管理员/超管路径。
+  - **效果**：`portal_org_role=operator/admin` 的客服能建/管门户，不用当组织管理员。`member` 仍不能建（member 不是门户管理角色）。当前缓存：张站=operator✅、王冬辉=admin✅、苏宇威=member❌（需后端把苏宇威 portal_org_role 改成 operator/admin 才能建）。
+  - **未做（留后续权限优化）**：①前端新建按钮改为按 `/me` 角色预判显示（现在默认显示、撞 403 才藏且不恢复，UX 差）；②配 DEPARTMENT 类型 `portal_access_grants`，让 operator/admin 角色对门户有细粒度权限；③门户加可变 `owner_user_id` 字段 + UI + 迁移，归档工号从门户归属人取（删 `_FALLBACK_ARCHIVE_SDMS_USERNAME`）。
+  - 单测：新增 `test_require_portal_manage_access_allows_portal_org_role`、`test_require_portal_manage_access_rejects_member` 补 member 用例；15 项通过。Service 已重启加载改动。
+
+### 2026-08-19
+
+- **门户唯一性改为「门户名称」+ 编号放开编辑（已上线）**
+  - 原唯一性 `(租户+实体类型+门户地址+登录账号)` → 改为只校验 `(租户+门户名称)`。同一客户可建多个门户（如 `天地伟业-国际` / `天地伟业-国际test`），地址、登录账号、客户编号都允许重复，只要门户名称不重复。
+  - 门户「客户/供应商编号」(`erpEntityCode`) 编辑模式下放开可改（原来 disabled）。
+  - 代码：`service/app/services/portal_account_service.py` `_check_portal_uniqueness` 改签名只收 `portal_name`；`app/.../portal-account-form-dialog.tsx` 去掉 `disabled`。
+  - 迁移 `e2b7c14a3d05`：drop 旧索引 `uq_portal_accounts_tenant_entity_url_login`（库里本就不存在，用 `if_exists`）、create `uq_portal_accounts_tenant_portal_name (tenant_id, portal_name) WHERE deleted_at IS NULL`。**已执行 `alembic upgrade head`**，新索引已生效。
+  - 单测：`test_portal_accounts.py` 唯一性冲突用例改按 `portal_name`；`portal-account-form-dialog.test.tsx` 通过。
+
+- **天地伟业-国际test 门户绑定已克隆（已上线）**
+  - 新门户 `天地伟业-国际test`（id `91b38832-…`，业务实体 `芯智国际有限公司` / `ou=101`）从 `天地伟业-芯云test` 克隆 11 条 WorkflowBinding，复用同一批流程模板与 Flow 版本（建单 1.2.9、传合同 1.2.3、对账 1.0.x 等）。dispatch 时各带各的 `businessEntity`/`ou`，互不干扰。
+
+- **定时扫单改为「按扫单绑定扇出」（已上线）**
+  - **背景**：`ScanScheduler` 原来查「所有启用门户」逐个建扫单任务。扫单 Flow `srm_scan_pending_orders` 是天地伟业定制，未来加别的客户门户时会对没扫单绑定的门户也调一遍、靠 `_find_binding` 报错兜底，每天刷错误日志、语义不对。
+  - **改法**：`service/app/services/scan_scheduler.py` 的门户查询从「所有 ENABLED 门户」改为 join `WorkflowBinding` + `WorkflowTemplate`，限定 `template_code = srm_scan_pending_orders` 且 binding `ENABLED`。即只扫「有启用扫单绑定的门户」。
+  - **效果**：天地伟业两个门户（有扫单绑定）→ 定时各扫各；未来无扫单绑定的门户 → 不被查到、零噪音。新客户要纳入定时扫单，给它建一条扫单绑定即可，无需改代码。
+  - 单测：`test_process_instances.py` 新增 `test_scan_scheduler_only_targets_portals_with_enabled_scan_binding`；全文件 29 项通过。
+
+- **建单 Flow 拆分演示/正式门户专用包（已上线 1.2.10）**
+  - **原则**：一个 Flow 版本只服务一种门户环境，不再用「双选择器」让一个版本同时跑演示和正式。**门户环境归属写在各 Flow 的 README 顶部**（演示/正式 + 门户地址），不用 manifest 加字段。同一门户环境内始终用最新版本；**绑定时按门户环境选对应版本的 Flow**。
+  - **背景 bug**：1.2.9 的 `order_page`/`lines_table` 用逗号 OR（`.el-table:visible, [data-rpa='order-list-page']`），演示门户里同时匹配「容器 + 容器内表格」两个元素 → Playwright strict mode 报错 → 建单 Flow 在演示门户挂掉。
+  - **改法**：新建 **1.2.10（演示门户专用包）**，`selectors.json` 全部改为纯 `data-rpa`（演示门户有这些标记），去掉所有正式门户的文本/`.el-table` 兜底。README 顶部标注「适用门户：演示门户」。单测 58 项通过。扫单 Flow `1.0.1` README 同步标注演示门户。
+  - **发布+切绑定**：1.2.10 已发布 Registry（versionId `81c94b03-…`，checksum `14947b6c…`，validate-binding 通过）；两个天地伟业门户的 `srm_prepare_erp_order` 绑定从 1.2.9 切到 1.2.10。
+  - **正式门户**：后续从正式站 `https://supplier.tiandy.com` 探测选择器，单独出一个正式门户专用版本（README 标「适用门户：正式门户」），不复用 1.2.10 的 `data-rpa` 选择器。
+  - **客户端**：`processes-list.tsx` 手动扫单循环改为按门户容错（有扫单绑定的扫、没绑定的报失败但不中断），避免没扫单绑定的示例门户把整批扫单拦住。
+
+- **客户订单详情「交易主体」改读门户业务实体（已上线）**
+  - **问题**：流程实例详情/交期页的「交易主体」原读 `summary.supplierName`（来自 Flow 输出的 Excel 供应商字段）。演示门户里国际和芯云共用地址 `192.168.102.247:3000`，Excel 供应商字段是芯云，导致「天地伟业-国际test」的订单也显示成「深圳市芯云信息科技有限公司」。
+  - **改法**：「交易主体」改为读门户账号维护的 `businessEntity`（我方公司）。新增 `usePortalBusinessEntityMap` / `resolvePortalBusinessEntity`（`app/src/features/processes/use-portal-name-map.ts`），`process-detail.tsx` 和 `process-dates.tsx` 两处「交易主体」改用门户 businessEntity，不再读 `summary.supplierName`。
+  - **效果**：国际test 显示「芯智国际有限公司」、芯云test 显示「深圳市芯云信息科技有限公司」，各走各的门户维护值，不受共用地址的 Excel 数据影响。`summary.supplierName` 仍保留（审计用），不再用于展示。
+  - 单测：`process-instances.test.tsx` mock 门户补 `businessEntity`，断言「交易主体」显示门户业务实体；12 项通过。
+
+- **回签轮询归档工号兜底（临时写死，已上线）**
+  - **问题**：自动回签轮询确认「已回签」后推进到 SIGNED 并触发归档（上传签章合同到 SDMS），归档需要 Auth 登录工号。原解析链：传入工号 → `summary.sdmsUsername` → `instance.created_by` 的工号。轮询自动触发时 actor 是 `sign-poll-scheduler`、实例 `created_by` 是脚本/调度器（非真人），三处都取不到工号 → `SDMS_USERNAME_MISSING`，归档失败。手动点按钮因有登录用户工号不受影响。
+  - **根因（设计）**：工号跟「谁点」绑死，自动轮询无真人。正确做法是工号归属「门户当前所属用户」（可变，离职可转移），但门户表目前只有不可变的 `created_by`、`owner_dept_id`，没有可变的 `owner_user_id`。
+  - **本次临时修复**：`process_instance_service._resolve_archive_username` 末尾加兜底常量 `_FALLBACK_ARCHIVE_SDMS_USERNAME = "SMC-SZ-HR15563"`；当传入工号、summary、`created_by` UserCache 都取不到时用此写死工号。手动路径不变（仍要求登录用户工号）。
+  - **后续（单独需求）**：门户加可变 `owner_user_id` 字段 + UI 选择 + 迁移（回填=创建人）+ 从 nodeskclaw-backend 取用户列表；归档工号改为从 `portal.owner_user_id` 取，删掉写死兜底。配套：部门主管/员工取数控制、主管可改归属人、任务查看权限=门户所属用户、模板引擎放开读取模式。
+  - 验证：`POJS2607240005`（天地伟业-国际test）重置回 SIGN_REQUESTED 后触发轮询 → 探测到已回签 → 推进 SIGNED → 用 `SMC-SZ-HR15563` 触发归档 → `srm_upload_order_attachment` SUCCESS → 实例 ARCHIVED/COMPLETED，`summary.sdmsUsername='SMC-SZ-HR15563'`。
+  - 单测：新增 `test_resolve_archive_username_falls_back_to_hardcoded`、`test_resolve_archive_username_prefers_explicit`；5 项归档相关测试通过。
+
+- **归档上传 SDMS 的 filename 补后缀（传合同 Flow 1.2.4，已发布并切 Binding）**
+  - **问题**：`rpa_flow_supplier_portal_upload_order_attachment` 1.2.3 上传 SDMS 时 `filename` 字段只传 `po_no`（如 `POJS2607240005`），没带文件后缀，SDMS 那边看不出是 PDF。
+  - **改法**：1.2.4 `run()` 里 `attachment_name` 改为 `po_no` + 下载文件后缀（取自 `sourceFileName`），如 `POJS2607240005.pdf`；`file` 多部分字段仍用真实下载文件名。
+  - 发布：Registry 版本 `8f93b85f-2558-4e4a-9540-91a3a2573960`，checksum `sha256:1a6aaa10…d7e3f5`，`validate-binding` valid。天地伟业-芯云test / 国际test 两条 `srm_upload_order_attachment` Binding 已从 1.2.3 切到 1.2.4。
+  - 单测：1.2.4 新增 `attachment_name == po_no+后缀` 断言，12 项通过；1.2.3 源码还原为已发布原样。
+
+- **后台作业开关上线清单（文档/模板补全）**
+  - 三个后台作业代码默认全 `false`，靠 `.env` 打开。`service/.env.example` 原本只列了 `SUCCESSOR_JOB_ENABLED`，漏了 `SCAN_JOB_ENABLED` / `SIGN_POLL_JOB_ENABLED`，导致上线不知道要开哪些。
+  - 已把三项及参数（`SCAN_JOB_HOUR/MINUTE`、`SIGN_POLL_INTERVAL_SECONDS` 等）连同"何时开"说明补进 `.env.example`。
+  - 当前 `.env` 实况：`SUCCESSOR_JOB_ENABLED=true`、`SIGN_POLL_JOB_ENABLED=true`、`SCAN_JOB_ENABLED` 未设→false。上线要自动扫单需补 `SCAN_JOB_ENABLED=true` 并重启 4520，看启动日志确认各调度器"已启动"。
+
+- **门户业务实体 / OU（已上线）**
+  - 同一客户可对应多家我方公司、各一套 SRM 登录 → 多条门户。业务实体 = 我方公司全称，写入 ERP `orgName`；OU = 我方公司编号，对账单 `custom_son_code` 拼接用。当前 ERP 导入按 `orgName` 反推 OU，不传 `orgCode`。
+  - 门户字段/租约已透传；建单 Flow **1.2.9** 已发布（`797d36f4-…`）并切 Binding。传合同 **1.2.3** 已切。天地伟业test 已填业务实体 `深圳市芯云信息科技有限公司` / `ou=104`。
+  - 对账单 `custom_son_code` 改由门户客户编号 + 我方公司编号拼接（`C007193-01` + `104` → `C007193-01_104`），不再写死。
+
+- **v5.0 运维切流**：门户「天地伟业」→「天地伟业test」（2 条）；Registry 已发布建单 **1.2.8**（`52a1660f-…`）、传合同 **1.2.3**（`e044027f-…`）；Binding `0a0b5beb-…` / `8c272818-…` 已切。
+
+- **v5.0：Client SDMS 网页也走 Task `.env`**
+  - 登录页去掉 `sdmsWebBaseUrl`。打开销售订单/对账单链接改为登录后读 Task `GET /integration-endpoints`（`SDMS_BASE_URL`），与机器人调 SDMS 接口同一套环境。
+  - 接口不返回 ERP 密钥。换测试/正式仍只改 Task `.env` 并重启 4520。
+
+- **v5.0 硬编码对照清单已写入 PRD**
+  - `project-docs/prd/AutoTask v5.0 门户密码.md` 第 7 节：本期要清的 10 项、有意保留、运维未做完、验收卡点。不含密钥。
+
+- **v5.0 门户密码 + 环境基址（已写代码）**
+  - 换人/换门户：改门户账号密码和客户编码/名称，不改 Engine `.env`、不改 Flow 源码。
+  - **SMC 接口平台 vs SDMS 网页**：对账单查询用 `SMC_API_BASE_URL`（如 `api.qywx…`）；Client 跳转用 `SDMS_BASE_URL`（如 `192.168.99.35:8080`）。两套域名，不要混。
+  - **SDMS/ERP/OA 域名和 OAuth 不进 Binding JSON**（上线否则要改每一个绑定）。改 Task `.env`：`SMC_API_BASE_URL`、`SDMS_BASE_URL`、`ERP_BASE_URL`、`OA_BASE_URL`、`ERP_CLIENT_ID`/`SECRET`、`SDMS_ATTACHMENT_API_BASE_URL`；租约下发网页/ERP 基址，Flow 只拼路径。
+  - 门户 `credential_ref` 语义改为 SRM 密码；租约 `credentials.username/password`；Engine 优先用租约，产品路径 `CREDENTIAL_RESOLVER_MODE=disabled`。
+  - 建单 Flow **1.2.8**、传合同 **1.2.3** 已升包（未发布 Registry）。对账单查询用门户 `erpEntityCode` + `SDMS_BASE_URL`。
+  - Client：门户表单改密码框；SDMS 网页链接读 Task `SDMS_BASE_URL`，登录页不再配。
+  - 运维一次性：各门户重填密码；Task `.env` 填测试/正式基址；发布并切 Binding 到 1.2.8 / 1.2.3；Engine 去掉 `MOCK_SRM_*`。密钥不进 Git。
+
+- **v5.0 门户存密码：需求已扩到运行时硬编码（未写代码）**
+  - 换人/换门户不准改 `.env`、不准改 Flow 源码。登录页只管 Client 连哪套 Auth/Task。
+  - 本期清：Engine `MOCK_SRM_*` / `mock_env` / 无用 `TASK_CLIENT_*`；建单/传合同 Flow 里 SDMS 地址和客户端密钥；建单抬头写死的客户名；对账单 `CUSTOMER_SITE`；Client 默认 SDMS 内网 IP。
+  - 去处：密码→门户 `credential_ref`；客户名/站点→门户已有编码名称；SDMS/ERP 地址密钥→Binding.config 随租约走。
+  - 不管：探测脚本、单测地址、演示验证码表、服务器互访 URL。
+  - PRD：`project-docs/prd/AutoTask v5.0 门户密码.md`。
+
+- **v4.0 Task3 正式站只读探测：登录成功（未写客户数据）**
+
+- **v4.0 Task3 正式站只读探测：登录成功（未写客户数据）**
+  - 脚本：`rpa-engine/scripts/probe_tiandy_prod_readonly.py`；产物（gitignore）：`runtime-cache/tiandy-prod-probe.json` + 截图目录。
+  - 账号 `02556`；门户 `https://supplier.tiandy.com`；密码**末尾含英文句点**（错密可能锁号）；必须勾选「我已阅读并同意《用户注册协议》」。凭据只走会话环境变量，不进本文档/Git。
+  - 浏览器：bundled Chromium 可用；本机 Chrome channel 曾崩 `new_page`。headless 可登录。
+  - 登录页：无 `data-rpa`。字段「账号或手机号码 / 密码 / 验证码」+ 协议 checkbox + 绿色「登录」。验证码是「验证码」输入框旁的 **data-URL PNG**（约 80×36），**不是** `img.login_img`（那是品牌图）。OCR 未装时写 `captcha-code.txt` 一次即可；默认 `PROBE_CAPTCHA_RETRY=0` 防连错。
+  - 登录后：`#/dashboard`，顶栏可见「订单 / 对账」等；账号角标显示 `02556`。
+  - 订单列表：顶栏「订单」→ `#/order/list`；表头含订单编号、回复状态、发货状态；样例多「已回签」；**待签章计数 0**（后续签章演练需影子单）。
+  - 收货列表：侧栏/菜单「收货」→ `#/order/receivingList`；表头含订单编号、收货单号、对账状态等；探测到约 10 行，样例对账状态「未提交」；列表可见「生成对账单」按钮文案（**探针未点击**）。
+  - 对账单：顶栏「对账」→ `#/reconciliation/reconciliationStatement`；表头含对账日期/状态/总额；存在「未对账」行（样例日期 `2026-04-01`）。应付详情本次未安全打开（`no_safe_detail_button`），细节选择器待 Task4 补探。
+  - 写闸：`blockedWrites=0`；未点保存/签章/生成对账单/提交审批。
+  - Task1 `runtime/dry_run.py` 已有单测。
+
+- **v4.0 纠偏：不要在演示站捞正式单**
+  - 给用户用的链路：正式 SRM 登录（验证码可人工一次）→ 按单号找到 `POJS2607170008` → 下载订单 → **真写 SDMS 销售订单**。
+  - 仍不能做：在对方 SRM 保存交期、签章、生成对账单、提交审批。
+  - 建单 Binding **不要** `dryRun`（那会拦住我们自己的 SDMS POST）。dryRun 只挂填交期/签章/生成/提交那些包。
+  - 已做：Engine 可挂第二组正式凭据（`TIANDY_PROD_*`，仅 .env）；建单 Flow **1.2.7** 双选择器。未发布、未建正式 Portal。
+
+- **v4.0 扫单演练样例已创建客户订单（建 SDMS 失败）**
+  - 脚本 `service/scripts/seed_tiandi_drill.py --yes POJS2607170008`：当成待签章走 `create_from_scan`。
+  - 实例 `030feb16-c2b0-4d18-b8c7-f3d9a31dd739`，任务 `3927190a-…` `srm_prepare_erp_order`。Worker 已租约并跑完。
+  - 失败：`BUSINESS_NOT_FOUND` / Customer purchase order was not found。当前天地伟业 Portal 仍是演示 `http://192.168.102.247:3000`，该正式单号不在演示站。
+  - 下一步才能真正建 SDMS：正式 Portal Binding，建单 Flow 按正式站选择器下载订单再导入。
+
+- **v4.0 扫单演练样例：POJS2607170008**
+  - 正式站订单列表**无 `data-rpa`**。用表头文字可读：订单编号 col1、回复状态 col6；筛选项标签可读：订单编号 / 订单类型 / **回复状态** / 发货状态 / 日期。
+  - 当前页 10 条回复状态全是「已回签」，待签章计数 0（列表共 81 条；「回复状态」下拉点选本次未点开，已改点击方式，下次再筛全量）。
+  - 用「订单编号」查询定位到 `POJS2607170008`：真实「已回签 / 未发货」。**后续填交期/签章演练把该单当作待签章样例**，不在 SRM 改状态。
+  - 演示扫单仍依赖 `[data-rpa='order-list-page']`，正式包必须改成表头采集，不能复用演示选择器。
+
+- **v4.0 Task2：租约透传 Binding.dryRun → Engine ctx.config**
+  - `service`：`LeaseCommandConfig.dry_run`；`_build_command_snapshot` / `_response_from_snapshot` 读 Binding.config。
+  - `rpa-engine`：`RunConfig.dry_run`；`_safe_config` 注入 `dryRun`（不含 profile/CDP 敏感键）。
+  - 单测：service 4 项 dryRun 相关 + runtime 注入断言 + dry_run 6 项，均通过。演示 Binding 无该键时默认为 false。
+
+### 2026-08-18
+
+- **v4.0 天地伟业切正式演练：方案已确认（未写代码）**
+  - 文档：`project-docs/prd/AutoTask v4.0 天地伟业.md`；计划：`.cursor/plans/v4.0_天地伟业_正式演练_2026-08-18.plan.md`。
+  - 做法：正式门户只读真跑；保存/签章/生成/提交审批停在按钮前；网络再拦一遍写请求；Binding `dryRun=true` 仅挂正式 Portal。
+  - 本地状态：读步骤真推进；写步骤 `committed: false` 不改 stage；`summary.drill` + Client「演练未提交」。无待签章用影子实例，不假装 SRM 有单。发票演练允许扫描、禁止提交。
+  - 红线：不改对方数据；凭据不进文档。原 PRD 里的明文密码已去掉。
+  - 实施闸：先只读探测正式登录/菜单/表头，再改正式选择器。
+
+- **客户订单列表混入对账单**：`GET /process-instances` 未按 `process_code` 过滤，对账单 SOP 行（如 `2026-08-18|1151309.12`）出现在客户订单列表。列表与回签轮询现只查 `srm_customer_order`；Client 列表再挡一层。**需重启唯一 Task 4520**；Client 热刷新即可。
+
+- **客户订单节点4 SDMS 附件 1.2.2（username=Auth 工号）**
+  - Postman 的 `username` 不是写死工号，而是当前 AutoTask Auth 登录账号（SDMS 工号）。1.2.1 误写成固定值。
+  - Flow **1.2.2** 从任务输入读 `username`。手动归档 API 用 `/me.username`（否则 UserCache.name）写入任务输入；回签轮询回退实例摘要或创建人缓存名。
+  - 已发布 Registry UUID `e8cdd181-10f3-4c46-863f-3461b4a90fc0`，checksum `sha256:96f950b6…2ddef36`。Binding `8c272818-…` 已切。**需重启唯一 Task 4520** 后详情再点归档。
+
+- **客户订单节点4 SDMS 附件 1.2.1（对齐 Postman）**
+  - 1.2.0 门户下载成功后报 `ATTACHMENT_UPLOAD_REJECTED`。接口实为 HTTP 200 / `code=2001` /「上传地址不能为空」；Flow 未传 `uploadUrl`，也未回传接口原文。
+  - Postman form-data：`custPoNumber`、`username`、`filename`、`file`、`uploadUrl=http://api.doc.uat.smart-core.com.hk/upload`、`flag=SDMS_SO1`。
+  - Flow **1.2.1** 已发布：Registry UUID `92011c02-42b0-4ed4-95c9-d4eef5899c7b`，checksum `sha256:5e2bee6e…81494b`，8313 字节。`validate` PASSED。Binding `8c272818-…` 已从 1.2.0 切到 1.2.1。不必重启 Task/Engine。详情再点归档即可。
+
+- **客户订单节点4 SDMS 附件接口切换（v2.02 R4）**
+  - 旧：无认证 POST 旧附件服务 `/upload`，`flag=sdms`，`order_number`。
+  - 新：与创建 SDMS 销售订单相同 OAuth；`POST /core/api/srm/so/uploadAttachment`；`flag=SDMS_SO1`；`custPoNumber`=客户订单号；`username`/`filename`/`file` 不变。
+  - Flow `rpa_flow_supplier_portal_upload_order_attachment` **1.2.0** 已发布：Registry UUID `53609f3a-4fe4-4275-81d9-e83a0bb722aa`，checksum `sha256:43411543…82740`，7870 字节。`validate` PASSED，`validate-binding` valid。
+  - 天地伟业 Binding `8c272818-0b6b-4dd2-b9a5-450161c0ecc0` 已从 1.1.0（`0513788f-…`）切到 1.2.0。新回签归档会走新接口；不必重启 Task/Engine。
+
+- **v3.02 对账单优化（不另开 Plan，已直接开发）**
+  - 文档：`project-docs/prd/AutoTask v3.02 业务需求-天地伟业对账单.md`（由随手记录整理）。v3.0 详情用语同步为「对账明细」；填单页仍叫收货明细。
+  - O1：详情标题/空态改为对账明细。
+  - O2：SDMS 校验解析 `check_num`，写入 `summary.sdms_check_num`（无新列/无 DDL）；详情「SDMS对账单」超链接 `fdId=check_head_id`。旧草稿无单号需重新走 SDMS 校验。
+  - O3：SRM 提交成功后 Task HTTP 上传同一批发票到附件服务，`flag=SDMS_ARR`，`order_number=check_num`，`username` 取 Auth `/me.username`（否则 name）。SDMS 失败不回滚已完成，只记 `last_error`。
+  - **需重启唯一 Task 4520** 后：新生成的草稿才有单号；提交审核才会传 SDMS。Client 热刷新即可。
+
+- **扫描+提交必须同一次 RPA**：SRM 没有「已上传未提交」落态，只扫描不提交刷新后附件消失。Client 选发票不跑 RPA；点「提交审核」才发起。submit Flow **1.0.6**（`3dd99992-…`）同一会话扫描并提交，Binding 已切。单独上传接口会拒绝。**需重启唯一 Task 4520**；Client 热刷新后详情先选文件再提交。
+
+- **发票号误读备注 0/100**：upload/submit 用整块 `innerText` 正则取「发票号」，换行被压成空格后把右侧「备注」字数 `0/100` 拼进发票号。已按表单项读取，并在回写时截掉备注计数。upload/submit **1.0.5**（`48876c82-…` / `452e8a13-…`），Binding 已切。详情再扫即可，无需重启 Task。
+
+- **上传发票租约死循环**：任务 `97578af2-…` 每约 60s 被 Worker 再领一次。Engine 已 `RUNTIME_SUCCEEDED`，但 Task `finish_run` 在 `on_upload_finished` 里把空/非数字 `invoiceAmount` 丢给 `Decimal`，抛 `InvalidOperation`，整笔事务回滚，任务一直 `RUNNING`；`WORKER_LEASE_TTL_SECONDS=60` 到期后又把 `RUNNING` 打回 `QUEUED`。已容错解析金额；钩子异常不再挡住 Run 终态。该任务现为 `CANCELLED`。**需重启唯一 Task 4520** 后再在详情重扫。
+
+- **收货应付点不到**：匹配已成功（`RC2608180001`），`.first` 点到表体 `visibility:hidden` 克隆，30s 超时。可见「收货应付」在 `.el-table__fixed-right`。upload/submit **1.0.4**（`c09b0307-…` / `019c2f53-…`）先点固定列。Binding 已切。详情再扫即可。
+
+- **上传发票找不到对账单行**：Run `970593f8-…` 报 `statement row not found by date+amount`。failure.png 显示对账列表「暂无数据」，查询条件为空。演示门户必须先点「查询」才出数；upload/submit 1.0.2 进页后立刻匹配。已发 **1.0.3**（`f9773c87-…` / `6259eda9-…`），Binding 已切。点查询后列表是种子数据，没有本地这笔 `2026-08-18 / 1151309.12`。**产品确认：演示门户数据可以对不上，匹配逻辑仍按日期+金额，找不到即失败，不算 Client/RPA 缺陷。**
+
+- **扫描发票信息**：详情页联调占位（粘贴本机路径 + RPA/IPC 说明）已换成系统文件选择框。选 png/jpg/jpeg/pdf/ofd，最多 10 个、单个 ≤20MB，再开始扫描。需**重启 Client**（主进程 IPC）。
+
+- **对账单详情明细行**：详情页没有展示生成时勾选的收货行。明细不落 `statement_bills`，但已写在流程实例 `summary.lines`。详情 API 现返回 `lines`，详情页在业务信息下展示只读表。需重启 Task 4520；Client 热刷新即可。
+
+- **对账单详情历史失败条**：生成已成功仍显示「重新生成 FAILED」。卡点条曾按任意历史 FAILED 子任务展示。已对齐客户订单：同一 taskType 只看最新一次。Client 刷新即可。
+
+- **生成对账单勾选**：门户 `data-rpa='receiving-row-*'` 打在订单编号 span 上，不在行/勾选框。1.0.5 在 span 内找 checkbox 必然超时。1.0.6 按 marker 找到所在 `tr`，再点选择列。已发布 `d4128a58-…`，Binding 已切。
+
+- **生成对账单勾选**：Element UI 左固定列复制行，点 body 克隆会超时/判不可见。对齐交期 Flow 1.0.2：先选 `.el-table__fixed`，回退 body。已发布 generate **1.0.5**（`ca668193-…`），Binding 已切。
+
+- **生成对账单勾选超时**：Run `257b6633-…` 三次都卡在行 checkbox 点击（Element UI 隐藏 `input` + 逗号选择器），报 `RUNTIME_TIMEOUT`。已发布 generate **1.0.4**（`f468426d-…`）改点可见 `.el-checkbox__inner`。Binding 已切。本地 Trace：`service/storage/artifacts/2be7c618-…/820bd8a1-…/257b6633-…/trace.zip`。
+
+- **生成对账单 `login page unavailable`**：Runtime 重试复用已登录 browser context，生成 Flow 只等验证码图，误报 `SRM_LOGIN_PAGE_UNAVAILABLE`。已按交期 Flow 增加会话复用；query/upload/submit 同步。已发布 generate/query **1.0.3**（`1f0a675f-…` / `cd0bd301-…`）、upload/submit **1.0.2**，Binding 已切换。Client 详情「重新生成」即可，无需重启 Task。
+
+- **对账单联调清空脚本**：`service/scripts/clear_statement_bills.py`（默认预览；加 `--yes` 只删 `srm_tiandi_statement` + `statement_bills` + 填单页查询任务）。不要用 `clear_process_instances.py --yes` 清对账单，那会把客户订单一起删掉。
+
+- **v3.01 对账单 SOP 体验已落地（需重启 Task）**
+  - 填单页带六步进度（待创建 → SDMS对账单核准）；SDMS 失败仍留在填单页不落库。
+  - 列表 Tab 改为 SOP 阶段（待生成 / 待上传发票 / 提交审核 / 已完成 / 已作废），列分阶段与运行状态。
+  - 详情：阶段徽章、卡点、六步进度、业务信息、子任务树、阶段历史。`STMT_PENDING_REVIEW` 显示名改为「提交审核」。
+  - API：`GET /statements?stage=`；账单 DTO 带 `stage` / `instanceStatus` / `stageHistory`。无新迁移。
+
+- **v3.01 需求草案：对账单按客户订单 SOP 呈现**
+  - 文档：`project-docs/prd/AutoTask v3.01 业务需求-天地伟业对账单SOP.md`。
+  - 六步：**待创建 → SDMS对账单核准 → 待生成 → 待上传发票 → 提交审核 → 已完成**。前两步只在填单页，不落库；实例从待生成起进列表/详情。待确认无误后再实施。
+
+- **对账单「待生成」本地草稿（代码已改，需重启 Task）**
+  - 产品：SDMS 校验失败仍不落库；校验通过立刻写 `statement_bills.check_status=DRAFT`（展示「待生成」，SRM 无此状态），跳转该草稿详情跟踪 RPA。SRM 成功 → 未对账；失败仍为待生成并记 `last_error`，详情可「重新生成」同一条。待生成不可上传发票/提交审核；可取消（仅本地作废）。
+  - service：`ProcessStage.STMT_GENERATING`；`POST /statements/{id}/retry-generate`；finish 钩子改为更新已有草稿，失败不把实例标 FAILED。无需新迁移（状态为字符串）。
+  - Client：列表增加「待生成」Tab；生成成功带 `billId` 进详情；详情展示错误与重新生成。
+  - **操作前必须只留一个 Task 占用 4520**（旧进程曾与新 uvicorn 并存，Client 会打到旧代码）。路径：流程实例 → 对账单 → 生成客户对账单 → 天地伟业 → `2026-04-01`～`2026-04-30` → 搜索 → 生成。
+
+- **对账单查询链路已绿，交给 Client 操作后续写入步骤**
+  - 根因：query Flow `1.0.1` 登录成功后 `_fill_date_range` 引用未定义 `step_id`，Engine 报 `FLOW_UNHANDLED_ERROR`。已改为在 `open_receipt_list` 发成功事件，并升 **1.0.2**。
+  - 已发布：`rpa_flow_srm_stmt_query_receipts` / `rpa_flow_srm_stmt_generate` **1.0.2**；Binding 已切到新 versionId。upload/submit 仍用已发布包。
+  - 只读烟雾：Task `639822cb-…` SUCCESS，`totalRows=2`，样例收货单 `RCV2604300001` / 行 10，金额 `5999.74`，状态「未提交」。未跑生成/上传/提交（会改 SRM）。
+  - **下一步：用户在 Client 操作**。登录端点 Auth=`http://192.168.102.247:4510`、Task=`http://127.0.0.1:4520`。路径：流程实例 → 对账单流程实例 → 生成客户对账单；门户选天地伟业；日期 `2026-04-01`～`2026-04-30`。生成前需 SDMS 当月有对账单且金额等于勾选汇总（当前 SDMS 当月查不到单据）。发票上传详情页暂填本机路径（每行一个）。
+
+### 2026-08-17
+
+- **v3.0 天地伟业对账单：代码实现落地（未 git commit）**
+  - service：`statement_bills` 模型 + dormant迁移 `c4a1f0e82b17`（不执行）；`ProcessStage`/`ProcessSubTaskKind` 对账阶段；`STAGE_DEFINITIONS` 改为按 `process_code` 分组；`sdms_client` + `statement_service`（金额校验阻断/落表/上传/提交/取消）；`/api/v1/autotask/statements/*` 路由；seed 追加 4 个 template/binding。
+  - rpa-flows：新建 4 包 `rpa_flow_srm_stmt_{query_receipts,generate,upload_invoice,submit_review}/1.0.0`（纯函数单测通过；UI 选择器为 `data-rpa` 占位，需补 mock_srm 对账页或对接真实 SRM）。
+  - app：`/process-instances/statements` 列表/生成/详情三页 + `autotaskApi.statements` 方法族；详情发票上传暂用本机路径触发 RPA（IPC 选文件后续补）。
+  - **待用户授权**：`alembic upgrade`、Engine 发布 4 Flow、Binding 绑定真门户、全链路验收。
+- **v3.0 天地伟业对账单 PRD 定稿**：`project-docs/prd/AutoTask v3.0 业务需求-天地伟业对账单.md`。核心决策：生成即落本地表（`statement_bills`，不存收货明细）、取消定时扫描（未对账列表读本地库）、本地↔SRM 按「对账日期+对账金额」匹配（SRM 无可回读对账单号）、流程终点 = 提交审核成功（SRM 后续审批不跟踪）、SDMS 金额校验无容差阻断、发票扫描/反写全为 SRM 功能（字段只读、不存发票文件）、取消对账仅本地作废、失败不重试只记原因。三轮共 22 项需求确认完毕，含流程图与状态机（mermaid）。附件 3 收货字段清单在 `project-docs/prd/收货信息_20260817141512.xlsx`。
+- **实施计划**：`.cursor/plans/v3.0_天地伟业对账单_0ac52cb7.plan.md`；修正计划见 Cursor Plan「v3.0 天地伟业对账单修正计划」。
+
+### 2026-08-14
+
+- **已回签阶段命名**：`SIGNED` 中文由「待上传附件」改为「已回签」；轮询确认后**先**改阶段再创建下载任务；失败可在已回签手动重试。`POJS2607240005` 已重置为 `SIGN_REQUESTED` 供复测。
+
+- **待回签不提供合同下载**：发起签章后客户→我司盖章全程为待回签；「手动触发签章合同下载」仅保留在 `SIGNED`（已回签）。PRD §3.2/§3.3 已改。
+
+- **R2 演示 TEMP**：回签轮询候选放宽为 `ACTIVE` +（`SIGN_REQUESTED`∪`DATES_COMPLETE`）；列表增加「立即回签轮询」`POST /process-instances/sign-poll/run-once`。PRD v2.02 §3.2/§3.3A 已记。单测相关通过。需重启 Task；Client 热更即可。
+
+- **签章成功不再立即归档**：按正式路径，签章 SUCCESS 一律停在 `SIGN_REQUESTED`；节点4仅由回签轮询（或人工兜底）触发。演示门户瞬间「已回签」不可信。已改 `process_instance_service._handle_sign_finished` + 单测；PRD v2.02 §3.3 同步。`POJS2607240005` 误进 `SIGNED` 已纠回 `DATES_COMPLETE`（门户仍待签章）。**需重启 Task** 后新签章才生效。
+
+- **联调清空脚本**：`service/scripts/clear_process_instances.py`（默认预览；加 `--yes` 硬删流程实例及相关任务/Run）。不删 Binding / Flow Registry。
+
+- **R3 Binding 已切换（MinIO 包已落）**：`rpa_flow_supplier_portal_upload_order_attachment` **1.1.0** Registry UUID `0513788f-a873-4f8d-8131-5baec1e49620`，checksum `sha256:6e8af37a…364ca`，9503 字节。门户 Binding 已切到「查看签章」合同下载。包已写入 MinIO（`GET /flow-versions/{id}/package` → 200）；`validate-binding` → valid。说明：`POST /api/v1/flows/packages` 当前对本机 Engine 返回空 body **502**（源码无 502），但同配置下直接 `put_package` 成功——接口层异常待查；联调以 MinIO+Registry 已就绪为准。
+
+- **联调重置**：按用户要求再次硬清空流程实例相关数据（7 实例 / 18 行 / 19 阶段历史，及关联 12 子任务与 Run/事件/制品）；计数均为 0，可重新手动扫单。
+
+### 2026-08-13
+
+- **R3 节点4附件纠正**：确认业务为已回签后下载**双方签章合同**上传 SDMS，不是「下载订单」的 XLSX/XML。演示门户入口为「查看签章」→ PDF（样例 `PURCHASE_ORDER.pdf`）。已新增 Flow `rpa_flow_supplier_portal_upload_order_attachment` **1.1.0**（源码+单测通过）；Client/service 按钮改为「手动触发签章合同下载」；PRD 增补 R3。**2026-08-14 已切换 Binding**（见上一日志）。
+
+- **错误体验**：已完成实例不再展示历史 `lastError`（成功推进签章/回签/归档时清除；列表 COMPLETED/CANCELLED 隐藏）；存量 `POJS2607180002` 已清脏。落库与 Client 展示按错误码中文化（如 `ORDER_SIGN_STATUS_UNCONFIRMED`）；签章 Flow 1.0.2 源码文案已改为中文（未强制重发版）。Task 需重启后新失败才会以中文落库；Client 刷新即可对旧英文码即时翻译展示。
+
+- **O4 客户订单命名与导航**：侧栏「流程实例」可折叠（客户订单 `/processes` + 对账单占位 `/process-instances/statements`）；列表/详情「客户订单 / 客户=`portal_name` / 交易主体」；新建实例标题 `{portal_name}·客户订单 - {po}`。本门户 `portal_name` 与 6 个 SOP 流程模板名已标为「天地伟业·…」（扫单/建单/交期/签章/回签探测/附件）。单测 process-instances 10 项通过。PRD §7 O4。
+
+- **O3 已落地（Client）**：阶段中文名与列表 Tab 对齐；详情主徽章「阶段」、辅徽章「运行状态」；签章失败仍「进行中」时展示卡点条（`lastError` / 失败子任务）。service `STAGE_DEFINITIONS` 文案已同步。旧 v2.02 plan 未改，以 PRD §6 为准。
+
+- **O3 需求草案**：已写入 `project-docs/prd/v2.02客户订单-业务需求.md` §6——保留 `stage`+`status` 两维；统一阶段中文名；详情以阶段为主、运行状态为辅；签章失败仍「进行中」时必须展示卡点/错误条。待用户审阅后再实施。
+
+- **签章 Flow 1.0.2**：`rpa_flow_srm_sign_order` 签章成功后**不再 reload**（演示门户不落库，刷新会冲掉页面「已回签/待回签」）；当前页读取状态，失败兜底输出 `待回签`。已发布 UUID `3118df88-b376-4be7-bfc5-fb3af6e5c450`，Binding `a206d2e8-…` 已切换。
+
+- **联调重置**：按用户要求硬清空流程实例相关数据（`process_instances` / `process_line_items` / `process_stage_history`，及 `process_instance_id` 关联的 automation_tasks + runs/事件/制品等）；当前计数均为 0，可重新扫单触发。
+
+- **v2.02 流程实例：回签轮询 + 详情优化（代码 + Registry/Binding 已落地）**
+  - **O2**：`prepare_erp_order` **1.2.6** 顶层输出 `headerId`；service summary 落库；Client `sdmsWebBaseUrl`（默认 `http://192.168.99.35:8080`）+ `ErpOrderLabel` 外链 SDMS 查看页（`fdId=headerId`）。无 headerId 时仍纯文本。
+  - **O1**：详情子任务改为 `ProcessSubTaskTree`（按节点/行聚合，历史失败 Collapsible）；API `subTasks.lineNumber` 从 task input 解析。
+  - **R2**：新 Flow `rpa_flow_srm_check_reply_status/1.0.0`（只读探测）；`SignPollScheduler`（`SIGN_POLL_JOB_ENABLED` / `SIGN_POLL_INTERVAL_SECONDS=1800`）；幂等 `_trigger_archive_if_needed`；签章成功且 `replyStatus=已回签` 立即自动归档；人工按钮改为「手动触发已签章下载」兜底。
+  - **R1（澄清）**：当场签章不落库的那笔验不了轮询；初始化里已有「已回签」种子单，应用其 PO 做 `SIGN_REQUESTED`→探测→归档验收。
+  - 单测：service process_instances 23；app process-instances 9；check_reply flow 4；prepare 1.2.6 相关通过。
+  - **运维（本机 Engine + 共享 DB）**：
+    - 已上传并发布 `rpa_flow_supplier_portal_prepare_erp_order` **1.2.6**（UUID `ff49be7b-7107-4366-b145-5ce985ea16da`，checksum `sha256:61097bcd…0d5b`）；门户 Binding `0a0b5beb-…` 已切到该版本；`validate-binding` → valid。
+    - 已上传并发布 `rpa_flow_srm_check_reply_status` **1.0.0**（UUID `95ce3888-78a8-4889-93f6-bc86ef3f0c05`，checksum `sha256:46ae5bb6…5498`）；新建 Template `srm_check_reply_status`（`62e8929f-…`）+ Binding `f14aecc9-…`（门户 `b182630d-…`）；`validate-binding` → valid。
+    - Task `.env` 已设 `SIGN_POLL_JOB_ENABLED=true`（间隔 1800）并已重启本机 Task；启动日志确认轮询调度器开启。
+    - 用户授权后已执行 Alembic **`b2e8a4c91f30`**（`9a3f2c71b5d4` → head）：补齐 `process_line_items` SRM 列；此前详情 500（缺 `material_status` 等）导致 Client 误报「不存在或已被删除」。
+
+- **流程实例订单行展示对齐 SRM（进行中增量）**
+  - 详情页与「填写交货日期」页共用 `ProcessOrderLinesTable`，表头按 SRM 附件字段：订单行号、料号、料品名称、料品规格、物料状态、内码、数量、单位、单价（元）、价税合计（元）、要求交货日期、标准交货日期（天）、是否满足LT、供方交期、欠交数量、备注、直发备注，外加预计交货日期与行状态（填交期页另有操作列）。
+  - service：建单成功钩子把 Flow `lines` 中对应字段写入 `process_line_items`；迁移 `b2e8a4c91f30` **已执行**（2026-08-13）。存量行新列为 NULL，新建单后才会写入单价/备注等。
+  - 单测：`app` process-instances、`service` test_process_instances 已通过。
+
+#### v2.0 流程实例（SOP 主任务）全链路实施
+
+- 依据 `project-docs/prd/v2.0客户订单-业务需求.md` 与实施计划完成流程实例体系全链路开发，新旧三任务链并存（successor 机制未动）。
+- service：新增 `ProcessInstance`/`ProcessLineItem`/`ProcessStageHistory` 模型与 `automation_tasks.process_instance_id` 关联列；Alembic 迁移 `9a3f2c71b5d4` 已准备**未执行**（数据库暂停点，待用户授权）。新增 `process_instance_service` 八阶段状态机、`/process-instances` API（列表/详情/按行提交/签章/归档/重试/取消/手动扫单）、`dispatch_service.finish_run` 钩子与 `ScanScheduler` 定时扫单（`SCAN_JOB_ENABLED` 等配置开关）。pytest 98 项通过（1 项为既有 `test_portal_accounts` 409/403 已知失败，非本次引入）。
+- rpa-flows：对真实门户 `http://192.168.102.247:3000` 完成只读探测（列表页选择器、分页、待签章详情页保存按钮与持久化契约），探测脚本 `rpa-engine/scripts/probe_srm_portal_readonly.py`（临时）。新建三个 Flow 1.0.0：`rpa_flow_srm_scan_pending_orders`（扫单）、`rpa_flow_srm_fill_line_delivery_date`（按行填交期）、`rpa_flow_srm_sign_order`（只签章），各含 manifest/selectors/README/单测，flows pytest 27 项通过，ZIP 包经 Engine `FlowPackageValidator` 离线校验通过；**尚未上传 Engine Registry 发布，WorkflowTemplate/Binding 待发布后创建**。
+- app：新增 `/processes/`、`/processes/$instanceId`、`/processes/$instanceId/dates` 三页（列表/详情/按行填交期），`remote-api`/`query-keys`/`autotask-api` 增加 process-instances 方法，侧边栏加「流程实例」入口，`/tasks` 列表按 `srm_scan_pending_orders` 过滤隐藏扫单任务。Vitest 66 项通过（含新增流程实例 7 项），`tsc --noEmit` 通过，electron-forge 生产打包通过。
+- 待办（需用户授权/联调）：执行 `alembic upgrade head`；三个 Flow 上传 Engine Registry 发布并创建 WorkflowTemplate + Binding；真实门户端到端联调（扫单→建单→按行填交期→签章→归档）。演示门户签章持久化历史问题（未决#14）仍可能影响节点3联调。
+
+#### v2.0 流程实例联调进展与需求澄清（续）
+
+- 数据库迁移 `9a3f2c71b5d4` 已执行；扫单/按行填交期/只签章 Flow 已发布，对应 WorkflowTemplate + Binding 已创建；任务一 `1.2.5` 已发布。
+- 扫单 `1.0.0` 误用表头「采购单号」导致 `totalRows=0`；已修复为「订单编号」并发布 `1.0.1`。重跑扫单成功：16 行中 7 张待签章，幂等创建 7 个流程实例并自动触发节点1。
+- 节点1（建 SDMS）多单成功进入 `SDMS_CREATED` 并落行；样例失败单 `POJS2607170001` 为附件重复行号（`ORDER_ATTACHMENT_LINE_DUPLICATE`），属数据/既有 Flow 边界，非流程实例状态机问题。
+- 节点2 按行填交期联调失败：`ORDER_LINE_SAVE_UNCONFIRMED`（保存后刷新日期未保留）。与历史任务二结论一致：演示门户「保存」无写请求。
+- **需求澄清（用户确认）**：交货日期是签章必要条件，二者不是同一件事；中间可能间隔很久或走内部流程。禁止把「填交期」合并成「直接签章」。产品状态机保持节点2/节点3分离；端到端阻塞点是门户「待签章可保存交期并持久化」契约，不是 SOP 设计。后续不按「填齐即签章」改产品。
+
+#### 节点2交期成功判定调整（演示门户不落库）
+
+- 用户确认演示门户按行「保存」仅有成功提示、不写库；业务上 AutoTask 行交期为真相来源，不以 SRM 刷新后是否仍显示该日期判定节点2成败。
+- 发布 `rpa_flow_srm_fill_line_delivery_date` `1.0.1`（UUID `812772a0-5d4b-452f-b783-794288dd9f69`）：删除 `verify_persisted`；填写 + 点击保存 + 成功提示即 SUCCESS；输出日期取任务输入；固定列选择器优先 `.el-table__fixed-right`。Binding 已切到 1.0.1。
+- 重跑联调时 Engine 侧出现 `SRM_LOGIN_PAGE_UNAVAILABLE`（本机只读探测仍可登录）；属运行时/浏览器通道波动，与本次成功判定变更无关。节点3签章 Flow 若仍从 SRM 页面读交期，在门户不落库时可能另需「签章前按 AutoTask 日期回填」——待登录恢复后继续验证。
+
+#### 填交期 1.0.2 修复并完成样例单节点2
+
+- 根因：首败实为 `ORDER_DATE_FILL_FAILED`（union 选择器 `.first` 点到 Element UI body 克隆）；Runtime 重试复用已登录 context 再找验证码，才表现为 `SRM_LOGIN_PAGE_UNAVAILABLE`。
+- 发布 `1.0.2`（UUID `0e5e2adb-3b7d-4234-946a-a2a56077c678`）：固定右列优先、已登录会话跳过登录、type+Enter 填写。Binding 已切换。
+- 样例 `POJS2607180002` 两行交期均 SUCCESS，流程实例进入 `DATES_COMPLETE`（10/20 均为 WRITTEN）。下一步可测节点3签章（若 SRM 不落库，签章前可能需按 AutoTask 日期回填）。
+
+#### TEMP E2E：签章前按 AutoTask 日期回填（联调后必须去掉）
+
+- **性质**：仅演示门户「保存交期不落库」时的临时绕过；产品上节点2/3仍分离。门户可持久化后删除下列全部 TEMP 代码与传参。
+- Flow：发布 `rpa_flow_srm_sign_order` `1.0.1`（UUID `02dc1d76-a72f-41fa-9ffd-313594f670a4`，checksum `8b610441…`）。输入可选 `temp_e2e_backfill_dates` + `order_lines`；签章前把 AutoTask 交期填入页面（不点保存）。Binding `a206d2e8-00e5-428a-a095-087e44f458b3` 已切到 1.0.1。
+- service：`request_sign` 在 `DATES_COMPLETE` 时把 WRITTEN 行日期写入子任务 input（带 `temp_e2e_backfill_dates=true`）。单测 `test_request_sign_passes_temp_e2e_backfill_payload` 覆盖。Task 已重启加载该逻辑。
+- 样例 `POJS2607180002` 节点3：子任务 `fb57d06a-…` / Run `272845eb-…` 精确使用 1.0.1；事件确认 `tempE2eBackfill=true`、回填 2 行 SUCCESS，随后点击签章；刷新后回复状态仍无法确认为待回签/已回签 → `WAITING_HUMAN` / `ORDER_SIGN_STATUS_UNCONFIRMED`（与历史演示门户签章不落库一致，未决#14）。实例仍停在 `DATES_COMPLETE`。
+- **待删除清单**：Flow `1.0.1` 回填逻辑与 README TEMP 段；`request_sign` 的 TEMP 传参与对应单测；Binding 可回切正式无回填版本；控制文档本条。
+
+#### v2.01 需求文档定稿（对照计划与落地差异）
+
+- 新增现行需求基线 `project-docs/prd/v2.01客户订单-业务需求.md`：相对 v2.0 / 实施计划记录已确认差异（新旧链并存、交期真相源、保存全部、路由跳转、TEMP 签章回填、阶段按钮等），并列出 v2.02 候选。
+- v2.0 文档顶部标注为历史定稿，指向 v2.01；后续需求变更走 v2.02。
+- Client：交期页表头「保存全部」、列表直达编辑页、详情子路由 Outlet；service：交期/扫单请求 camelCase 校验别名；API 错误文案解析避免 `[object Object]`。
+
+#### v2.02 需求草案（相对 v2.01 迭代）
+
+- 成文 `project-docs/prd/v2.02客户订单-业务需求.md`：明确为 **v2.01 的增量**，只写变更。
+- **R1**：记录演示门户签章后页面常直接「已回签」且不落库。
+- **R2**：节点4主路径改为每 30 分钟轮询「待回签」是否「已回签」，发现后自动推进并自动下载合同上传 SDMS（人工按钮降为兜底）；覆盖 v2.01「第一期不自动扫回签」。
+- **O1**：详情子任务改为按节点/行树状展示。
+- **O2**：ERP 订单号链到 SDMS 查看页，`fdId`=`headerId`，Web 基址可配置。
+- 实施前现行行为仍以 v2.01 为准；未开工实现。
 #### Ubuntu 一键启动脚本 `dev.sh`
 
 - 新增工作区根目录 `dev.sh`（仅 Ubuntu）：对 `service/` 与 `rpa-engine/` 使用各自的 `uv.lock` + `pyproject.toml` 执行 `uv sync --frozen --python 3.12` 创建 `.venv`。

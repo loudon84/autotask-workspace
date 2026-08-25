@@ -18,5 +18,89 @@
       {"id": "srm.fetch_po", "name": "拉取 PO 详情"}
     ],
     "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-stmt-query",
+    "tenantId": "seed-tenant-001",
+    "name": "SRM 收货列表查询",
+    "code": "srm_stmt_query_receipts",
+    "description": "天地伟业对账单：按入库确认时间查询未提交收货明细",
+    "entityType": "CUSTOMER",
+    "category": "statement",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "dateStart", "label": "入库确认开始日期", "type": "string", "required": true},
+      {"name": "dateEnd", "label": "入库确认结束日期", "type": "string", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.query_receipts", "name": "查询收货列表"}
+    ],
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-stmt-generate",
+    "tenantId": "seed-tenant-001",
+    "name": "SRM 生成对账单",
+    "code": "srm_stmt_generate",
+    "description": "天地伟业对账单：勾选收货行并在 SRM 生成对账单",
+    "entityType": "CUSTOMER",
+    "category": "statement",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "dateStart", "label": "入库确认开始日期", "type": "string", "required": true},
+      {"name": "dateEnd", "label": "入库确认结束日期", "type": "string", "required": true},
+      {"name": "lines", "label": "勾选行", "type": "array", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.generate_statement", "name": "生成对账单"}
+    ],
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-stmt-upload",
+    "tenantId": "seed-tenant-001",
+    "name": "SRM 上传对账发票",
+    "code": "srm_stmt_upload_invoice",
+    "description": "天地伟业对账单：上传电子发票并由 SRM 扫描回写",
+    "entityType": "CUSTOMER",
+    "category": "statement",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "checkDate", "label": "对账日期", "type": "string", "required": true},
+      {"name": "checkAmount", "label": "对账金额", "type": "number", "required": true},
+      {"name": "filePaths", "label": "发票文件路径", "type": "array", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.upload_invoice", "name": "扫描上传发票"}
+    ],
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-stmt-submit",
+    "tenantId": "seed-tenant-001",
+    "name": "SRM 提交对账审核",
+    "code": "srm_stmt_submit_review",
+    "description": "天地伟业对账单：提交审核，对账状态变为已对账、发票状态变为审批中",
+    "entityType": "CUSTOMER",
+    "category": "statement",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "checkDate", "label": "对账日期", "type": "string", "required": true},
+      {"name": "checkAmount", "label": "对账金额", "type": "number", "required": true},
+      {"name": "filePaths", "label": "发票文件路径", "type": "array", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.upload_invoice", "name": "扫描上传发票"},
+      {"id": "srm.submit_review", "name": "提交审核"}
+    ],
+    "createdBy": "seed-user-001"
   }
 ]

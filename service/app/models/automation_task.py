@@ -31,3 +31,4 @@ class AutomationTask(BaseModel):
     assigned_to: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_task_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    process_instance_id: Mapped[str | None] = mapped_column(String(36), nullable=True)

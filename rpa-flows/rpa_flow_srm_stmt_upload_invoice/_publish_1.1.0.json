@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_upload_invoice",
+  "rpaFlowVersion": "1.1.0",
+  "rpaFlowVersionId": "0fd304e3-f5af-4041-bb8d-738d1a8c54bb",
+  "packageChecksum": "sha256:af9d991183fa0bd89701a1d3f4b0883ea1b740a3095ca30c3fa75b3c0e46e931",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_stmt_upload_invoice"
+}

@@ -1,0 +1,8 @@
+{
+  "flowVersionId": "0513788f-a873-4f8d-8131-5baec1e49620",
+  "checksum": "sha256:6e8af37ae6e55e6094340dabecf77c8297983c5c8b7174d77774fbec639364ca",
+  "version": "1.1.0",
+  "packageSize": 9503,
+  "objectKey": "flows/global/rpa_flow_supplier_portal_upload_order_attachment/1.1.0/891af34371c346518f2a0cc10fbc4bac-6e8af37ae6e55e6094340dabecf77c8297983c5c8b7174d77774fbec639364ca.zip",
+  "mode": "minio-put-then-db"
+}

@@ -1,5 +1,6 @@
 """Engine 输出持久化与 Task 后继任务机制测试。"""
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -602,6 +603,7 @@ async def test_processor_queues_attachment_successor_with_run() -> None:
             _scalar_result(source_task),
             _scalar_result(source_run),
             target_result,
+            _scalar_result(SimpleNamespace(name="tester")),
         ]
     )
     added: list[object] = []
@@ -623,7 +625,7 @@ async def test_processor_queues_attachment_successor_with_run() -> None:
     assert child.workflow_binding_id == "binding-3"
     assert child.source_task_id == "task-2"
     assert child.source_run_id == "run-2"
-    assert __import__("json").loads(child.input) == {"po_no": "PO-001"}
+    assert __import__("json").loads(child.input) == {"po_no": "PO-001", "username": "tester"}
     assert run.task_id == "task-3"
     assert run.rpa_flow_id == "attachment-flow"
     assert run.status == RunStatus.QUEUED

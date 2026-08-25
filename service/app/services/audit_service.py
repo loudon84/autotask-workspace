@@ -17,6 +17,8 @@ ACTION_PORTAL_DELETED = "portal_account.deleted"
 ACTION_PORTAL_OPENED = "portal_account.opened"
 ACTION_PORTAL_ACCESS_GRANTED = "portal_account.access_granted"
 ACTION_WORKFLOW_TEMPLATE_DELETED = "workflow_template.deleted"
+ACTION_SCHEDULER_JOB_UPDATED = "scheduler_job.updated"
+SCHEDULER_JOB_RESOURCE_TYPE = "scheduler_job"
 
 
 async def write_audit_log(

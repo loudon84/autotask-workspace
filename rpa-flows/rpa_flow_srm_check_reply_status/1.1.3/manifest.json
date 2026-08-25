@@ -1,0 +1,27 @@
+{
+  "rpaFlowId": "rpa_flow_srm_check_reply_status",
+  "name": "SRM Check Order Reply Status (Official Portal)",
+  "version": "1.1.3",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_check_reply_status"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "po_no",
+      "type": "string",
+      "required": true,
+      "description": "Customer purchase order number to inspect reply status"
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

@@ -8,10 +8,15 @@ from app.models.base import Base, BaseModel, not_deleted  # noqa: F401
 from app.models.human_action import HumanAction  # noqa: F401
 from app.models.portal_access_grant import PortalAccessGrant  # noqa: F401
 from app.models.portal_account import PortalAccount  # noqa: F401
+from app.models.process_instance import ProcessInstance  # noqa: F401
+from app.models.process_line_item import ProcessLineItem  # noqa: F401
+from app.models.process_stage_history import ProcessStageHistory  # noqa: F401
 from app.models.rpa_component import RpaComponent  # noqa: F401
 from app.models.rpa_run import RpaRun  # noqa: F401
+from app.models.scheduler_job import SchedulerJob  # noqa: F401
 from app.models.rpa_worker import RpaWorker  # noqa: F401
 from app.models.run_event import RunEvent  # noqa: F401
+from app.models.statement_bill import StatementBill  # noqa: F401
 from app.models.step_run import StepRun  # noqa: F401
 from app.models.task_message import TaskMessage  # noqa: F401
 from app.models.task_successor_job import TaskSuccessorJob  # noqa: F401

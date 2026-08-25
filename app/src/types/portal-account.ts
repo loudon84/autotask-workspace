@@ -9,12 +9,17 @@ export interface PortalAccount {
   entityType: PortalEntityType;
   erpEntityCode: string;
   erpEntityName: string;
+  businessEntity: string;
+  ou: string;
   portalName: string;
   portalUrl: string;
   loginAccount: string;
   clientOpenMode: ClientOpenMode;
   clientSessionPartition: string;
   status: PortalStatus;
+  ownerUserId: string;
+  ownerName: string;
+  ownerUsername?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -22,14 +27,21 @@ export interface PortalAccount {
 
 export type CreatePortalAccountInput = Omit<
   PortalAccount,
-  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt"
+  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt" | "ownerUserId" | "ownerName"
 > & {
   credentialRef?: string;
+};
+
+export type PortalOwnerCandidate = {
+  userId: string;
+  name: string;
+  username?: string;
 };
 
 export type UpdatePortalAccountInput = Partial<
   Pick<
     PortalAccount,
+    | "entityType"
     | "portalName"
     | "portalUrl"
     | "loginAccount"
@@ -38,6 +50,9 @@ export type UpdatePortalAccountInput = Partial<
     | "status"
     | "erpEntityName"
     | "erpEntityCode"
+    | "businessEntity"
+    | "ou"
+    | "ownerUserId"
   >
 > & {
   credentialRef?: string;

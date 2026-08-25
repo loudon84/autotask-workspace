@@ -1,0 +1,218 @@
+import importlib.util
+import json
+import sys
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+from nodeskclaw_rpa_engine.runtime import RpaBusinessError
+
+FLOW_DIR = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "srm_check_reply_status_flow_1_1_1",
+    FLOW_DIR / "flow.py",
+)
+flow_module = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = flow_module
+SPEC.loader.exec_module(flow_module)
+
+validate_input = flow_module.validate_input
+resolve_captcha_code = flow_module.resolve_captcha_code
+SELECTORS = json.loads((FLOW_DIR / "selectors.json").read_text(encoding="utf-8"))
+
+
+class FakeLocator:
+    def __init__(self, *, visible=False, text="", count=1):
+        self.visible = visible
+        self.text = text
+        self._count = count
+        self.clicks = 0
+
+    async def is_visible(self):
+        return self.visible
+
+    async def wait_for(self, *, state="visible", timeout=0):
+        if state == "visible" and not self.visible:
+            raise TimeoutError("not visible")
+
+    async def get_attribute(self, name):
+        return None
+
+    async def inner_text(self):
+        return self.text
+
+    async def count(self):
+        return self._count
+
+    async def click(self):
+        self.clicks += 1
+
+    @property
+    def first(self):
+        return self
+
+    def nth(self, index):
+        return self
+
+
+class FakePage:
+    def __init__(self, locators, *, evaluate_result=True):
+        self._locators = locators
+        self.gotos = []
+        self.fills = []
+        self.clicks = []
+        self.evaluates = []
+        self.evaluate_result = evaluate_result
+
+    async def goto(self, url, wait_until=None):
+        self.gotos.append(url)
+
+    def locator(self, selector):
+        return self._locators.get(selector, FakeLocator())
+
+    async def fill(self, selector, value):
+        self.fills.append((selector, value))
+
+    async def click(self, selector):
+        self.clicks.append(selector)
+
+    async def wait_for_timeout(self, ms):
+        return
+
+    async def evaluate(self, script, arg=None):
+        self.evaluates.append(arg)
+        return self.evaluate_result
+
+
+class RecordingEvents:
+    def __init__(self):
+        self.items = []
+
+    async def emit(self, type, message="", payload=None, level=None):
+        self.items.append({"type": type, "message": message, "payload": payload or {}})
+
+
+class ValidateInputTests(unittest.TestCase):
+    def test_valid_input(self):
+        self.assertEqual(validate_input({"po_no": " pojs2607130002 "}), "POJS2607130002")
+
+    def test_rejects_missing_po_no(self):
+        with self.assertRaises(RpaBusinessError):
+            validate_input({})
+        with self.assertRaises(RpaBusinessError):
+            validate_input(None)
+
+
+class CaptchaTests(unittest.TestCase):
+    def test_known_captcha(self):
+        self.assertEqual(resolve_captcha_code("/assets/code01.png"), "mp3s")
+
+    def test_data_url_returns_none(self):
+        self.assertIsNone(resolve_captcha_code("data:image/png;base64,abc"))
+
+
+class OfficialPackageGuardTests(unittest.TestCase):
+    def test_manifest_is_1_1_1(self):
+        manifest = json.loads((FLOW_DIR / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["version"], "1.1.1")
+
+    def test_selectors_have_no_data_rpa(self):
+        raw = (FLOW_DIR / "selectors.json").read_text(encoding="utf-8")
+        self.assertNotIn("data-rpa", raw)
+
+
+class OpenOrderDetailTests(unittest.IsolatedAsyncioTestCase):
+    async def test_marks_row_and_clicks_detail(self):
+        po_no = "POJS2607170008"
+        detail = FakeLocator(visible=True, count=1)
+        locators = {
+            SELECTORS["order_page"]: FakeLocator(visible=True),
+            SELECTORS["loading_mask"]: FakeLocator(visible=False),
+            SELECTORS["detail_page"]: FakeLocator(visible=True),
+            f"[data-autotask-po-detail='{po_no}']": detail,
+        }
+        page = FakePage(locators)
+        adapter = flow_module.SupplierPortalReplyStatusAdapter(
+            SimpleNamespace(
+                events=RecordingEvents(),
+                page=page,
+                portal_url="https://supplier.tiandy.com/#/login",
+                selectors=SELECTORS,
+            )
+        )
+
+        await adapter.open_order_detail(po_no)
+
+        self.assertEqual(page.gotos, ["https://supplier.tiandy.com/#/order/list"])
+        self.assertEqual(page.fills, [(SELECTORS["po_number"], po_no)])
+        self.assertEqual(page.clicks, [SELECTORS["search_button"]])
+        self.assertEqual(page.evaluates, [po_no])
+        self.assertEqual(detail.clicks, 1)
+
+    async def test_missing_row_raises_business_not_found(self):
+        page = FakePage(
+            {
+                SELECTORS["order_page"]: FakeLocator(visible=True),
+                SELECTORS["loading_mask"]: FakeLocator(visible=False),
+            },
+            evaluate_result=False,
+        )
+        adapter = flow_module.SupplierPortalReplyStatusAdapter(
+            SimpleNamespace(
+                events=RecordingEvents(),
+                page=page,
+                portal_url="https://supplier.tiandy.com/",
+                selectors=SELECTORS,
+            )
+        )
+        with self.assertRaises(RpaBusinessError) as ctx:
+            await adapter.open_order_detail("POJS2607170008")
+        self.assertEqual(ctx.exception.code, "BUSINESS_NOT_FOUND")
+
+
+class ReplyStatusTests(unittest.IsolatedAsyncioTestCase):
+    async def test_picks_known_tag(self):
+        tags = FakeLocator(visible=True, text="已回签", count=3)
+        adapter = flow_module.SupplierPortalReplyStatusAdapter(
+            SimpleNamespace(
+                events=RecordingEvents(),
+                page=FakePage({SELECTORS["reply_status"]: tags}),
+                portal_url="https://supplier.tiandy.com/",
+                selectors=SELECTORS,
+            )
+        )
+        self.assertEqual(await adapter.reply_status(), "已回签")
+
+
+class RunFlowTests(unittest.IsolatedAsyncioTestCase):
+    async def test_run_returns_reply_status_without_signing(self):
+        adapter = SimpleNamespace(
+            login=AsyncMock(),
+            open_order_detail=AsyncMock(),
+            reply_status=AsyncMock(return_value="已回签"),
+        )
+        original = flow_module.SupplierPortalReplyStatusAdapter
+        flow_module.SupplierPortalReplyStatusAdapter = lambda ctx: adapter
+        try:
+            result = await flow_module.run(
+                SimpleNamespace(
+                    input={"po_no": "POJS2607170008"},
+                    portal_url="https://supplier.tiandy.com/#/login",
+                    log=SimpleNamespace(info=AsyncMock()),
+                    events=SimpleNamespace(emit=AsyncMock()),
+                )
+            )
+        finally:
+            flow_module.SupplierPortalReplyStatusAdapter = original
+
+        self.assertEqual(result["schemaVersion"], "SRM_CHECK_REPLY_STATUS_OUTPUT_V1")
+        self.assertEqual(result["poNo"], "POJS2607170008")
+        self.assertEqual(result["replyStatus"], "已回签")
+        adapter.login.assert_awaited_once()
+        adapter.open_order_detail.assert_awaited_once_with("POJS2607170008")
+        adapter.reply_status.assert_awaited_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

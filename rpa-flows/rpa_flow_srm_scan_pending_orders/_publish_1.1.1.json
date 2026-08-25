@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_scan_pending_orders",
+  "rpaFlowVersion": "1.1.1",
+  "rpaFlowVersionId": "130ee81f-c5ff-474e-b047-1396f80d4ed9",
+  "packageChecksum": "sha256:128926781a4e86b0e952f8dd79bfe1f53a9a18e2a3cac7a0d79ada733189866e",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_scan_pending_orders"
+}

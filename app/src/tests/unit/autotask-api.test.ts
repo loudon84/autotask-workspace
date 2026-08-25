@@ -59,6 +59,30 @@ describe("default endpoint config", () => {
     expect(config.rpaEngineUrl).toBe("http://localhost:4610");
     expect(config.authPrefix).toBe("/api/v1/auth");
     expect(config.taskPrefix).toBe("/api/v1/autotask");
+    expect("sdmsWebBaseUrl" in config).toBe(false);
+  });
+
+    it("does not invent a default SDMS web URL", async () => {
+    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl } = await import(
+      "@/types/endpoint-config"
+    );
+    expect(buildSdmsOmViewUrl(undefined, "1100983")).toBeNull();
+    expect(buildSdmsOmViewUrl("", "1100983")).toBeNull();
+    expect(buildSdmsCheckViewUrl(undefined, "36775")).toBeNull();
+  });
+
+    it("builds SDMS OM view URLs from headerId", async () => {
+    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl } = await import(
+      "@/types/endpoint-config"
+    );
+    expect(buildSdmsOmViewUrl("http://192.168.99.35:8080/", "1100983")).toBe(
+      "http://192.168.99.35:8080/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=1100983"
+    );
+    expect(buildSdmsOmViewUrl("http://example.com", "")).toBeNull();
+    expect(buildSdmsCheckViewUrl("http://192.168.99.35:8080/", "36775")).toBe(
+      "http://192.168.99.35:8080/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=36775"
+    );
+    expect(buildSdmsCheckViewUrl("http://example.com", "")).toBeNull();
   });
 });
 
@@ -66,6 +90,7 @@ describe("autotaskApi facade", () => {
   it("exposes domain namespaces", async () => {
     const { autotaskApi } = await import("@/services/autotask-api");
     expect(autotaskApi.dashboard.getSummary).toBeTypeOf("function");
+    expect(autotaskApi.integrationEndpoints.get).toBeTypeOf("function");
     expect(autotaskApi.tasks.list).toBeTypeOf("function");
     expect(autotaskApi.portalAccounts.list).toBeTypeOf("function");
     expect(autotaskApi.portalAccounts.create).toBeTypeOf("function");

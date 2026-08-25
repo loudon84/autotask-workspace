@@ -25,6 +25,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
@@ -76,6 +77,39 @@ function now() {
 function newId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+const mockSchedulerJobs = [
+  {
+    id: "job-scan-1",
+    bindingId: "binding-scan-1",
+    portalAccountId: "portal-1",
+    portalName: "天地伟业",
+    name: "天地伟业-客户订单-扫单",
+    cron: "0 8 * * *",
+    enabled: true,
+    nextRunAt: "2026-08-25T00:00:00+08:00",
+  },
+  {
+    id: "job-sign-1",
+    bindingId: "binding-sign-1",
+    portalAccountId: "portal-1",
+    portalName: "天地伟业",
+    name: "天地伟业-客户订单-回签轮询",
+    cron: "*/30 * * * *",
+    enabled: false,
+    nextRunAt: null,
+  },
+];
+
+const mockSchedulerJobTasks = [
+  {
+    jobId: "job-scan-1",
+    id: "task-scan-1",
+    title: "扫单：SRM 待签章订单",
+    status: "SUCCESS",
+    createdAt: "2026-08-24T08:00:00+08:00",
+  },
+];
 
 function getPortals(): PortalAccount[] {
   return mockPortalStore.map((portal) => mapPortalAccount(portal));
@@ -137,6 +171,9 @@ function appendAuditLog(entry: Omit<AuditLog, "id">) {
 export const mockApi = {
   getDashboard: async (): Promise<DashboardData> =>
     delay(dashboardData as DashboardData),
+
+  getIntegrationEndpoints: async (): Promise<IntegrationEndpoints> =>
+    delay({ sdmsBaseUrl: "" }),
 
   getTasks: async (): Promise<AutomationTask[]> => delay(getTasks()),
 
@@ -385,6 +422,9 @@ export const mockApi = {
   getSrmPortalById: async (id: string): Promise<PortalAccount | undefined> =>
     delay(findPortalById(id)),
 
+  listOwnerCandidates: async () =>
+    delay([{ userId: "mock-user", name: "Mock 用户", username: "mock-user" }]),
+
   createPortalAccount: (
     input: CreatePortalAccountInput
   ): Promise<PortalAccount> => {
@@ -397,6 +437,8 @@ export const mockApi = {
       id: `portal_${Date.now()}`,
       tenantId: "mock-tenant",
       clientSessionPartition: sessionPartition,
+      ownerUserId: "mock-user",
+      ownerName: "Mock 用户",
       createdBy: "mock-user",
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -459,6 +501,43 @@ export const mockApi = {
   getAuditLogs: (taskId?: string): Promise<AuditLog[]> => {
     const logs = auditLogsData as AuditLog[];
     return delay(taskId ? logs.filter((l) => l.taskId === taskId) : logs);
+  },
+
+  listSchedulerJobs: async (enabled?: boolean) => {
+    const jobs = mockSchedulerJobs.filter((job) =>
+      enabled === undefined ? true : job.enabled === enabled
+    );
+    return delay(jobs);
+  },
+
+  getSchedulerJob: async (id: string) => {
+    const job = mockSchedulerJobs.find((item) => item.id === id);
+    if (!job) {
+      throw new Error("调度任务不存在");
+    }
+    return delay(job);
+  },
+
+  patchSchedulerJob: async (
+    id: string,
+    patch: { enabled?: boolean; cron?: string }
+  ) => {
+    const index = mockSchedulerJobs.findIndex((item) => item.id === id);
+    if (index < 0) {
+      throw new Error("调度任务不存在");
+    }
+    mockSchedulerJobs[index] = { ...mockSchedulerJobs[index], ...patch };
+    return delay(mockSchedulerJobs[index]);
+  },
+
+  listSchedulerJobTasks: async (id: string, page = 1) => {
+    const items = mockSchedulerJobTasks.filter((task) => task.jobId === id);
+    return delay({
+      items,
+      total: items.length,
+      page,
+      pageSize: 20,
+    });
   },
 
   getSettings: async (): Promise<AppSettings> =>

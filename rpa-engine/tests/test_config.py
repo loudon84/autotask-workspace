@@ -158,6 +158,16 @@ def test_runtime_cache_and_work_directories_must_differ() -> None:
         )
 
 
+def test_runtime_session_cache_directory_must_differ() -> None:
+    with pytest.raises(ValidationError, match="must be different"):
+        Settings(
+            _env_file=None,
+            runtime_cache_dir="runtime-cache/flows",
+            runtime_work_dir="runtime-cache/runs",
+            runtime_session_cache_dir="runtime-cache/flows",
+        )
+
+
 def test_mock_credential_resolver_requires_scoped_environment_settings() -> None:
     with pytest.raises(ValidationError, match="MOCK_SRM_CREDENTIAL_REF"):
         Settings(_env_file=None, credential_resolver_mode="mock_env")

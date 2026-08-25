@@ -1,0 +1,17 @@
+{
+  "username": "[data-rpa='login-username']",
+  "password": "[data-rpa='login-password']",
+  "captcha": "[data-rpa='login-captcha']",
+  "captcha_image": "img[data-rpa='login-captcha-image']",
+  "agreement": "[data-rpa='login-agreement'] input[type='checkbox']",
+  "login_button": "button[data-rpa='login-submit']",
+  "login_error": ".el-message--error",
+  "login_success": "[data-rpa='portal-env-tag']",
+  "receipt_page": "[data-rpa='receiving-list-page']",
+  "date_range": "[data-rpa='receiving-date-range']",
+  "search_button": "[data-rpa='receiving-search-btn']",
+  "generate_button": "[data-rpa='receiving-generate-reconciliation-btn']",
+  "row_marker": "[data-rpa='receiving-row-{orderNo}-{lineNo}']",
+  "success_toast": ".el-message--success",
+  "loading_mask": ".el-loading-mask:visible"
+}

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
 
-from nodeskclaw_rpa_engine.runtime.browser import ManagedBrowserSessionManager
+from nodeskclaw_rpa_engine.runtime.browser import (
+    ManagedBrowserSessionManager,
+    ensure_playwright_browsers_path,
+)
 from nodeskclaw_rpa_engine.runtime.errors import RpaFatalError
 from nodeskclaw_rpa_engine.workers.schemas import BrowserSessionConfig
 
@@ -32,6 +36,13 @@ class FakeContext:
 
     async def close(self) -> None:
         self.closed = True
+
+    async def storage_state(self, *, path: str) -> None:
+        await asyncio.to_thread(
+            Path(path).write_text,
+            '{"cookies":[],"origins":[]}',
+            encoding="utf-8",
+        )
 
 
 class FakeBrowser:
@@ -117,6 +128,29 @@ async def test_managed_browser_owns_context_page_trace_and_cleanup(tmp_path) -> 
     assert playwright.stopped is True
 
 
+async def test_managed_browser_restores_and_saves_storage_state(tmp_path: Path) -> None:
+    controller = FakeController()
+    manager = ManagedBrowserSessionManager(lambda: controller)
+    state = tmp_path / "storage_state.json"
+    state.write_text('{"cookies":[],"origins":[]}', encoding="utf-8")
+
+    session = await manager.start(
+        config(),
+        run_directory=tmp_path / "run",
+        trace_enabled=False,
+        storage_state=state,
+    )
+    saved = tmp_path / "saved.json"
+    await session.save_storage_state(saved)
+    await session.close()
+
+    assert controller.playwright.chromium.browser.context_options == {
+        "accept_downloads": True,
+        "storage_state": str(state),
+    }
+    assert saved.is_file()
+
+
 @pytest.mark.parametrize("channel", ["chrome", "msedge"])
 async def test_managed_browser_preserves_requested_branded_channel(
     tmp_path: Path,
@@ -158,3 +192,21 @@ async def test_managed_browser_rejects_unsupported_configuration(
             trace_enabled=False,
         )
     assert captured.value.code == code
+
+
+def test_ensure_playwright_ignores_missing_browser_path(monkeypatch, tmp_path: Path) -> None:
+    missing = tmp_path / "cursor-sandbox-playwright"
+    fallback = tmp_path / "ms-playwright"
+    fallback.mkdir()
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(missing))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    result = ensure_playwright_browsers_path()
+    assert result == str(fallback)
+    assert Path(result).is_dir()
+
+
+def test_ensure_playwright_keeps_existing_browser_path(monkeypatch, tmp_path: Path) -> None:
+    existing = tmp_path / "real-browsers"
+    existing.mkdir()
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(existing))
+    assert ensure_playwright_browsers_path() == str(existing)

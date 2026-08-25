@@ -1,0 +1,26 @@
+[
+  {
+    "rpaFlowId": "rpa_flow_srm_scan_pending_orders",
+    "rpaFlowVersion": "1.1.0",
+    "rpaFlowVersionId": "24d05324-e418-42a1-b448-a60fd42d8fff",
+    "packageChecksum": "sha256:0bf6b7863c8e571648f2fb4bf3ac01189a2410aee72e70e3f6e19b53ae451536",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_scan_pending_orders"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_check_reply_status",
+    "rpaFlowVersion": "1.1.0",
+    "rpaFlowVersionId": "8d24354a-9bda-41ee-bb72-1b2d330889f9",
+    "packageChecksum": "sha256:85efe444a1f860097ead303046991bce7cd9af2bf160733183d6d2164f615182",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_check_reply_status"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_stmt_query_receipts",
+    "rpaFlowVersion": "1.1.0",
+    "rpaFlowVersionId": "2a673d87-2964-48a0-bcb8-bb63a9e86aae",
+    "packageChecksum": "sha256:80c0dfefcd525e9318d93797b281fa47408dc5b358b5c87d0101a5fbcc484ad5",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_stmt_query_receipts"
+  }
+]

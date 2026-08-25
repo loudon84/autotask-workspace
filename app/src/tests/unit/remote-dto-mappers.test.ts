@@ -153,6 +153,8 @@ describe("remote DTO 映射", () => {
         entityType: "CUSTOMER",
         erpEntityCode: "C001",
         erpEntityName: "客户一",
+        businessEntity: "深圳市芯云信息科技有限公司",
+        ou: "104",
         portalName: "供应商门户",
         portalUrl: "https://supplier.example.com",
         loginAccount: "demo",
@@ -164,6 +166,8 @@ describe("remote DTO 映射", () => {
     ).toMatchObject({
       entityType: "CUSTOMER",
       erpEntityCode: "C001",
+      businessEntity: "深圳市芯云信息科技有限公司",
+      ou: "104",
       credentialRef: "credential-demo",
       status: "ENABLED",
     });

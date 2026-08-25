@@ -22,9 +22,13 @@ import {
   useCreatePortalAccount,
   useUpdatePortalAccount,
 } from "@/features/srm-portals/api/use-portal-account-mutations";
+import { useOwnerCandidates } from "@/features/srm-portals/api/use-owner-candidates";
+import { OwnerPicker } from "@/features/srm-portals/components/owner-picker";
+import { useAuth } from "@/modules/auth/AutoTaskAuthProvider";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
+  PortalEntityType,
   PortalStatus,
 } from "@/types/portal-account";
 import type { ClientOpenMode } from "@/types/web-tab";
@@ -37,8 +41,11 @@ type PortalAccountFormDialogProps = {
 };
 
 type FormState = {
+  entityType: PortalEntityType;
   erpEntityCode: string;
   erpEntityName: string;
+  businessEntity: string;
+  ou: string;
   portalName: string;
   portalUrl: string;
   loginAccount: string;
@@ -46,13 +53,17 @@ type FormState = {
   clientSessionPartition: string;
   credentialRef: string;
   status: PortalStatus;
+  ownerUserId: string;
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 const defaultFormState: FormState = {
+  entityType: "CUSTOMER",
   erpEntityCode: "",
   erpEntityName: "",
+  businessEntity: "",
+  ou: "",
   portalName: "",
   portalUrl: "",
   loginAccount: "",
@@ -60,12 +71,16 @@ const defaultFormState: FormState = {
   clientSessionPartition: "",
   credentialRef: "",
   status: "ENABLED",
+  ownerUserId: "",
 };
 
 function portalToFormState(portal: PortalAccount): FormState {
   return {
+    entityType: portal.entityType,
     erpEntityCode: portal.erpEntityCode,
     erpEntityName: portal.erpEntityName,
+    businessEntity: portal.businessEntity ?? "",
+    ou: portal.ou ?? "",
     portalName: portal.portalName,
     portalUrl: portal.portalUrl,
     loginAccount: portal.loginAccount,
@@ -73,6 +88,7 @@ function portalToFormState(portal: PortalAccount): FormState {
     clientSessionPartition: portal.clientSessionPartition,
     credentialRef: "",
     status: portal.status,
+    ownerUserId: portal.ownerUserId ?? "",
   };
 }
 
@@ -117,9 +133,11 @@ function buildCreateInput(form: FormState): CreatePortalAccountInput {
     `persist:portal-${form.erpEntityCode.toLowerCase()}`;
 
   return {
-    entityType: "CUSTOMER",
+    entityType: form.entityType,
     erpEntityCode: form.erpEntityCode.trim(),
     erpEntityName: form.erpEntityName.trim(),
+    businessEntity: form.businessEntity.trim(),
+    ou: form.ou.trim(),
     portalName: form.portalName.trim(),
     portalUrl: form.portalUrl.trim(),
     loginAccount: form.loginAccount.trim(),
@@ -141,6 +159,11 @@ export function PortalAccountFormDialog({
 
   const createMutation = useCreatePortalAccount();
   const updateMutation = useUpdatePortalAccount();
+  const { authState } = useAuth();
+  const currentUserId = authState.user?.id ?? "";
+  const currentUserName = authState.user?.displayName ?? "";
+  const currentUsername = authState.user?.username ?? "";
+  const { data: ownerCandidates = [] } = useOwnerCandidates(open);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -152,9 +175,9 @@ export function PortalAccountFormDialog({
     if (mode === "edit" && portal) {
       setForm(portalToFormState(portal));
     } else {
-      setForm(defaultFormState);
+      setForm({ ...defaultFormState, ownerUserId: currentUserId });
     }
-  }, [open, mode, portal]);
+  }, [open, mode, portal, currentUserId]);
 
   const updateField = <K extends keyof FormState>(
     key: K,
@@ -191,8 +214,11 @@ export function PortalAccountFormDialog({
       {
         id: portal.id,
         patch: {
+          entityType: form.entityType,
           erpEntityCode: form.erpEntityCode.trim(),
           erpEntityName: form.erpEntityName.trim(),
+          businessEntity: form.businessEntity.trim(),
+          ou: form.ou.trim(),
           portalName: form.portalName.trim(),
           portalUrl: form.portalUrl.trim(),
           loginAccount: form.loginAccount.trim(),
@@ -204,6 +230,7 @@ export function PortalAccountFormDialog({
             form.clientSessionPartition.trim() ||
             `persist:portal-${form.erpEntityCode.toLowerCase()}`,
           status: form.status,
+          ownerUserId: form.ownerUserId || currentUserId,
         },
       },
       {
@@ -219,48 +246,104 @@ export function PortalAccountFormDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "新增 SRM" : "编辑 SRM"}
+            {mode === "create" ? "新增门户" : "编辑门户"}
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "登记门户连接信息和凭据引用，密码不会保存在客户端。"
-              : "更新门户连接信息；凭据引用留空时保持现有值。"}
+              ? "填写门户网址、登录账号和密码。"
+              : "更新门户信息；密码留空则不修改。"}
           </DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="erpEntityCode">客户编码 *</Label>
-              <Input
-                disabled={mode === "edit"}
-                id="erpEntityCode"
-                onChange={(e) => updateField("erpEntityCode", e.target.value)}
-                required
-                value={form.erpEntityCode}
-              />
-              {fieldErrors.erpEntityCode && (
-                <p className="text-destructive text-xs">
-                  {fieldErrors.erpEntityCode}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="erpEntityName">客户名称 *</Label>
-              <Input
-                id="erpEntityName"
-                onChange={(e) => updateField("erpEntityName", e.target.value)}
-                required
-                value={form.erpEntityName}
-              />
-              {fieldErrors.erpEntityName && (
-                <p className="text-destructive text-xs">
-                  {fieldErrors.erpEntityName}
-                </p>
-              )}
-            </div>
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="entityType">实体类型 *</Label>
+            <Select
+              onValueChange={(value) =>
+                updateField("entityType", value as PortalEntityType)
+              }
+              value={form.entityType}
+            >
+              <SelectTrigger id="entityType" className="w-full">
+                <SelectValue placeholder="选择客户或供应商" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CUSTOMER">客户</SelectItem>
+                <SelectItem value="SUPPLIER">供应商</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>状态 *</Label>
+            <Select
+              onValueChange={(v) => updateField("status", v as PortalStatus)}
+              value={form.status}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ENABLED">启用</SelectItem>
+                <SelectItem value="DISABLED">禁用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="erpEntityCode">
+              {form.entityType === "SUPPLIER" ? "供应商编号 *" : "客户编号 *"}
+            </Label>
+            <Input
+              id="erpEntityCode"
+              onChange={(e) => updateField("erpEntityCode", e.target.value)}
+              required
+              value={form.erpEntityCode}
+            />
+            {fieldErrors.erpEntityCode && (
+              <p className="text-destructive text-xs">
+                {fieldErrors.erpEntityCode}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="erpEntityName">
+              {form.entityType === "SUPPLIER" ? "供应商名称 *" : "客户名称 *"}
+            </Label>
+            <Input
+              id="erpEntityName"
+              onChange={(e) => updateField("erpEntityName", e.target.value)}
+              required
+              value={form.erpEntityName}
+            />
+            {fieldErrors.erpEntityName && (
+              <p className="text-destructive text-xs">
+                {fieldErrors.erpEntityName}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="businessEntity">业务实体</Label>
+            <Input
+              id="businessEntity"
+              onChange={(e) => updateField("businessEntity", e.target.value)}
+              placeholder="我方公司全称"
+              value={form.businessEntity}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ou">我方公司编号</Label>
+            <Input
+              id="ou"
+              onChange={(e) => updateField("ou", e.target.value)}
+              placeholder="如 104"
+              value={form.ou}
+            />
           </div>
 
           <div className="space-y-2">
@@ -276,7 +359,7 @@ export function PortalAccountFormDialog({
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="portalUrl">门户地址 *</Label>
             <Input
               id="portalUrl"
@@ -305,24 +388,23 @@ export function PortalAccountFormDialog({
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="credentialRef">
-              凭据引用（credentialRef）{mode === "create" ? " *" : ""}
+              门户密码{mode === "create" ? " *" : ""}
             </Label>
             <Input
+              autoComplete="new-password"
               id="credentialRef"
               onChange={(e) => updateField("credentialRef", e.target.value)}
               placeholder={
                 mode === "create"
-                  ? "例如：supplier-portal-phase5-integration"
-                  : "留空表示保持现有凭据引用不变"
+                  ? "门户登录密码"
+                  : "留空则不修改"
               }
               required={mode === "create"}
+              type="password"
               value={form.credentialRef}
             />
-            <p className="text-muted-foreground text-xs">
-              仅填写凭据引用标识，不要在此填写门户密码
-            </p>
             {fieldErrors.credentialRef && (
               <p className="text-destructive text-xs">
                 {fieldErrors.credentialRef}
@@ -330,39 +412,22 @@ export function PortalAccountFormDialog({
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>打开方式 *</Label>
-              <Select
-                onValueChange={(v) =>
-                  updateField("clientOpenMode", v as ClientOpenMode)
-                }
-                value={form.clientOpenMode}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="webcontents">内置 Web</SelectItem>
-                  <SelectItem value="system_browser">系统浏览器</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>状态 *</Label>
-              <Select
-                onValueChange={(v) => updateField("status", v as PortalStatus)}
-                value={form.status}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ENABLED">启用</SelectItem>
-                  <SelectItem value="DISABLED">禁用</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>打开方式 *</Label>
+            <Select
+              onValueChange={(v) =>
+                updateField("clientOpenMode", v as ClientOpenMode)
+              }
+              value={form.clientOpenMode}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="webcontents">内置 Web</SelectItem>
+                <SelectItem value="system_browser">系统浏览器</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -382,7 +447,26 @@ export function PortalAccountFormDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>归属人 *</Label>
+            <OwnerPicker
+              candidates={
+                ownerCandidates.length > 0
+                  ? ownerCandidates
+                  : [
+                      {
+                        userId: currentUserId,
+                        name: currentUserName || "当前用户",
+                        username: currentUsername,
+                      },
+                    ]
+              }
+              onChange={(userId) => updateField("ownerUserId", userId)}
+              value={form.ownerUserId || currentUserId}
+            />
+          </div>
+
+          <DialogFooter className="sm:col-span-2">
             <Button
               disabled={isPending}
               onClick={() => onOpenChange(false)}

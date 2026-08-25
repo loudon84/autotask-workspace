@@ -1,0 +1,23 @@
+{
+  "username": "[data-rpa='login-username']",
+  "password": "[data-rpa='login-password']",
+  "captcha": "[data-rpa='login-captcha']",
+  "captcha_image": "img[data-rpa='login-captcha-image']",
+  "agreement": "[data-rpa='login-agreement'] input[type='checkbox']",
+  "login_button": "button[data-rpa='login-submit']",
+  "login_error": ".el-message--error",
+  "login_success": "[data-rpa='portal-env-tag']",
+  "order_page": "[data-rpa='order-list-page']",
+  "po_number": "[data-rpa='order-no-input']",
+  "search_button": "[data-rpa='order-search-btn']",
+  "order_row": "[data-rpa='order-row-{po_no}']:visible",
+  "order_detail": "[data-rpa='order-detail-{po_no}']:visible",
+  "detail_page": "[data-rpa='order-detail-page'], [data-rpa='pend-order-detail-page']",
+  "detail_po_number": "[data-rpa='order-detail-no-{po_no}']:visible, [data-rpa='pend-order-detail-no-{po_no}']:visible",
+  "lines_table": "[data-rpa='order-detail-lines-table'], [data-rpa='pend-order-detail-lines-table']",
+  "sign": "[data-rpa='pend-order-detail-sign-btn']:visible",
+  "sign_success": ".el-message--success:has-text('签章成功')",
+  "sign_error": ".el-message--error:visible",
+  "reply_status": "[data-rpa='order-detail-page'] .order-summary .summary-tags .el-tag:first-child, [data-rpa='pend-order-detail-page'] .order-summary .summary-tags .el-tag:first-child",
+  "loading_mask": ".el-loading-mask:visible"
+}

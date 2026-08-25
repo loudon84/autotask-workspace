@@ -79,6 +79,24 @@ class ConflictError(AppException):
         )
 
 
+class UnprocessableError(AppException):
+    def __init__(
+        self,
+        message: str = "无法处理的请求",
+        message_key: str = "errors.common.unprocessable",
+        message_params: dict[str, str] | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        super().__init__(
+            code=42200,
+            message=message,
+            status_code=422,
+            message_key=message_key,
+            message_params=message_params,
+            details=details,
+        )
+
+
 HTTP_STATUS_DEFAULT_CODES: dict[int, int] = {
     400: 40000,
     401: 40100,

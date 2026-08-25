@@ -19,6 +19,48 @@ export class AutotaskApiError extends Error {
   }
 }
 
+function formatApiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") {
+    return fallback;
+  }
+  const errBody = body as {
+    detail?: unknown;
+    message?: unknown;
+    messageKey?: unknown;
+  };
+  if (typeof errBody.message === "string" && errBody.message.trim()) {
+    return errBody.message;
+  }
+  if (typeof errBody.detail === "string" && errBody.detail.trim()) {
+    return errBody.detail;
+  }
+  if (Array.isArray(errBody.detail) && errBody.detail.length > 0) {
+    const parts = errBody.detail.map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+      if (item && typeof item === "object") {
+        const row = item as { msg?: unknown; loc?: unknown };
+        const loc = Array.isArray(row.loc)
+          ? row.loc.filter((part) => part !== "body").join(".")
+          : "";
+        const msg = typeof row.msg === "string" ? row.msg : "";
+        return [loc, msg].filter(Boolean).join(": ") || JSON.stringify(item);
+      }
+      return String(item);
+    });
+    return parts.join("; ") || fallback;
+  }
+  if (errBody.detail && typeof errBody.detail === "object") {
+    try {
+      return JSON.stringify(errBody.detail);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 export interface AutotaskApiRequestInput {
   body?: unknown;
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -78,8 +120,7 @@ async function doRequest<T>(
     let body: unknown;
     try {
       body = await res.json();
-      const errBody = body as { detail?: string; message?: string };
-      message = errBody.detail ?? errBody.message ?? message;
+      message = formatApiErrorMessage(body, message);
     } catch {
       // ignore
     }

@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+PROCESS_STARTED_AT = datetime.now(timezone.utc)
 
 
 def _restore_logging_after_alembic(saved_handlers: list, saved_level: int) -> None:
@@ -56,7 +58,8 @@ async def _auto_migrate() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("nodeskclaw-task %s starting", settings.APP_VERSION)
+    logger.info("nodeskclaw-task %s starting pid=%s", settings.APP_VERSION, os.getpid())
+    logger.info("startedAt=%s", PROCESS_STARTED_AT.isoformat())
 
     if not settings.SKIP_AUTO_MIGRATE:
         try:
@@ -95,9 +98,19 @@ async def lifespan(app: FastAPI):
         logger.info("SUCCESSOR_JOB_ENABLED=false，后继任务作业处理器保持关闭")
     app.state.successor_job_processor = successor_processor
 
+    # Binding 级调度器常驻启动；开关与 cron 在 scheduler_jobs 表，每个 tick 热加载。
+    from app.core.deps import async_session_factory
+    from app.services.job_scheduler import JobScheduler
+
+    job_scheduler = JobScheduler(async_session_factory)
+    await job_scheduler.start()
+    logger.info("Binding 调度器已启动（scheduler_jobs 热更新）")
+    app.state.job_scheduler = job_scheduler
+
     try:
         yield
     finally:
+        await job_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()
         await engine.dispose()
@@ -128,4 +141,9 @@ app.include_router(mcp_router, prefix="/api/v1/autotask")
 
 @app.get("/health")
 async def root_health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "pid": os.getpid(),
+        "startedAt": PROCESS_STARTED_AT.isoformat(),
+        "version": settings.APP_VERSION,
+    }

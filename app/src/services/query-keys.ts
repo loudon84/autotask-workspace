@@ -33,6 +33,8 @@ export const queryKeys = {
     all: ["srm-portals"] as const,
     list: () => [...queryKeys.portalAccounts.all] as const,
     detail: (id: string) => [...queryKeys.portalAccounts.all, id] as const,
+    ownerCandidates: () =>
+      [...queryKeys.portalAccounts.all, "owner-candidates"] as const,
   },
   artifacts: {
     all: ["artifacts"] as const,
@@ -48,9 +50,41 @@ export const queryKeys = {
   },
   settings: {
     all: ["settings"] as const,
+    schedulers: ["settings", "schedulers"] as const,
+  },
+  schedulerJobs: {
+    all: ["scheduler-jobs"] as const,
+    list: (enabled?: boolean) =>
+      enabled === undefined
+        ? ([...queryKeys.schedulerJobs.all] as const)
+        : ([...queryKeys.schedulerJobs.all, { enabled }] as const),
+    detail: (id: string) => [...queryKeys.schedulerJobs.all, id] as const,
+    tasks: (id: string) =>
+      [...queryKeys.schedulerJobs.all, id, "tasks"] as const,
+  },
+  integrationEndpoints: {
+    all: ["integration-endpoints"] as const,
   },
   rpaComponents: {
     all: ["rpa-components"] as const,
+  },
+  processInstances: {
+    all: ["process-instances"] as const,
+    list: (params?: Record<string, unknown>) =>
+      params
+        ? ([...queryKeys.processInstances.all, params] as const)
+        : ([...queryKeys.processInstances.all] as const),
+    detail: (id: string) => [...queryKeys.processInstances.all, id] as const,
+  },
+  statements: {
+    all: ["statements"] as const,
+    list: (params?: Record<string, unknown>) =>
+      params
+        ? ([...queryKeys.statements.all, params] as const)
+        : ([...queryKeys.statements.all] as const),
+    detail: (id: string) => [...queryKeys.statements.all, id] as const,
+    queryReceipts: (taskId: string) =>
+      [...queryKeys.statements.all, "query-receipts", taskId] as const,
   },
   search: {
     all: ["search"] as const,

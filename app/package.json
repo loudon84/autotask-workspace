@@ -1,6 +1,6 @@
 {
   "name": "AutoTask-studio",
-  "productName": "SMC-Copilot",
+  "productName": "AutoTask Studio",
   "version": "0.1.0",
   "description": "AutoTask Studio - SRM Automation Desktop Workbench",
   "main": ".vite/build/main.js",

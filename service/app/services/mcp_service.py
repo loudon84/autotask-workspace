@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import require_tenant_access
+from app.core.security import require_portal_visible, require_tenant_access
 from app.models.enums import PortalPermission
 from app.models.user_cache import UserCache
 from app.schemas.mcp import McpToolCallRequest, McpToolDefinition
@@ -14,7 +14,7 @@ from app.services import (
     portal_account_service,
     workflow_template_service,
 )
-from app.services.permission_service import check_portal_permission
+from app.services.permission_service import check_portal_permission, list_accessible_portal_ids
 
 MCP_TOOLS: list[McpToolDefinition] = [
     McpToolDefinition(
@@ -142,21 +142,33 @@ async def call_tool(db: AsyncSession, user: UserCache, request: McpToolCallReque
 
     if request.name == "autotask.task.get":
         task = await automation_task_service.get_task(db, tenant_id, args["taskId"])
+        await require_portal_visible(db, user, task.portal_account_id)
         return {"id": task.id, "title": task.title, "status": task.status, "progress": task.progress}
 
     if request.name == "autotask.task.get_status":
         task = await automation_task_service.get_task(db, tenant_id, args["taskId"])
+        await require_portal_visible(db, user, task.portal_account_id)
         return {"taskId": task.id, "status": task.status, "progress": task.progress}
 
     if request.name == "autotask.task.list_messages":
+        task = await automation_task_service.get_task(db, tenant_id, args["taskId"])
+        await require_portal_visible(db, user, task.portal_account_id)
         messages = await automation_task_service.list_task_messages(db, tenant_id, args["taskId"])
         return {"items": [{"id": m.id, "role": m.role, "content": m.content} for m in messages]}
 
     if request.name == "autotask.human_action.list_pending":
-        actions = await human_action_service.list_pending_human_actions(db, tenant_id)
+        accessible_ids = await list_accessible_portal_ids(
+            db, user, tenant_id, PortalPermission.PORTAL_VIEW
+        )
+        actions = await human_action_service.list_pending_human_actions(
+            db, tenant_id, accessible_portal_ids=accessible_ids
+        )
         return {"items": [{"id": a.id, "title": a.title, "status": a.status} for a in actions]}
 
     if request.name == "autotask.human_action.confirm":
+        preview = await human_action_service.get_human_action(db, tenant_id, args["humanActionId"])
+        task = await automation_task_service.get_task(db, tenant_id, preview.task_id)
+        await require_portal_visible(db, user, task.portal_account_id)
         action = await human_action_service.confirm_human_action(
             db,
             tenant_id,
@@ -167,6 +179,8 @@ async def call_tool(db: AsyncSession, user: UserCache, request: McpToolCallReque
         return {"humanActionId": action.id, "status": action.status}
 
     if request.name == "autotask.artifact.list":
+        task = await automation_task_service.get_task(db, tenant_id, args["taskId"])
+        await require_portal_visible(db, user, task.portal_account_id)
         artifacts = await artifact_service.list_artifacts(db, tenant_id, task_id=args["taskId"], run_id=args.get("runId"))
         return {
             "items": [

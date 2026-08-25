@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     runtime_enabled: bool = False
     runtime_cache_dir: Path = Path("runtime-cache/flows")
     runtime_work_dir: Path = Path("runtime-cache/runs")
+    runtime_session_cache_enabled: bool = True
+    runtime_session_cache_dir: Path = Path("runtime-cache/sessions")
     runtime_timeout_seconds: float = Field(default=900.0, gt=0, le=86_400)
     runtime_max_retries: int = Field(default=2, ge=0, le=10)
     runtime_retry_backoff_seconds: float = Field(default=1.0, ge=0, le=300)
@@ -148,6 +150,10 @@ class Settings(BaseSettings):
     mock_srm_password: SecretStr | None = None
     mock_srm_allowed_tenant_id: str | None = None
     mock_srm_allowed_portal_account_id: str | None = None
+    tiandy_prod_credential_ref: str | None = None
+    tiandy_prod_username: SecretStr | None = None
+    tiandy_prod_password: SecretStr | None = None
+    tiandy_prod_allowed_portal_account_id: str | None = None
 
     @field_validator(
         "database_url",
@@ -156,6 +162,8 @@ class Settings(BaseSettings):
         "task_client_secret",
         "mock_srm_username",
         "mock_srm_password",
+        "tiandy_prod_username",
+        "tiandy_prod_password",
         mode="before",
     )
     @classmethod
@@ -171,6 +179,8 @@ class Settings(BaseSettings):
         "mock_srm_credential_ref",
         "mock_srm_allowed_tenant_id",
         "mock_srm_allowed_portal_account_id",
+        "tiandy_prod_credential_ref",
+        "tiandy_prod_allowed_portal_account_id",
         mode="before",
     )
     @classmethod
@@ -336,9 +346,15 @@ class Settings(BaseSettings):
                     "Missing mock credential settings: "
                     + ", ".join(missing_mock)
                 )
-        if self.runtime_cache_dir.resolve() == self.runtime_work_dir.resolve():
+        runtime_dirs = (
+            self.runtime_cache_dir.resolve(),
+            self.runtime_work_dir.resolve(),
+            self.runtime_session_cache_dir.resolve(),
+        )
+        if len(set(runtime_dirs)) != len(runtime_dirs):
             raise ValueError(
-                "RUNTIME_CACHE_DIR and RUNTIME_WORK_DIR must be different"
+                "RUNTIME_CACHE_DIR, RUNTIME_WORK_DIR and "
+                "RUNTIME_SESSION_CACHE_DIR must be different"
             )
         return self
 
@@ -359,5 +375,6 @@ class Settings(BaseSettings):
             "workerLeaseEnabled": self.worker_lease_enabled,
             "workerId": self.worker_id,
             "runtimeEnabled": self.runtime_enabled,
+            "runtimeSessionCacheEnabled": self.runtime_session_cache_enabled,
             "credentialResolverMode": self.credential_resolver_mode.value,
         }

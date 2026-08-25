@@ -1,0 +1,34 @@
+{
+  "rpaFlowId": "rpa_flow_supplier_portal_upload_order_attachment",
+  "name": "Supplier Portal Upload Signed Contract Attachment (Official Portal)",
+  "version": "1.3.2",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_upload_order_attachment"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "po_no",
+      "type": "string",
+      "required": true,
+      "description": "Customer purchase order number"
+    },
+    {
+      "name": "username",
+      "type": "string",
+      "required": true,
+      "description": "Auth login username (SDMS employee id)"
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT",
+    "DOWNLOAD"
+  ],
+  "minimumEngineVersion": "0.6.0"
+}

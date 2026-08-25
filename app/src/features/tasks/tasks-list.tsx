@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTasks } from "@/features/tasks/api/use-tasks";
 import { DELIVERY_DATE_TASK_TYPE } from "@/features/tasks/delivery-date-task-model";
+import { SCAN_TASK_TYPE } from "@/features/processes/process-model";
 import { queryKeys } from "@/services/query-keys";
 import type { AutomationTask } from "@/types/automation-task";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -56,6 +57,9 @@ export function TasksListPage() {
   const customers = [...new Set(tasks.map((t) => t.customerName))];
 
   const filtered = tasks.filter((t) => {
+    if (t.taskType === SCAN_TASK_TYPE) {
+      return false;
+    }
     if (statusTab !== "all" && t.status !== statusTab) {
       return false;
     }

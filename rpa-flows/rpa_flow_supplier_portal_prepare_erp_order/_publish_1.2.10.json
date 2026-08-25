@@ -1,0 +1,7 @@
+{
+  "rpaFlowId": "rpa_flow_supplier_portal_prepare_erp_order",
+  "rpaFlowVersion": "1.2.10",
+  "rpaFlowVersionId": "81c94b03-5bf0-4041-9d05-9d106c93760e",
+  "packageChecksum": "sha256:14947b6cdb72d9834c6f16dcba42ab7485f2ce56e0d60e1767a480bc2eae42a5",
+  "status": "PUBLISHED"
+}

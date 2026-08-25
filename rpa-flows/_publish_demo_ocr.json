@@ -1,0 +1,74 @@
+[
+  {
+    "rpaFlowId": "rpa_flow_srm_check_reply_status",
+    "rpaFlowVersion": "1.0.1",
+    "rpaFlowVersionId": "80f2a852-1c8b-4028-8130-8ce837b6c1cc",
+    "packageChecksum": "sha256:16e620734df30e028d42119f7cf911a412f23a910b9f074f83f0aeb3306e7357",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_check_reply_status"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_fill_line_delivery_date",
+    "rpaFlowVersion": "1.0.3",
+    "rpaFlowVersionId": "a5a021d0-5ada-4d2b-9953-8d020caa6132",
+    "packageChecksum": "sha256:74a4975df368d3cfb6aae01db4a35048abfa3fc06aff55e3b3b096035d2645b7",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_fill_line_delivery_date"
+  },
+  {
+    "rpaFlowId": "rpa_flow_supplier_portal_prepare_erp_order",
+    "rpaFlowVersion": "1.2.11",
+    "rpaFlowVersionId": "99d71284-a60d-4241-bf5c-74c29dd00900",
+    "packageChecksum": "sha256:ebfd40e141106e0a766158fcad45313e49827c34473b8bea8266bcf7ef15ca10",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_prepare_erp_order"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_sign_order",
+    "rpaFlowVersion": "1.0.3",
+    "rpaFlowVersionId": "e398b74c-0ee6-4146-8bb9-a90abc6d3584",
+    "packageChecksum": "sha256:fd876c31d19a832bab82e8a0478458272ab9a53ab3bcf00ec532d31ebb64de76",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_sign_order"
+  },
+  {
+    "rpaFlowId": "rpa_flow_supplier_portal_upload_order_attachment",
+    "rpaFlowVersion": "1.2.5",
+    "rpaFlowVersionId": "7d2661f9-251e-4143-8365-2b73bc93cce0",
+    "packageChecksum": "sha256:15fd5133f863f80be7a0b714e646b57b75a97acaaa82c126aef2e3a2964b8b2f",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_upload_order_attachment"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_stmt_query_receipts",
+    "rpaFlowVersion": "1.0.4",
+    "rpaFlowVersionId": "a2b68441-e2dc-462e-8139-844e44485b37",
+    "packageChecksum": "sha256:d50643202d790f958d19d88d7f3f6f713c3d188d45a0973ff40578278a5fc95e",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_stmt_query_receipts"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_stmt_generate",
+    "rpaFlowVersion": "1.0.7",
+    "rpaFlowVersionId": "82560ced-340b-4499-83f2-1e48a612fdbd",
+    "packageChecksum": "sha256:cb119dbacf1a07065169e841d60b5396e0284706dbec5d2b2560beed368cef34",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_stmt_generate"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_stmt_upload_invoice",
+    "rpaFlowVersion": "1.0.6",
+    "rpaFlowVersionId": "27532494-c390-4727-9020-b7fc7c74dc5b",
+    "packageChecksum": "sha256:900b0f843e8d54273d6d2215cd8fd3e8f882b3445deb13fe359e5bc206fdf83b",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_stmt_upload_invoice"
+  },
+  {
+    "rpaFlowId": "rpa_flow_srm_stmt_submit_review",
+    "rpaFlowVersion": "1.0.7",
+    "rpaFlowVersionId": "184a451f-34e0-4862-a981-a4a5beb85d84",
+    "packageChecksum": "sha256:438e52dd6933acb280809ece1919ae4a81e2dd7b14a3ade49e415a817e28aa8d",
+    "status": "PUBLISHED",
+    "workflowCode": "srm_stmt_submit_review"
+  }
+]

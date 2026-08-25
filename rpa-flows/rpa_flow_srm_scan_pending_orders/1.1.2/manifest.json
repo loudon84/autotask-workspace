@@ -1,0 +1,28 @@
+{
+  "rpaFlowId": "rpa_flow_srm_scan_pending_orders",
+  "name": "SRM Scan Pending Signature Orders (Official Portal)",
+  "version": "1.1.2",
+  "engineType": "PLAYWRIGHT_CDP",
+  "entrypoint": "flow.py:run",
+  "supportedWorkflowCodes": [
+    "srm_scan_pending_orders"
+  ],
+  "supportedPortalTypes": [
+    "MOCK_SRM"
+  ],
+  "inputSchema": [
+    {
+      "name": "assumedPendingPo",
+      "type": "string",
+      "required": false,
+      "description": "When pending-signature export is empty, search this PO and export it as 待签章. Default POJS2607170008. Empty string disables the drill fallback."
+    }
+  ],
+  "capabilities": [
+    "PLAYWRIGHT_CDP",
+    "BROWSER_SESSION_MANAGED",
+    "SCREENSHOT",
+    "DOWNLOAD"
+  ],
+  "minimumEngineVersion": "0.5.0"
+}

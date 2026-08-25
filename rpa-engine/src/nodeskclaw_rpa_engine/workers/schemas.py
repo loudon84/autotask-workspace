@@ -86,9 +86,26 @@ class BrowserSessionConfig(CamelModel):
     close_policy: str
 
 
+class LeaseCredentials(CamelModel):
+    username: str
+    password: str
+
+
 class RunConfig(CamelModel):
     browser_session: BrowserSessionConfig
     portal_url: str
+    dry_run: bool = False
+    customer_name: str | None = None
+    customer_code: str | None = None
+    business_entity: str | None = None
+    ou: str | None = None
+    sdms_base_url: str | None = None
+    erp_base_url: str | None = None
+    oa_base_url: str | None = None
+    doc_base_url: str | None = None
+    erp_client_id: str | None = None
+    erp_client_secret: str | None = None
+    searches: list[dict[str, Any]] | None = None
 
     @field_validator("portal_url")
     @classmethod
@@ -116,6 +133,7 @@ class LeaseRunCommand(CamelModel):
     rpa_engine_type: str
     rpa_flow_version: str
     credential_ref: str | None
+    credentials: LeaseCredentials | None = None
     config: RunConfig
     lease_expires_at: datetime
 

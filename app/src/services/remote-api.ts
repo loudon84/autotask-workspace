@@ -8,11 +8,19 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
   UpdatePortalAccountInput,
 } from "@/types/portal-account";
+import type {
+  ProcessInstanceDetail,
+  ProcessInstanceListItem,
+  ProcessLineItem,
+  ProcessScanResult,
+  ProcessSignPollRunResult,
+} from "@/types/process-instance";
 import type { RpaComponent } from "@/types/rpa-component";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
@@ -33,6 +41,7 @@ import {
   deletePortalAccount as remoteDeletePortalAccount,
   getPortalAccount as remoteGetPortalAccount,
   listPortalAccounts as remoteListPortalAccounts,
+  listOwnerCandidates as remoteListOwnerCandidates,
   testOpenPortalAccount as remoteTestOpenPortalAccount,
   updatePortalAccount as remoteUpdatePortalAccount,
 } from "./autotask-api/portal-accounts";
@@ -130,6 +139,16 @@ export const remoteApi = {
       path: "/dashboard/summary",
     });
     return mapDashboardSummary(data);
+  },
+
+  getIntegrationEndpoints: async (): Promise<IntegrationEndpoints> => {
+    const data = await requestAutotaskApi<{ sdmsBaseUrl?: string }>({
+      method: "GET",
+      path: "/integration-endpoints",
+    });
+    return {
+      sdmsBaseUrl: String(data?.sdmsBaseUrl ?? "").trim().replace(/\/+$/, ""),
+    };
   },
 
   getTasks: async (): Promise<AutomationTask[]> => {
@@ -438,6 +457,8 @@ export const remoteApi = {
   getSrmPortals: async (): Promise<PortalAccount[]> =>
     remoteListPortalAccounts(),
 
+  listOwnerCandidates: async () => remoteListOwnerCandidates(),
+
   getSrmPortalById: async (id: string): Promise<PortalAccount | undefined> =>
     remoteGetPortalAccount(id),
 
@@ -465,6 +486,210 @@ export const remoteApi = {
     return mapListResponse<RpaComponent>(data);
   },
 
+  listProcessInstances: async (params?: {
+    stage?: string;
+    status?: string;
+    keyword?: string;
+  }): Promise<ProcessInstanceListItem[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/process-instances",
+      query: params,
+    });
+    return mapListResponse<ProcessInstanceListItem>(data);
+  },
+
+  getProcessInstance: async (
+    id: string
+  ): Promise<ProcessInstanceDetail | undefined> => {
+    try {
+      const data = await requestAutotaskApi<unknown>({
+        method: "GET",
+        path: `/process-instances/${id}`,
+      });
+      return mapItemResponse<ProcessInstanceDetail>(data);
+    } catch {
+      return;
+    }
+  },
+
+  submitProcessLineDate: async (input: {
+    instanceId: string;
+    lineNumber: string;
+    expectedDeliveryDate: string;
+  }): Promise<ProcessLineItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${input.instanceId}/lines/${input.lineNumber}/date`,
+      body: { expectedDeliveryDate: input.expectedDeliveryDate },
+    });
+    return mapItemResponse<ProcessLineItem>(data);
+  },
+
+  signProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/sign`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  archiveProcessInstance: async (
+    id: string
+  ): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/archive`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  retryProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/retry`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  cancelProcessInstance: async (id: string): Promise<ProcessInstanceListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/process-instances/${id}/cancel`,
+    });
+    return mapItemResponse<ProcessInstanceListItem>(data);
+  },
+
+  triggerProcessScan: async (
+    portalAccountId: string
+  ): Promise<ProcessScanResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/process-instances/scan",
+      body: { portalAccountId },
+    });
+    return mapItemResponse<ProcessScanResult>(data);
+  },
+
+  runSignPollOnce: async (): Promise<ProcessSignPollRunResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/process-instances/sign-poll/run-once",
+    });
+    return mapItemResponse<ProcessSignPollRunResult>(data);
+  },
+
+  listStatements: async (params?: {
+    checkStatus?: string;
+    stage?: string;
+  }): Promise<import("@/types/statement").StatementBillListItem[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/statements",
+      query: params?.stage
+        ? { stage: params.stage }
+        : params?.checkStatus
+          ? { check_status: params.checkStatus }
+          : undefined,
+    });
+    return mapListResponse(data);
+  },
+
+  getStatement: async (
+    id: string
+  ): Promise<import("@/types/statement").StatementBillDetail | undefined> => {
+    try {
+      const data = await requestAutotaskApi<unknown>({
+        method: "GET",
+        path: `/statements/${id}`,
+      });
+      return mapItemResponse(data);
+    } catch {
+      return;
+    }
+  },
+
+  queryStatementReceipts: async (input: {
+    portalAccountId: string;
+    dateStart: string;
+    dateEnd: string;
+  }): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/statements/query-receipts",
+      body: input,
+    });
+    return mapItemResponse(data);
+  },
+
+  getStatementQueryReceipts: async (
+    taskId: string
+  ): Promise<import("@/types/statement").StatementQueryResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/statements/query-receipts/${taskId}`,
+    });
+    return mapItemResponse(data);
+  },
+
+  generateStatement: async (input: {
+    portalAccountId: string;
+    lines: Record<string, unknown>[];
+    dateStart?: string;
+    dateEnd?: string;
+  }): Promise<import("@/types/statement").StatementGenerateResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/statements/generate",
+      body: input,
+    });
+    return mapItemResponse(data);
+  },
+
+  retryGenerateStatement: async (
+    billId: string
+  ): Promise<import("@/types/statement").StatementGenerateResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/retry-generate`,
+    });
+    return mapItemResponse(data);
+  },
+
+  uploadStatementInvoicePaths: async (input: {
+    billId: string;
+    filePaths: string[];
+  }): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${input.billId}/invoice/paths`,
+      body: { filePaths: input.filePaths },
+    });
+    return mapItemResponse(data);
+  },
+
+  submitStatementReview: async (
+    billId: string,
+    input: { filePaths: string[] }
+  ): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/submit-review`,
+      body: { filePaths: input.filePaths },
+    });
+    return mapItemResponse(data);
+  },
+
+  cancelStatement: async (
+    billId: string
+  ): Promise<import("@/types/statement").StatementBillListItem> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/statements/${billId}/cancel`,
+    });
+    return mapItemResponse(data);
+  },
+
   getAuditLogs: async (taskId?: string): Promise<AuditLog[]> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",
@@ -472,6 +697,51 @@ export const remoteApi = {
       query: taskId ? { task_id: taskId } : undefined,
     });
     return mapListResponse<AuditLog>(data);
+  },
+
+  listSchedulerJobs: async (
+    enabled?: boolean
+  ): Promise<import("@/features/schedulers/types").SchedulerJob[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/scheduler-jobs",
+      query: enabled === undefined ? undefined : { enabled },
+    });
+    return mapListResponse(data);
+  },
+
+  getSchedulerJob: async (
+    id: string
+  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/scheduler-jobs/${id}`,
+    });
+    return mapItemResponse(data);
+  },
+
+  patchSchedulerJob: async (
+    id: string,
+    patch: { enabled?: boolean; cron?: string }
+  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "PATCH",
+      path: `/scheduler-jobs/${id}`,
+      body: patch,
+    });
+    return mapItemResponse(data);
+  },
+
+  listSchedulerJobTasks: async (
+    id: string,
+    page = 1
+  ): Promise<import("@/features/schedulers/types").SchedulerJobTaskPage> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/scheduler-jobs/${id}/tasks`,
+      query: { page, pageSize: 20 },
+    });
+    return mapItemResponse(data);
   },
 
   getSettings: async (): Promise<AppSettings> => {

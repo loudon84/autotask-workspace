@@ -12,19 +12,25 @@ from app.models.base import not_deleted
 from app.models.enums import TaskStatus, WorkerStatus
 from app.models.rpa_worker import RpaWorker
 from app.schemas.dashboard import DashboardStats, DashboardSummary, TaskTypeDistributionItem
+from app.services.permission_service import apply_accessible_portal_filter
 
 
-async def get_dashboard_summary(db: AsyncSession, tenant_id: str) -> DashboardSummary:
+async def get_dashboard_summary(
+    db: AsyncSession,
+    tenant_id: str,
+    *,
+    accessible_portal_ids: list[str] | None = None,
+) -> DashboardSummary:
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    tasks = (
-        await db.execute(
-            select(AutomationTask).where(
-                AutomationTask.tenant_id == tenant_id,
-                AutomationTask.created_at >= today_start,
-                not_deleted(AutomationTask),
-            )
-        )
-    ).scalars().all()
+    query = select(AutomationTask).where(
+        AutomationTask.tenant_id == tenant_id,
+        AutomationTask.created_at >= today_start,
+        not_deleted(AutomationTask),
+    )
+    query = apply_accessible_portal_filter(
+        query, AutomationTask.portal_account_id, accessible_portal_ids
+    )
+    tasks = (await db.execute(query)).scalars().all()
 
     today_total = len(tasks)
     pending = sum(1 for t in tasks if t.status in {TaskStatus.READY, TaskStatus.QUEUED})

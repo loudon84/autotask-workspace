@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_generate",
+  "rpaFlowVersion": "1.1.0",
+  "rpaFlowVersionId": "1f83e5e3-f4a9-4d9c-b17b-7cd80f248b0c",
+  "packageChecksum": "sha256:acf471d2c2f45fac892431d3a3daef75aea3236418524dddbd063809f9a48dfe",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_stmt_generate"
+}
