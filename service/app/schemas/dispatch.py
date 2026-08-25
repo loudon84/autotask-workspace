@@ -32,7 +32,7 @@ class WorkerLeaseRequest(CamelModel):
 class BrowserSessionConfig(CamelModel):
     mode: str = "MANAGED"
     headless: bool = True
-    channel: str = "chrome"
+    channel: str = "chromium"
     profile_ref: str | None = Field(None, serialization_alias="profileRef")
     cdp_endpoint_ref: str | None = Field(None, serialization_alias="cdpEndpointRef")
     close_policy: str = Field("CLOSE_ON_FINISH", serialization_alias="closePolicy")

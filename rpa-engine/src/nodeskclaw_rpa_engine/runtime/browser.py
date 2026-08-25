@@ -21,15 +21,41 @@ from nodeskclaw_rpa_engine.workers.schemas import BrowserSessionConfig
 
 logger = logging.getLogger(__name__)
 
+_LAUNCH_ATTEMPTS = 3
+_LAUNCH_RETRY_DELAY_SECONDS = 0.8
+_WINDOWS_CHROMIUM_ARGS = (
+    "--disable-gpu",
+    "--use-angle=swiftshader",
+    "--disable-extensions",
+    "--no-first-run",
+)
+
+
+def _has_bundled_chromium(root: Path) -> bool:
+    if not root.is_dir():
+        return False
+    patterns = (
+        "chromium-*/chrome-win*/chrome.exe",
+        "chromium-*/chrome-win/chrome.exe",
+        "chromium-*/chrome-linux/chrome",
+        "chromium-*/chrome-mac*/Chromium",
+    )
+    return any(
+        candidate.is_file()
+        for pattern in patterns
+        for candidate in root.glob(pattern)
+    )
+
 
 def ensure_playwright_browsers_path() -> str | None:
     """Drop unusable PLAYWRIGHT_BROWSERS_PATH values (empty sandbox dirs).
 
-    Cursor agent shells may inject a TEMP playwright cache that does not exist.
-    Playwright then fails to launch Chromium. Prefer a real local install.
+    Cursor agent shells may inject a TEMP playwright cache that does not exist
+    or has no Chromium build. Playwright then fails to launch. Prefer a real
+    local install.
     """
     current = (os.environ.get("PLAYWRIGHT_BROWSERS_PATH") or "").strip()
-    if current and Path(current).is_dir():
+    if current and _has_bundled_chromium(Path(current)):
         return current
     if current:
         os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
@@ -39,7 +65,7 @@ def ensure_playwright_browsers_path() -> str | None:
         )
     if os.name == "nt":
         fallback = Path(os.environ.get("LOCALAPPDATA", "")) / "ms-playwright"
-        if fallback.is_dir():
+        if _has_bundled_chromium(fallback):
             os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(fallback)
             return str(fallback)
     return None
@@ -110,52 +136,107 @@ class ManagedBrowserSessionManager:
             exists = await asyncio.to_thread(restored_state.is_file)
             if not exists:
                 restored_state = None
+        if config.channel in {"chrome", "msedge"}:
+            logger.warning(
+                "MANAGED sessions use bundled Chromium; ignoring branded channel",
+                extra={"requestedChannel": config.channel},
+            )
+        last_exc: Exception | None = None
         try:
             playwright = await self._playwright_factory().start()
-            channel = None if config.channel == "chromium" else config.channel
-            browser = await playwright.chromium.launch(
-                headless=config.headless,
-                channel=channel,
-                downloads_path=str(run_directory / "downloads"),
-            )
-            context = await self._open_context(browser, restored_state)
-            if restored_state is not None and context is None:
-                await asyncio.to_thread(restored_state.unlink, missing_ok=True)
-                restored_state = None
-                context = await self._open_context(browser, None)
-            if context is None:
-                raise RuntimeError("browser context was not created")
-            if trace_enabled:
-                await context.tracing.start(
-                    screenshots=True,
-                    snapshots=True,
-                    sources=True,
-                )
-            page = await context.new_page()
-            if restored_state is not None:
-                logger.info(
-                    "Portal session cache restored",
-                    extra={"storageState": restored_state.name},
-                )
-            return BrowserSession(
-                playwright=playwright,
-                browser=browser,
-                context=context,
-                page=page,
-                trace_started=trace_enabled,
-            )
+            for attempt in range(_LAUNCH_ATTEMPTS):
+                state = restored_state if attempt == 0 else None
+                try:
+                    browser = await self._launch_bundled_chromium(
+                        playwright,
+                        config,
+                        run_directory,
+                    )
+                    context = await self._open_context(browser, state)
+                    if state is not None and context is None:
+                        await asyncio.to_thread(state.unlink, missing_ok=True)
+                        restored_state = None
+                        try:
+                            await browser.close()
+                        except Exception:
+                            logger.warning(
+                                "Crashed browser could not be closed before relaunch"
+                            )
+                        browser = await self._launch_bundled_chromium(
+                            playwright,
+                            config,
+                            run_directory,
+                        )
+                        context = await self._open_context(browser, None)
+                    if context is None:
+                        raise RuntimeError("browser context was not created")
+                    if trace_enabled:
+                        await context.tracing.start(
+                            screenshots=True,
+                            snapshots=True,
+                            sources=True,
+                        )
+                    page = await context.new_page()
+                    if restored_state is not None and state is not None:
+                        logger.info(
+                            "Portal session cache restored",
+                            extra={"storageState": restored_state.name},
+                        )
+                    return BrowserSession(
+                        playwright=playwright,
+                        browser=browser,
+                        context=context,
+                        page=page,
+                        trace_started=trace_enabled,
+                    )
+                except Exception as exc:
+                    last_exc = exc
+                    logger.exception(
+                        "Managed browser launch failed",
+                        extra={
+                            "usedSessionCache": bool(state),
+                            "attempt": attempt + 1,
+                        },
+                    )
+                    for resource in (context, browser):
+                        if resource is None:
+                            continue
+                        try:
+                            await resource.close()
+                        except Exception:
+                            logger.warning("Browser cleanup failed after launch error")
+                    browser = None
+                    context = None
+                    restored_state = None
+                    if attempt + 1 < _LAUNCH_ATTEMPTS:
+                        await asyncio.sleep(_LAUNCH_RETRY_DELAY_SECONDS)
+            raise last_exc or RuntimeError("browser launch failed")
         except Exception as exc:
-            logger.exception("Managed browser launch failed")
-            if context is not None:
-                await context.close()
-            if browser is not None:
-                await browser.close()
             if playwright is not None:
                 await playwright.stop()
+            cause = str(exc).strip()
+            message = "Managed browser session could not be started"
+            if cause:
+                message = f"{message}: {cause[:400]}"
             raise RpaFatalError(
                 "BROWSER_LAUNCH_FAILED",
-                "Managed browser session could not be started",
+                message,
             ) from exc
+
+    @staticmethod
+    async def _launch_bundled_chromium(
+        playwright: Playwright,
+        config: BrowserSessionConfig,
+        run_directory: Path,
+    ) -> Browser:
+        options: dict[str, Any] = {
+            "headless": config.headless,
+            "channel": None,
+            "downloads_path": str(run_directory / "downloads"),
+        }
+        if os.name == "nt":
+            options["args"] = list(_WINDOWS_CHROMIUM_ARGS)
+        return await playwright.chromium.launch(**options)
 
     @staticmethod
     async def _open_context(

@@ -234,12 +234,17 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-25
 
+- **本地模拟填交期脚本**：正式演练无填交期 Binding。新增 `service/scripts/simulate_fill_delivery_dates.py`，按 PO 把订单行标成已写入并推进到待签章；不写 SRM、不派 RPA。默认预览，`--yes` 才写库。
+- **浏览器有时能起来有时 Target crashed**：生成对账单/查询收货同一句 `Managed browser session could not be started`。17:47 查询曾成功（有截图和 xlsx）。原因是 Windows 同时 `--disable-gpu` 和 `--disable-software-rasterizer`，没有渲染后端就会间歇崩。已改为 `--use-angle=swiftshader`，启动失败最多再试 2 次（间隔 0.8s）。`test_runtime_browser.py` 15 passed。**请在 rpa-engine 窗口重启 4610**（若报 10048，先结束占用端口的旧进程）。
+- **扫单浏览器同样起不来（17:07）**：与生成对账单同一失败。Client 两条 ERROR 是 Runtime 事件 + Task finish 各记一次。第一次 chrome→chromium 回退仍会在已崩溃的 Chrome 上 `new_context`。已改为 MANAGED 一律自带 Chromium、Windows `--disable-gpu`；会话缓存恢复失败则关浏览器再空上下文重开。`test_runtime_browser.py` 14 passed。**已重启 Engine 4610** 后请再点扫单。
+- **对账单生成浏览器起不来**：Client 只显示 `Managed browser session could not be started`。本机复现：`channel=chrome/msedge` 会 `Target crashed`，自带 `chromium` 可启动。Engine 已改为 chrome 失败则回退 Chromium，并把 Playwright 原因带进事件；Task 租约默认 channel 改为 `chromium`。**需重启 Engine 4610 和 Task 4520** 后再点生成对账单。
 - **正式演练回签 `*/5` 看起来没触发**：JobScheduler 已在 09:48 进程上运行。同门户扫单 `*/5` 曾于 10:15/10:20 真正建出任务（随后扫单 job 已停用）。回签 job `5517f5e8-…` 启用、cron=`*/5 * * * *`、Binding 为 `srm_check_reply_status`。客户订单 `POJS2607170008` 停在 `SDMS_CREATED`，候选=0，所以详情「执行任务」为空。已补开火日志与详情空列表说明。要把实例推进到待回签才会出现探测任务。
 - **v5.1 权限接上 Auth 接口**：`/me.is_super_admin` / `is_task_admin`；`GET /api/v1/members/{id}/subordinate` 登录写入 `managed_user_ids`。模块管理员 AutoTask 内全放开。
 - **v5.1 迁库（用户授权）**：已执行 `alembic upgrade head`（`g3b8e2a91c40` → `a7e4b2c81d09`）。`autotask_user_cache.is_task_admin` 已建。**未**重启 4520。
 - **v5.1 归属人全员接口**：Auth OpenAPI 已有 `GET /api/v1/orgs/{org_id}/members`。模块管理员走这条；人名在 `user_name`、工号在 `username`，归属必须用 `user_id` 不能用成员 `id`。下拉展示「姓名（工号）」可搜索。
 - **调度中心 v5.2 回填 Binding JSON**：用户授权维护 `config.schedule`。已执行 `backfill_scheduler_jobs.py --apply`，6 条 ENABLED 扫单/回签 Binding 写入默认 schedule，并插入 `scheduler_jobs`。扫单默认 `0 8 * * *` / 扫单；回签默认 `*/30 * * * *` / 回签轮询。门户：芯云test、国际test、芯云-正式演练（各扫单+回签）。库中无「天地伟业-国际-正式演练」扫单/回签 Binding。4520 未重启。
 - **扫单排队卡死**：用户要求去掉「扫单：SRM 待签章订单」排队中任务。旧 4520 全局扫单循环仍在跑，约每 2 分钟插一条，堆积 268 条 QUEUED。已走 `cancel_task` 全部取消（任务+Run）。当前 inflight=0。未重启 4520，旧循环可能继续插新单。
+- **未对账影子账单种子门户**：`seed_official_unchecked_statement.py` 默认门户从「天地伟业-国际-正式演练」改为「天地伟业-芯云-正式演练」（同 id `fbf07b4e-…`）。预览已找到门户；未加 `--yes`，未写库。同改 `run_official_stmt_payable_click.py`。
 
 ### 2026-08-24
 

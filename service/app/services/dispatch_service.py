@@ -78,7 +78,7 @@ def _browser_session_from_config(config: dict[str, Any]) -> BrowserSessionConfig
     return BrowserSessionConfig(
         mode=raw.get("mode", "MANAGED"),
         headless=bool(raw.get("headless", True)),
-        channel=raw.get("channel", "chrome"),
+        channel=raw.get("channel", "chromium"),
         profile_ref=raw.get("profileRef") or raw.get("profile_ref"),
         cdp_endpoint_ref=raw.get("cdpEndpointRef") or raw.get("cdp_endpoint_ref"),
         close_policy=raw.get("closePolicy") or raw.get("close_policy") or "CLOSE_ON_FINISH",
@@ -147,7 +147,7 @@ def _lease_config_from_snapshot(config_raw: dict[str, Any]) -> LeaseCommandConfi
         browser_session=BrowserSessionConfig(
             mode=browser_raw.get("mode", "MANAGED"),
             headless=bool(browser_raw.get("headless", True)),
-            channel=browser_raw.get("channel", "chrome"),
+            channel=browser_raw.get("channel", "chromium"),
             profile_ref=browser_raw.get("profileRef"),
             cdp_endpoint_ref=browser_raw.get("cdpEndpointRef"),
             close_policy=browser_raw.get("closePolicy", "CLOSE_ON_FINISH"),

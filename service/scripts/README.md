@@ -70,12 +70,33 @@ cd d:\work_space260811\autotask-workspace\service
 
 
 
+## 本地模拟填写交货日期（无 Binding / 不写 SRM）
+
+脚本：`simulate_fill_delivery_dates.py`
+
+正式演练没有填交期 Binding，门户已回签也没有保存。本脚本按客户订单号把已有实例的订单行标成已写入，并推进到「待签章」。**不调 SRM、不派 RPA**。实例必须已有订单行（建单完成）。默认预览，加 `--yes` 才写库。
+
+```powershell
+cd d:\work_space260811\autotask-workspace\service
+
+# 预览
+.\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py POJS2607170008
+
+# 写库（日期优先用行上「要求交货日期」，没有则用今天）
+.\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py --yes POJS2607170008
+
+# 全部行指定同一天
+.\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py --yes --date 2026-08-25 POJS2607170008
+```
+
+
+
 ## 天地伟业 v4.0 演练种子（正式站已有未对账 → 待上传发票）
 
 脚本：`seed_official_unchecked_statement.py`
 
 生成演练 dryRun 不会在门户落下对账单，不能拿那张待生成草稿去上传发票。  
-按门户**真实未对账**的对账日期 + 对账总额插入本地 `UNCHECKED` 账单，阶段 `STMT_PENDING_INVOICE`。不调 SRM。日期和金额必须与门户那一行一致。
+按门户**真实未对账**的对账日期 + 对账总额插入本地 `UNCHECKED` 账单，阶段 `STMT_PENDING_INVOICE`。不调 SRM。日期和金额必须与门户那一行一致。默认门户「天地伟业-芯云-正式演练」；其它门户传 `--portal-id`。
 
 ```powershell
 cd d:\work_space260811\autotask-workspace\service

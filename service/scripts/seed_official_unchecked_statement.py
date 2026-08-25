@@ -31,6 +31,7 @@ from app.services.json_utils import dumps_json, loads_json
 from app.services.process_instance_service import PROCESS_CODE_SRM_TIANDI_STATEMENT
 
 ACTOR = "scripts/seed_stmt_unchecked"  # created_by varchar(36)
+PORTAL_NAME = "天地伟业-芯云-正式演练"
 
 
 async def resolve_portal(db, portal_id: str | None) -> PortalAccount:
@@ -38,10 +39,10 @@ async def resolve_portal(db, portal_id: str | None) -> PortalAccount:
     if portal_id:
         query = query.where(PortalAccount.id == portal_id)
     else:
-        query = query.where(PortalAccount.portal_name == "天地伟业-国际-正式演练")
+        query = query.where(PortalAccount.portal_name == PORTAL_NAME)
     rows = (await db.execute(query.order_by(PortalAccount.created_at.asc()))).scalars().all()
     if not rows:
-        raise SystemExit("找不到天地伟业-国际-正式演练 PortalAccount，请传 --portal-id")
+        raise SystemExit(f"找不到{PORTAL_NAME} PortalAccount，请传 --portal-id")
     return rows[0]
 
 

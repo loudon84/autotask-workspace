@@ -34,8 +34,17 @@ checksum so the cache is reused only when it matches.
 Playwright and returns a single `Page` from a managed `BrowserContext`.
 
 Only `mode=MANAGED` is supported; `profileRef` and `cdpEndpointRef` must be null;
-`closePolicy` must be `ALWAYS` or `CLOSE_ON_FINISH`. Channels are `chromium`, `chrome`,
-and `msedge`.
+`closePolicy` must be `ALWAYS` or `CLOSE_ON_FINISH`. Lease `channel` may still be
+`chromium`, `chrome`, or `msedge`, but MANAGED always launches bundled Chromium
+(`channel=None`). Branded Chrome/Edge on Windows often `Target crashed` under
+contention; a crashed process is never reused for `new_context`. Empty Cursor
+`PLAYWRIGHT_BROWSERS_PATH` sandboxes are ignored in favor of a real Playwright cache.
+On Windows, launch uses `--disable-gpu` with `--use-angle=swiftshader` (software
+GL). Do not also pass `--disable-software-rasterizer`; that combination leaves no
+renderer and causes intermittent `Target crashed`. Transient launch failures retry
+up to three times with a short delay. If `storage_state` restore fails, the cache
+file is deleted and Chromium is relaunched empty. The run-event message includes
+the Playwright cause after `Managed browser session could not be started`.
 
 ## Run Context
 

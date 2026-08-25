@@ -25,6 +25,8 @@
     "src/**/*",
     "src/mock/**/*.json",
     "scripts/**/*",
+    "forge/**/*",
+    "installer/**/*",
     "./package.json",
     "./forge.config.ts",
     "*.mts"

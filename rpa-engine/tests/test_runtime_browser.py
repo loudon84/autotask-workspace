@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from nodeskclaw_rpa_engine.runtime.browser import (
     ManagedBrowserSessionManager,
     ensure_playwright_browsers_path,
 )
+from nodeskclaw_rpa_engine.runtime import browser as browser_mod
 from nodeskclaw_rpa_engine.runtime.errors import RpaFatalError
 from nodeskclaw_rpa_engine.workers.schemas import BrowserSessionConfig
 
@@ -86,6 +88,19 @@ class FakeController:
         return self.playwright
 
 
+class FallingBrandedChromium(FakeChromium):
+    async def launch(self, **kwargs):
+        if kwargs.get("channel") in {"chrome", "msedge"}:
+            raise RuntimeError("Target crashed")
+        return await super().launch(**kwargs)
+
+
+class FallingBrandedController(FakeController):
+    def __init__(self) -> None:
+        super().__init__()
+        self.playwright.chromium = FallingBrandedChromium()
+
+
 def config(**updates: object) -> BrowserSessionConfig:
     values = {
         "mode": "MANAGED",
@@ -97,6 +112,22 @@ def config(**updates: object) -> BrowserSessionConfig:
     }
     values.update(updates)
     return BrowserSessionConfig(**values)
+
+
+def expected_launch_options(tmp_path: Path) -> dict[str, object]:
+    options: dict[str, object] = {
+        "headless": True,
+        "channel": None,
+        "downloads_path": str(tmp_path / "downloads"),
+    }
+    if os.name == "nt":
+        options["args"] = [
+            "--disable-gpu",
+            "--use-angle=swiftshader",
+            "--disable-extensions",
+            "--no-first-run",
+        ]
+    return options
 
 
 async def test_managed_browser_owns_context_page_trace_and_cleanup(tmp_path) -> None:
@@ -113,11 +144,7 @@ async def test_managed_browser_owns_context_page_trace_and_cleanup(tmp_path) -> 
     await session.close()
 
     playwright = controller.playwright
-    assert playwright.chromium.launch_options == {
-        "headless": True,
-        "channel": None,
-        "downloads_path": str(tmp_path / "downloads"),
-    }
+    assert playwright.chromium.launch_options == expected_launch_options(tmp_path)
     assert playwright.chromium.browser.context_options == {
         "accept_downloads": True
     }
@@ -126,6 +153,69 @@ async def test_managed_browser_owns_context_page_trace_and_cleanup(tmp_path) -> 
     assert playwright.chromium.browser.context.closed is True
     assert playwright.chromium.browser.closed is True
     assert playwright.stopped is True
+
+
+async def test_managed_browser_falls_back_to_chromium_when_branded_channel_fails(
+    tmp_path: Path,
+) -> None:
+    controller = FallingBrandedController()
+    manager = ManagedBrowserSessionManager(lambda: controller)
+
+    session = await manager.start(
+        config(channel="chrome"),
+        run_directory=tmp_path,
+        trace_enabled=False,
+    )
+    await session.close()
+
+    assert controller.playwright.chromium.launch_options["channel"] is None
+
+
+class RestoreFailingBrowser(FakeBrowser):
+    async def new_context(self, **kwargs):
+        self.context_options = kwargs
+        if "storage_state" in kwargs:
+            raise RuntimeError("Target crashed")
+        return self.context
+
+
+class RestoreFailingChromium(FakeChromium):
+    def __init__(self) -> None:
+        super().__init__()
+        self.launch_count = 0
+
+    async def launch(self, **kwargs):
+        self.launch_count += 1
+        self.launch_options = kwargs
+        self.browser = RestoreFailingBrowser()
+        return self.browser
+
+
+class RestoreFailingController(FakeController):
+    def __init__(self) -> None:
+        super().__init__()
+        self.playwright.chromium = RestoreFailingChromium()
+
+
+async def test_managed_browser_relaunches_after_storage_state_restore_fails(
+    tmp_path: Path,
+) -> None:
+    controller = RestoreFailingController()
+    manager = ManagedBrowserSessionManager(lambda: controller)
+    state = tmp_path / "storage_state.json"
+    state.write_text('{"cookies":[],"origins":[]}', encoding="utf-8")
+
+    session = await manager.start(
+        config(),
+        run_directory=tmp_path / "run",
+        trace_enabled=False,
+        storage_state=state,
+    )
+    await session.close()
+
+    assert controller.playwright.chromium.launch_count == 2
+    assert "storage_state" not in controller.playwright.chromium.browser.context_options
+    assert not state.is_file()
 
 
 async def test_managed_browser_restores_and_saves_storage_state(tmp_path: Path) -> None:
@@ -152,7 +242,7 @@ async def test_managed_browser_restores_and_saves_storage_state(tmp_path: Path) 
 
 
 @pytest.mark.parametrize("channel", ["chrome", "msedge"])
-async def test_managed_browser_preserves_requested_branded_channel(
+async def test_managed_browser_ignores_branded_channel(
     tmp_path: Path,
     channel: str,
 ) -> None:
@@ -166,7 +256,52 @@ async def test_managed_browser_preserves_requested_branded_channel(
     )
     await session.close()
 
-    assert controller.playwright.chromium.launch_options["channel"] == channel
+    assert controller.playwright.chromium.launch_options["channel"] is None
+
+
+class FlakyLaunchChromium(FakeChromium):
+    def __init__(self, fail_times: int) -> None:
+        super().__init__()
+        self.fail_times = fail_times
+        self.launch_count = 0
+
+    async def launch(self, **kwargs):
+        self.launch_count += 1
+        self.launch_options = kwargs
+        if self.launch_count <= self.fail_times:
+            raise RuntimeError("Browser.new_page: Target crashed")
+        self.browser = FakeBrowser()
+        return self.browser
+
+
+class FlakyLaunchController(FakeController):
+    def __init__(self, fail_times: int) -> None:
+        super().__init__()
+        self.playwright.chromium = FlakyLaunchChromium(fail_times)
+
+
+async def test_managed_browser_retries_transient_target_crash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+
+    async def instant_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(browser_mod.asyncio, "sleep", instant_sleep)
+    controller = FlakyLaunchController(fail_times=2)
+    manager = ManagedBrowserSessionManager(lambda: controller)
+
+    session = await manager.start(
+        config(),
+        run_directory=tmp_path,
+        trace_enabled=False,
+    )
+    await session.close()
+
+    assert controller.playwright.chromium.launch_count == 3
+    assert sleeps == [0.8, 0.8]
 
 
 @pytest.mark.parametrize(
@@ -197,7 +332,9 @@ async def test_managed_browser_rejects_unsupported_configuration(
 def test_ensure_playwright_ignores_missing_browser_path(monkeypatch, tmp_path: Path) -> None:
     missing = tmp_path / "cursor-sandbox-playwright"
     fallback = tmp_path / "ms-playwright"
-    fallback.mkdir()
+    chromium = fallback / "chromium-1" / "chrome-win64"
+    chromium.mkdir(parents=True)
+    (chromium / "chrome.exe").write_bytes(b"")
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(missing))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     result = ensure_playwright_browsers_path()
@@ -207,6 +344,21 @@ def test_ensure_playwright_ignores_missing_browser_path(monkeypatch, tmp_path: P
 
 def test_ensure_playwright_keeps_existing_browser_path(monkeypatch, tmp_path: Path) -> None:
     existing = tmp_path / "real-browsers"
-    existing.mkdir()
+    chromium = existing / "chromium-1" / "chrome-win64"
+    chromium.mkdir(parents=True)
+    (chromium / "chrome.exe").write_bytes(b"")
     monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(existing))
     assert ensure_playwright_browsers_path() == str(existing)
+
+
+def test_ensure_playwright_ignores_empty_browser_path(monkeypatch, tmp_path: Path) -> None:
+    empty = tmp_path / "cursor-sandbox-playwright"
+    empty.mkdir()
+    fallback = tmp_path / "ms-playwright"
+    chromium = fallback / "chromium-1" / "chrome-win64"
+    chromium.mkdir(parents=True)
+    (chromium / "chrome.exe").write_bytes(b"")
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(empty))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    result = ensure_playwright_browsers_path()
+    assert result == str(fallback)
