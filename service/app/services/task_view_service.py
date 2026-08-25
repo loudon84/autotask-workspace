@@ -194,6 +194,7 @@ async def list_tasks_for_frontend(
     keyword: str | None = None,
     page: int | None = None,
     page_size: int | None = None,
+    accessible_portal_ids: list[str] | None = None,
 ) -> list[TaskListItemResponse] | TaskListPageResponse:
     query = select(AutomationTask).where(
         AutomationTask.tenant_id == tenant_id,
@@ -229,6 +230,12 @@ async def list_tasks_for_frontend(
                 return TaskListPageResponse(items=[], total=0, page=page or 1, page_size=page_size or 20)
             return []
         query = query.where(AutomationTask.workflow_binding_id.in_(binding_ids))
+
+    from app.services.permission_service import apply_accessible_portal_filter
+
+    query = apply_accessible_portal_filter(
+        query, AutomationTask.portal_account_id, accessible_portal_ids
+    )
 
     query = query.order_by(AutomationTask.created_at.desc())
     tasks = list((await db.execute(query)).scalars().all())

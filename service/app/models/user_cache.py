@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -16,4 +16,6 @@ class UserCache(BaseModel):
     org_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
     portal_org_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_task_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    managed_user_ids: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

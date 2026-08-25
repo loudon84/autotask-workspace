@@ -15,6 +15,7 @@ export interface AuthUserResponse {
   id: string;
   is_active?: boolean;
   is_super_admin?: boolean;
+  is_task_admin?: boolean;
   name: string;
   org_role?: string | null;
   organization?: {
@@ -52,6 +53,7 @@ export function mapMeToPublicUser(me: AuthUserResponse): PublicAuthUser {
     id: me.id,
     email: me.email,
     displayName: me.name ?? me.email,
+    username: me.username ?? "",
   };
 }
 

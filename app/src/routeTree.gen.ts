@@ -18,12 +18,14 @@ import { Route as WorkflowsIndexRouteImport } from './routes/workflows/index'
 import { Route as WebWorkspaceIndexRouteImport } from './routes/web-workspace/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as SrmPortalsIndexRouteImport } from './routes/srm-portals/index'
+import { Route as SchedulersIndexRouteImport } from './routes/schedulers/index'
 import { Route as RunsIndexRouteImport } from './routes/runs/index'
 import { Route as ProcessesIndexRouteImport } from './routes/processes/index'
 import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows/$workflowId'
 import { Route as TasksNewRouteImport } from './routes/tasks/new'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as SrmPortalsPortalIdRouteImport } from './routes/srm-portals/$portalId'
+import { Route as SchedulersJobIdRouteImport } from './routes/schedulers/$jobId'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as ProcessesInstanceIdRouteImport } from './routes/processes/$instanceId'
 import { Route as ProcessInstancesStatementsRouteImport } from './routes/process-instances/statements'
@@ -78,6 +80,11 @@ const SrmPortalsIndexRoute = SrmPortalsIndexRouteImport.update({
   path: '/srm-portals/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SchedulersIndexRoute = SchedulersIndexRouteImport.update({
+  id: '/schedulers/',
+  path: '/schedulers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RunsIndexRoute = RunsIndexRouteImport.update({
   id: '/runs/',
   path: '/runs/',
@@ -106,6 +113,11 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
 const SrmPortalsPortalIdRoute = SrmPortalsPortalIdRouteImport.update({
   id: '/srm-portals/$portalId',
   path: '/srm-portals/$portalId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulersJobIdRoute = SchedulersJobIdRouteImport.update({
+  id: '/schedulers/$jobId',
+  path: '/schedulers/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RunsRunIdRoute = RunsRunIdRouteImport.update({
@@ -164,12 +176,14 @@ export interface FileRoutesByFullPath {
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
+  '/schedulers/$jobId': typeof SchedulersJobIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/processes/': typeof ProcessesIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/schedulers/': typeof SchedulersIndexRoute
   '/srm-portals/': typeof SrmPortalsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
@@ -187,12 +201,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/schedulers/$jobId': typeof SchedulersJobIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/processes': typeof ProcessesIndexRoute
   '/runs': typeof RunsIndexRoute
+  '/schedulers': typeof SchedulersIndexRoute
   '/srm-portals': typeof SrmPortalsIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/web-workspace': typeof WebWorkspaceIndexRoute
@@ -213,12 +229,14 @@ export interface FileRoutesById {
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
+  '/schedulers/$jobId': typeof SchedulersJobIdRoute
   '/srm-portals/$portalId': typeof SrmPortalsPortalIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/tasks/new': typeof TasksNewRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
   '/processes/': typeof ProcessesIndexRoute
   '/runs/': typeof RunsIndexRoute
+  '/schedulers/': typeof SchedulersIndexRoute
   '/srm-portals/': typeof SrmPortalsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
@@ -240,12 +258,14 @@ export interface FileRouteTypes {
     | '/process-instances/statements'
     | '/processes/$instanceId'
     | '/runs/$runId'
+    | '/schedulers/$jobId'
     | '/srm-portals/$portalId'
     | '/tasks/$taskId'
     | '/tasks/new'
     | '/workflows/$workflowId'
     | '/processes/'
     | '/runs/'
+    | '/schedulers/'
     | '/srm-portals/'
     | '/tasks/'
     | '/web-workspace/'
@@ -263,12 +283,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/runs/$runId'
+    | '/schedulers/$jobId'
     | '/srm-portals/$portalId'
     | '/tasks/$taskId'
     | '/tasks/new'
     | '/workflows/$workflowId'
     | '/processes'
     | '/runs'
+    | '/schedulers'
     | '/srm-portals'
     | '/tasks'
     | '/web-workspace'
@@ -288,12 +310,14 @@ export interface FileRouteTypes {
     | '/process-instances/statements'
     | '/processes/$instanceId'
     | '/runs/$runId'
+    | '/schedulers/$jobId'
     | '/srm-portals/$portalId'
     | '/tasks/$taskId'
     | '/tasks/new'
     | '/workflows/$workflowId'
     | '/processes/'
     | '/runs/'
+    | '/schedulers/'
     | '/srm-portals/'
     | '/tasks/'
     | '/web-workspace/'
@@ -314,12 +338,14 @@ export interface RootRouteChildren {
   ProcessInstancesStatementsRoute: typeof ProcessInstancesStatementsRouteWithChildren
   ProcessesInstanceIdRoute: typeof ProcessesInstanceIdRouteWithChildren
   RunsRunIdRoute: typeof RunsRunIdRoute
+  SchedulersJobIdRoute: typeof SchedulersJobIdRoute
   SrmPortalsPortalIdRoute: typeof SrmPortalsPortalIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   TasksNewRoute: typeof TasksNewRoute
   WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
   ProcessesIndexRoute: typeof ProcessesIndexRoute
   RunsIndexRoute: typeof RunsIndexRoute
+  SchedulersIndexRoute: typeof SchedulersIndexRoute
   SrmPortalsIndexRoute: typeof SrmPortalsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
   WebWorkspaceIndexRoute: typeof WebWorkspaceIndexRoute
@@ -391,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SrmPortalsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/schedulers/': {
+      id: '/schedulers/'
+      path: '/schedulers'
+      fullPath: '/schedulers/'
+      preLoaderRoute: typeof SchedulersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs/': {
       id: '/runs/'
       path: '/runs'
@@ -431,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/srm-portals/$portalId'
       fullPath: '/srm-portals/$portalId'
       preLoaderRoute: typeof SrmPortalsPortalIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedulers/$jobId': {
+      id: '/schedulers/$jobId'
+      path: '/schedulers/$jobId'
+      fullPath: '/schedulers/$jobId'
+      preLoaderRoute: typeof SchedulersJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/runs/$runId': {
@@ -534,12 +574,14 @@ const rootRouteChildren: RootRouteChildren = {
   ProcessInstancesStatementsRoute: ProcessInstancesStatementsRouteWithChildren,
   ProcessesInstanceIdRoute: ProcessesInstanceIdRouteWithChildren,
   RunsRunIdRoute: RunsRunIdRoute,
+  SchedulersJobIdRoute: SchedulersJobIdRoute,
   SrmPortalsPortalIdRoute: SrmPortalsPortalIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   TasksNewRoute: TasksNewRoute,
   WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,
   ProcessesIndexRoute: ProcessesIndexRoute,
   RunsIndexRoute: RunsIndexRoute,
+  SchedulersIndexRoute: SchedulersIndexRoute,
   SrmPortalsIndexRoute: SrmPortalsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
   WebWorkspaceIndexRoute: WebWorkspaceIndexRoute,

@@ -13,6 +13,8 @@ from app.api import (
     rpa_dispatch,
     rpa_runs,
     rpa_workers,
+    scheduler_jobs,
+    settings,
     statements,
     tasks,
     workflow_bindings,
@@ -41,6 +43,8 @@ api_router.include_router(rpa_runs.router, prefix="/runs", tags=["RPA Run"])
 api_router.include_router(human_actions.router, prefix="/human-actions", tags=["Human Action"])
 api_router.include_router(artifacts.router, prefix="/artifacts", tags=["Artifact"])
 api_router.include_router(rpa_workers.router, prefix="/rpa-workers", tags=["RPA Worker"])
+api_router.include_router(settings.router, prefix="/settings", tags=["Settings"])
+api_router.include_router(scheduler_jobs.router, prefix="/scheduler-jobs", tags=["Scheduler Job"])
 
 worker_api_router.include_router(rpa_dispatch.router, tags=["RPA Worker API"])
 mcp_router.include_router(mcp.router, tags=["MCP"])

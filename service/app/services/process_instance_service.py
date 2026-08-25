@@ -55,9 +55,8 @@ STMT_SUBMIT_REVIEW_TEMPLATE_CODE = "srm_stmt_submit_review"
 SCAN_OUTPUT_SCHEMA = "SRM_PENDING_ORDERS_OUTPUT_V1"
 SIGNED_REPLY_STATUS = "已回签"
 
-# 归档上传 SDMS 的 username：有登录人用登录工号；轮询无登录人时用实例创建人；
-# 创建人也没有时用此固定工号。该字段 SDMS 只要求非空，值不敏感。
-_FALLBACK_ARCHIVE_SDMS_USERNAME = "SMC-SZ-HR15563"
+# 归档上传 SDMS 的 username：请求里有就用请求的；否则用门户归属人工号；
+# 没有门户则用实例创建人。查不到工号则空字符串，不再写死兜底。
 _DEMO_PORTAL_HOST = "192.168.102.247"
 
 _ARCHIVE_SKIP_STATUSES = {
@@ -152,6 +151,7 @@ async def list_instances(
     stage: str | None = None,
     status: str | None = None,
     keyword: str | None = None,
+    accessible_portal_ids: list[str] | None = None,
 ) -> list[ProcessInstance]:
     query = select(ProcessInstance).where(
         ProcessInstance.tenant_id == tenant_id,
@@ -164,6 +164,11 @@ async def list_instances(
         query = query.where(ProcessInstance.status == status)
     if keyword:
         query = query.where(ProcessInstance.biz_key.contains(keyword.strip()))
+    from app.services.permission_service import apply_accessible_portal_filter
+
+    query = apply_accessible_portal_filter(
+        query, ProcessInstance.portal_account_id, accessible_portal_ids
+    )
     result = await db.execute(query.order_by(ProcessInstance.created_at.desc()))
     return list(result.scalars().all())
 
@@ -689,10 +694,22 @@ async def _resolve_archive_username(
     username = str(sdms_username or "").strip() or _summary_sdms_username(instance)
     if username:
         return username
-    username = await username_from_user_cache(db, instance.created_by)
+    owner_id = instance.created_by
+    if instance.portal_account_id:
+        portal = (
+            await db.execute(
+                select(PortalAccount).where(
+                    PortalAccount.id == instance.portal_account_id,
+                    not_deleted(PortalAccount),
+                )
+            )
+        ).scalar_one_or_none()
+        if portal is not None:
+            owner_id = portal.owner_user_id or portal.created_by
+    username = await username_from_user_cache(db, owner_id)
     if username:
         return username
-    return _FALLBACK_ARCHIVE_SDMS_USERNAME
+    return ""
 
 
 async def _trigger_archive_if_needed(
@@ -773,9 +790,11 @@ async def create_check_reply_task(
     )
 
 
-async def list_sign_poll_candidates(db: AsyncSession) -> list[ProcessInstance]:
+async def list_sign_poll_candidates(
+    db: AsyncSession, *, portal_account_id: str | None = None
+) -> list[ProcessInstance]:
     """回签轮询候选：ACTIVE 且阶段为待回签或待签章，且门户仍启用。"""
-    result = await db.execute(
+    stmt = (
         select(ProcessInstance)
         .join(PortalAccount, PortalAccount.id == ProcessInstance.portal_account_id)
         .where(
@@ -790,6 +809,9 @@ async def list_sign_poll_candidates(db: AsyncSession) -> list[ProcessInstance]:
             not_deleted(PortalAccount),
         )
     )
+    if portal_account_id is not None:
+        stmt = stmt.where(ProcessInstance.portal_account_id == portal_account_id)
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -798,12 +820,16 @@ async def list_sign_requested_instances(db: AsyncSession) -> list[ProcessInstanc
     return await list_sign_poll_candidates(db)
 
 
-async def run_sign_poll_once(db: AsyncSession, *, actor: str) -> dict[str, int]:
+async def run_sign_poll_once(
+    db: AsyncSession, *, actor: str, portal_account_id: str | None = None
+) -> dict[str, int]:
     """立即跑一轮回签探测（列表按钮 / 可被调度器复用创建逻辑）。
 
     返回 candidate_count / created_count。逐条 commit，单条失败不影响其它。
     """
-    instances = await list_sign_poll_candidates(db)
+    instances = await list_sign_poll_candidates(
+        db, portal_account_id=portal_account_id
+    )
     created = 0
     for instance in instances:
         try:

@@ -13,6 +13,7 @@ from app.models.process_line_item import ProcessLineItem  # noqa: F401
 from app.models.process_stage_history import ProcessStageHistory  # noqa: F401
 from app.models.rpa_component import RpaComponent  # noqa: F401
 from app.models.rpa_run import RpaRun  # noqa: F401
+from app.models.scheduler_job import SchedulerJob  # noqa: F401
 from app.models.rpa_worker import RpaWorker  # noqa: F401
 from app.models.run_event import RunEvent  # noqa: F401
 from app.models.statement_bill import StatementBill  # noqa: F401

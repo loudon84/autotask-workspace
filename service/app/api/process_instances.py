@@ -3,7 +3,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
-from app.core.security import bearer_scheme, get_current_user, require_tenant_access
+from app.core.security import bearer_scheme, get_current_user, require_portal_visible, require_tenant_access
+from app.models.enums import PortalPermission
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
 from app.schemas.process import (
@@ -17,6 +18,7 @@ from app.schemas.process import (
     ProcessStageHistoryResponse,
 )
 from app.services import process_instance_service
+from app.services.permission_service import list_accessible_portal_ids
 from app.services.user_sync import resolve_login_username
 
 router = APIRouter()
@@ -31,8 +33,16 @@ async def list_process_instances(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    accessible_ids = await list_accessible_portal_ids(
+        db, user, tenant_id, PortalPermission.PORTAL_VIEW
+    )
     instances = await process_instance_service.list_instances(
-        db, tenant_id, stage=stage, status=status, keyword=keyword
+        db,
+        tenant_id,
+        stage=stage,
+        status=status,
+        keyword=keyword,
+        accessible_portal_ids=accessible_ids,
     )
     return ApiResponse(data=[ProcessInstanceListItem.model_validate(item) for item in instances])
 
@@ -44,6 +54,7 @@ async def trigger_scan(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await require_portal_visible(db, user, body.portal_account_id)
     task = await process_instance_service.create_scan_task(
         db, tenant_id, body.portal_account_id, actor=user.user_id
     )
@@ -74,6 +85,7 @@ async def get_process_instance(
 ):
     tenant_id = require_tenant_access(user)
     instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     lines = await process_instance_service.list_line_items(db, instance.id)
     history = await process_instance_service.list_stage_history(db, instance.id)
     sub_tasks = await process_instance_service.list_sub_tasks(db, instance.id)
@@ -98,6 +110,8 @@ async def submit_line_date(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     line = await process_instance_service.submit_line_date(
         db, tenant_id, instance_id, line_number, body.expected_delivery_date, user
     )
@@ -111,6 +125,8 @@ async def request_sign(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     instance = await process_instance_service.request_sign(db, tenant_id, instance_id, user)
     return ApiResponse(data=ProcessInstanceListItem.model_validate(instance))
 
@@ -123,6 +139,8 @@ async def archive_signed_order(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     tenant_id = require_tenant_access(user)
+    instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     username = await resolve_login_username(
         credentials.credentials if credentials else None,
         user,
@@ -144,6 +162,8 @@ async def retry_process_instance(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     instance = await process_instance_service.retry_instance(db, tenant_id, instance_id, user)
     return ApiResponse(data=ProcessInstanceListItem.model_validate(instance))
 
@@ -155,5 +175,7 @@ async def cancel_process_instance(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    instance = await process_instance_service.get_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
     instance = await process_instance_service.cancel_instance(db, tenant_id, instance_id, user)
     return ApiResponse(data=ProcessInstanceListItem.model_validate(instance))

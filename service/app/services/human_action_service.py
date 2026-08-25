@@ -13,6 +13,7 @@ from app.models.human_action import HumanAction
 from app.models.rpa_run import RpaRun
 from app.models.user_cache import UserCache
 from app.services.json_utils import dumps_json
+from app.services.permission_service import apply_accessible_portal_filter
 from app.services.task_state_machine import transition
 
 
@@ -42,8 +43,13 @@ async def create_human_action_for_run(
     return action
 
 
-async def list_pending_human_actions(db: AsyncSession, tenant_id: str) -> list[HumanAction]:
-    result = await db.execute(
+async def list_pending_human_actions(
+    db: AsyncSession,
+    tenant_id: str,
+    *,
+    accessible_portal_ids: list[str] | None = None,
+) -> list[HumanAction]:
+    query = (
         select(HumanAction)
         .join(AutomationTask, HumanAction.task_id == AutomationTask.id)
         .where(
@@ -54,6 +60,10 @@ async def list_pending_human_actions(db: AsyncSession, tenant_id: str) -> list[H
         )
         .order_by(HumanAction.created_at.asc())
     )
+    query = apply_accessible_portal_filter(
+        query, AutomationTask.portal_account_id, accessible_portal_ids
+    )
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 

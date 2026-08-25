@@ -32,4 +32,5 @@ class PortalAccount(BaseModel):
     rpa_profile_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="ENABLED", nullable=False)
     owner_dept_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    owner_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)

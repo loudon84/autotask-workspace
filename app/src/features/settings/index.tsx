@@ -261,6 +261,7 @@ export function SettingsPage() {
   );
 }
 
+
 function SettingsCard({
   title,
   children,
@@ -279,33 +280,37 @@ function SettingsCard({
 }
 
 function Field({
+  htmlFor,
   label,
   children,
 }: {
+  htmlFor?: string;
   label: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
     </div>
   );
 }
 
 function SwitchField({
+  id,
   label,
   checked,
   onCheckedChange,
 }: {
+  id?: string;
   label: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }) {
   return (
     <div className="flex items-center justify-between">
-      <Label>{label}</Label>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      <Label htmlFor={id}>{label}</Label>
+      <Switch checked={checked} id={id} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

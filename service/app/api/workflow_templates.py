@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
-from app.core.security import get_current_user, require_tenant_access
+from app.core.security import get_current_user, require_portal_manage_access, require_tenant_access
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
 from app.schemas.workflow import WorkflowTemplateCreate, WorkflowTemplateResponse, WorkflowTemplateUpdate
@@ -27,6 +27,7 @@ async def create_workflow_template(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     template = await workflow_template_service.create_workflow_template(db, tenant_id, user, body)
     return ApiResponse(data=WorkflowTemplateResponse.model_validate(template))
@@ -50,6 +51,7 @@ async def update_workflow_template(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     template = await workflow_template_service.update_workflow_template(db, tenant_id, template_id, body)
     return ApiResponse(data=WorkflowTemplateResponse.model_validate(template))
@@ -61,6 +63,7 @@ async def delete_workflow_template(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     await workflow_template_service.delete_workflow_template(
         db,
@@ -77,6 +80,7 @@ async def enable_workflow_template(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     template = await workflow_template_service.enable_workflow_template(db, tenant_id, template_id)
     return ApiResponse(data=WorkflowTemplateResponse.model_validate(template))
@@ -88,6 +92,7 @@ async def disable_workflow_template(
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
+    require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     template = await workflow_template_service.disable_workflow_template(db, tenant_id, template_id)
     return ApiResponse(data=WorkflowTemplateResponse.model_validate(template))

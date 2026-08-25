@@ -62,6 +62,29 @@ export async function deletePortalAccount(id: string): Promise<void> {
   });
 }
 
+export async function listOwnerCandidates(): Promise<
+  import("@/types/portal-account").PortalOwnerCandidate[]
+> {
+  const data = await apiRequest<unknown>({
+    method: "GET",
+    path: "/portal-accounts/owner-candidates",
+  });
+  const payload = Array.isArray(data)
+    ? data
+    : data && typeof data === "object" && "items" in (data as object)
+      ? (data as { items?: unknown[] }).items
+      : [];
+  const items = Array.isArray(payload) ? payload : [];
+  return items.map((item) => {
+    const record = (item ?? {}) as Record<string, unknown>;
+    return {
+      userId: String(record.userId ?? record.user_id ?? ""),
+      name: String(record.name ?? ""),
+      username: String(record.username ?? ""),
+    };
+  });
+}
+
 export async function testOpenPortalAccount(
   id: string
 ): Promise<PortalAccount | undefined> {

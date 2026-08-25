@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
-from app.core.security import get_current_user, require_tenant_access
+from app.core.security import get_current_user, require_portal_visible, require_tenant_access
+from app.models.enums import PortalPermission
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
 from app.schemas.resource import ArtifactResponse, HumanActionResponse, RpaRunResponse
@@ -25,7 +26,17 @@ from app.services import (
     task_view_service,
 )
 
+from app.services.permission_service import list_accessible_portal_ids
+
 router = APIRouter()
+
+
+async def _require_task_visible(
+    db: AsyncSession, user: UserCache, tenant_id: str, task_id: str
+):
+    task = await automation_task_service.get_task(db, tenant_id, task_id)
+    await require_portal_visible(db, user, task.portal_account_id)
+    return task
 
 
 @router.get("", response_model=ApiResponse[list[TaskListItemResponse] | TaskListPageResponse])
@@ -43,6 +54,9 @@ async def list_tasks(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    accessible_ids = await list_accessible_portal_ids(
+        db, user, tenant_id, PortalPermission.PORTAL_VIEW
+    )
     result = await task_view_service.list_tasks_for_frontend(
         db,
         tenant_id,
@@ -55,6 +69,7 @@ async def list_tasks(
         keyword=keyword,
         page=page,
         page_size=page_size,
+        accessible_portal_ids=accessible_ids,
     )
     return ApiResponse(data=result)
 
@@ -66,6 +81,7 @@ async def create_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await require_portal_visible(db, user, body.portal_account_id)
     task = await automation_task_service.create_task(db, tenant_id, user, body)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -77,7 +93,7 @@ async def get_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
-    task = await automation_task_service.get_task(db, tenant_id, task_id)
+    task = await _require_task_visible(db, user, tenant_id, task_id)
     item = await task_view_service.build_task_list_item_for_task(db, tenant_id, task)
     return ApiResponse(data=item)
 
@@ -89,6 +105,7 @@ async def get_task_human_action(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     action = await human_action_service.get_active_human_action_for_task(db, tenant_id, task_id)
     if action is None:
         return ApiResponse(data=None)
@@ -102,6 +119,7 @@ async def mark_task_human_opened(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     _action, task = await human_action_service.open_human_action_for_task(db, tenant_id, task_id, user)
     return ApiResponse(data=TaskHumanActionStatusResponse(task_id=task.id, status=task.status))
 
@@ -113,6 +131,7 @@ async def confirm_task_human(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     action, task = await human_action_service.confirm_human_action_for_task(db, tenant_id, task_id, user)
     return ApiResponse(
         data=TaskConfirmHumanResponse(
@@ -131,6 +150,7 @@ async def update_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.update_task(db, tenant_id, task_id, body)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -142,6 +162,7 @@ async def submit_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.submit_task(db, tenant_id, task_id)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -153,6 +174,7 @@ async def start_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.start_task(db, tenant_id, task_id)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -164,6 +186,7 @@ async def cancel_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.cancel_task(db, tenant_id, task_id)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -175,6 +198,7 @@ async def retry_task(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.retry_task(db, tenant_id, task_id)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -186,6 +210,7 @@ async def mark_success_manual(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     task = await automation_task_service.mark_success_manual(db, tenant_id, task_id, user)
     return ApiResponse(data=AutomationTaskResponse.model_validate(task))
 
@@ -197,6 +222,7 @@ async def list_task_messages(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     messages = await automation_task_service.list_task_messages(db, tenant_id, task_id)
     return ApiResponse(data=[TaskMessageResponse.model_validate(m) for m in messages])
 
@@ -208,6 +234,7 @@ async def list_task_runs(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     runs = await automation_task_service.list_task_runs(db, tenant_id, task_id)
     return ApiResponse(data=[RpaRunResponse.model_validate(r) for r in runs])
 
@@ -222,7 +249,7 @@ async def list_task_successors(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
-    await automation_task_service.get_task(db, tenant_id, task_id)
+    await _require_task_visible(db, user, tenant_id, task_id)
     jobs = await task_successor_service.list_successor_jobs(
         db,
         tenant_id=tenant_id,
@@ -244,7 +271,7 @@ async def retry_task_successor(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
-    await automation_task_service.get_task(db, tenant_id, task_id)
+    await _require_task_visible(db, user, tenant_id, task_id)
     job = await task_successor_service.retry_successor_job(
         db,
         tenant_id=tenant_id,
@@ -261,5 +288,6 @@ async def list_task_artifacts(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
     artifacts = await artifact_service.list_artifacts(db, tenant_id, task_id=task_id)
     return ApiResponse(data=[ArtifactResponse.model_validate(a) for a in artifacts])

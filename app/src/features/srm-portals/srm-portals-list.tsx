@@ -24,6 +24,7 @@ import {
 } from "@/features/srm-portals/api/use-portal-account-mutations";
 import { usePortalAccounts } from "@/features/srm-portals/api/use-portal-accounts";
 import { PortalAccountFormDialog } from "@/features/srm-portals/components/portal-account-form-dialog";
+import { formatOwnerLabel } from "@/features/srm-portals/owner-label";
 import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-portal-write-permission";
 import type { PortalAccount, PortalStatus } from "@/types/portal-account";
 import type { ClientOpenMode } from "@/types/web-tab";
@@ -113,7 +114,7 @@ function buildColumns(
     { accessorKey: "erpEntityCode", header: "编号" },
     {
       accessorKey: "erpEntityName",
-      header: "主体名称",
+      header: "portal名称",
       cell: ({ row }) => (
         <TruncatedCell
           className="max-w-[9rem]"
@@ -161,6 +162,19 @@ function buildColumns(
       ),
     },
     {
+      accessorKey: "ownerName",
+      header: "归属人",
+      cell: ({ row }) => (
+        <TruncatedCell
+          className="max-w-[8rem]"
+          value={formatOwnerLabel(
+            row.original.ownerName,
+            row.original.ownerUsername
+          ) || row.original.ownerUserId}
+        />
+      ),
+    },
+    {
       accessorKey: "status",
       header: "状态",
       cell: ({ row }) => (
@@ -179,6 +193,7 @@ function buildColumns(
     {
       id: "actions",
       header: "操作",
+      meta: { sticky: "right" },
       cell: ({ row }) => (
         <PortalRowActions
           canWrite={canWrite}
@@ -334,9 +349,7 @@ export function SrmPortalsListPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <DataTable columns={columns} data={filteredPortals} />
-        </div>
+        <DataTable columns={columns} data={filteredPortals} />
       )}
 
       <PortalAccountFormDialog

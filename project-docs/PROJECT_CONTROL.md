@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-21
+最后更新：2026-08-25
 
 ## 1. 用途
 
@@ -38,7 +38,7 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-10. 可以准备数据库设计和 DDL，但目前尚未授权创建数据库或执行 DDL。
+10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行（当前 head）。**
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -66,6 +66,8 @@
 | 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
 | 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.4 dryRun=true** 已绑正式演练 | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
+| 权限 v5.1（管人接口后补） | 代码已接 Auth：`/me` 的 `is_super_admin` / `is_task_admin`；登录拉 `GET /members/{id}/subordinate` 写入 `managed_user_ids`。模块管理员与超管在 AutoTask 内全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后新列与下属缓存才对运行中的进程生效。 |
+| 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
 
 ## 5. 未决问题
 
@@ -106,6 +108,8 @@
 17. **v4.0 阶段 1 已落地**：正式门户「天地伟业-国际-正式演练」已绑扫单/回签/收货 **1.1.0**（正式选择器）。演示 Binding 仍 1.0.x。下一步：Client 手动扫单验收；阶段 2 出正式建单+下合同（不设 dryRun），阶段 3 写步骤 + dryRun。
 18. **v5.0**：PRD 已扩。换人/换门户不准改 `.env` 和 Flow 源码。门户存密码；ERP/SDMS 地址进 Binding.config；Engine `mock_env` 去掉。探测脚本硬编码不纳入本期。
 19. **正式 Flow 演练/上线**：现行说明见 v4.1 SOP。扫描正式 **1.1.3**（Binding 已写 `searches`，无包内默认 PO）、提交正式 **1.1.4 dryRun** 已绑。选文件后必须点弹窗「确定」才识别。dryRun 对「提交审核」做 trial click，不真点。填交期/签章正式包未绑。
+20. **v5.1**：Auth `/me` 管理员字段与下属接口已到。代码已接：`is_task_admin` 全放开；登录缓存下属。迁移 `a7e4b2c81d09` **已执行**（`g3b8e2a91c40` → `a7e4b2c81d09`，当前 head）。**需重启唯一 Task 4520**。
+21. **v5.2 调度中心（Binding 任务）**：迁移与回填已完成。4520 已于 2026-08-25 09:48 换成 `JobScheduler`。正式演练回签 `*/5` 会到点开火，但无待回签候选时不建任务。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -228,7 +232,53 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-08-25
+
+- **正式演练回签 `*/5` 看起来没触发**：JobScheduler 已在 09:48 进程上运行。同门户扫单 `*/5` 曾于 10:15/10:20 真正建出任务（随后扫单 job 已停用）。回签 job `5517f5e8-…` 启用、cron=`*/5 * * * *`、Binding 为 `srm_check_reply_status`。客户订单 `POJS2607170008` 停在 `SDMS_CREATED`，候选=0，所以详情「执行任务」为空。已补开火日志与详情空列表说明。要把实例推进到待回签才会出现探测任务。
+- **v5.1 权限接上 Auth 接口**：`/me.is_super_admin` / `is_task_admin`；`GET /api/v1/members/{id}/subordinate` 登录写入 `managed_user_ids`。模块管理员 AutoTask 内全放开。
+- **v5.1 迁库（用户授权）**：已执行 `alembic upgrade head`（`g3b8e2a91c40` → `a7e4b2c81d09`）。`autotask_user_cache.is_task_admin` 已建。**未**重启 4520。
+- **v5.1 归属人全员接口**：Auth OpenAPI 已有 `GET /api/v1/orgs/{org_id}/members`。模块管理员走这条；人名在 `user_name`、工号在 `username`，归属必须用 `user_id` 不能用成员 `id`。下拉展示「姓名（工号）」可搜索。
+- **调度中心 v5.2 回填 Binding JSON**：用户授权维护 `config.schedule`。已执行 `backfill_scheduler_jobs.py --apply`，6 条 ENABLED 扫单/回签 Binding 写入默认 schedule，并插入 `scheduler_jobs`。扫单默认 `0 8 * * *` / 扫单；回签默认 `*/30 * * * *` / 回签轮询。门户：芯云test、国际test、芯云-正式演练（各扫单+回签）。库中无「天地伟业-国际-正式演练」扫单/回签 Binding。4520 未重启。
+- **扫单排队卡死**：用户要求去掉「扫单：SRM 待签章订单」排队中任务。旧 4520 全局扫单循环仍在跑，约每 2 分钟插一条，堆积 268 条 QUEUED。已走 `cancel_task` 全部取消（任务+Run）。当前 inflight=0。未重启 4520，旧循环可能继续插新单。
+
+### 2026-08-24
+
+- **调度中心 v5.2（扫单/回签轮询迁入 autotask_settings，cron 化热更新）**
+  - PRD：`prd/AutoTask v5.2 调度中心.md`（定稿，含范围/语义/验收/待办）。
+  - 痛点：扫单/回签轮询开关与时间参数在 `.env`，改一次要上服务器改文件并重启 Task。
+  - Task：新增 `scheduler_config_service`（读写 `autotask_settings`，键 `scheduler.signPoll.*` / `scheduler.scan.*`；表缺值回退 `.env` 默认）。`SignPollScheduler` / `ScanScheduler` 常驻启动，每个 tick 查库读配置；`main.py` 不再按 `.env` 开关决定是否创建。新增 `GET/PUT /api/v1/autotask/settings/schedulers`（门户 admin/operator/超管可改，写审计）。`SUCCESSOR_JOB_*` 仍走 `.env` 未动。
+  - 旧 `.env` 键（`SIGN_POLL_JOB_ENABLED` / `SIGN_POLL_INTERVAL_SECONDS` / `SCAN_JOB_ENABLED` / `SCAN_JOB_HOUR` / `SCAN_JOB_MINUTE`）降级为首次回退默认，**服务重启后即以表为准**。
+  - **迭代 2（同日）：调度模型统一为 5 段 cron（分 时 日 月 周，本地时间）**——上一版"回签=间隔秒、扫单=每天时刻"表达不了"每半小时扫一次"这类需求。改动：
+    - 新增 `cron_schedule.py`：自研解析器（`*`、`*/n`、`a-b`、`a-b/n`、`n/m`、逗号列表；dom/dow 双受限按 Vixie OR；7=周日；`previous_before` 支持补跑判断），无第三方依赖。
+    - 配置键改为 `scheduler.signPoll.enabled/cron` + `scheduler.scan.enabled/cron`（上一版 interval/hour/minute 键从未落库，直接替换无迁移负担）。`.env` 回退自动折算：`SIGN_POLL_INTERVAL_SECONDS=1800` → `*/30 * * * *`，`SCAN_JOB_HOUR/MINUTE` → `M H * * *`。
+    - 两调度器统一"30s tick + `_next_fire` 到点触发"：改 cron 只换计划不重启；到点后 10 分钟内重启会补触发一次（防停机错过当天扫单）；开关关闭清计划，重开即时按新计划走。
+    - API/DTO：`GET/PUT` 返回并校验 cron（解析失败 422），响应含 `next_run_at`（下次触发预览）。
+    - Client 调度中心卡片改「开关 + 预设下拉（每15/30分钟、每1/2小时、每天8点、每天8&14点、工作日8点）+ 自定义 cron 输入 + 下次触发展示」，两个调度器同一套交互。
+    - 验证：Task pytest 214 passed（含 cron 解析/配置回退/调度器触发与热更 24 项）；Client tsc 无本次改动文件错误。
+  - **迭代 3（同日）：Client 修复三连**——① `fromDTO` 读 snake_case 但 `mapItemResponse` 已转 camelCase，导致 `Cannot read properties of undefined (reading 'enabled')`，DTO 改 camelCase；② 调度中心两个 Select 缺 `SelectTrigger/SelectContent` 包裹层，整页崩溃（`SelectItem must be used within SelectContent`），已补齐；③ 加 custom 模式状态 + 前端 cron 解析器（`features/settings/cron.ts`，与后端同语义）实现「自定义」切换与下次触发实时预览。
+  - **未决**：用户现场反馈自定义模式/实时预览仍不生效；已确认 4520 运行 cron 版代码（openapi `SignPollSettings` 含 `cron` 字段）、Vite 5173 分发新版模块。新增组件测试 `scheduler-settings.test.tsx` 7 例 4 过 3 挂，挂点为无障碍关联（combobox/按钮无可访问名，`Field` 的 Label 未 htmlFor 关联、保存按钮文案为「保存调度配置」与用例不符），下一步修 Label 关联与 aria 后复测。
+  - 待办：重启唯一 Task 4520 后生效；首次 PUT 前表中无这些键，GET 返回 `.env` 折算值。
+  - **迭代 4（同日，按现场口径收窄）**：调度配置是全局一份，页面读写不再跟登录组织走。非法/无下次触发的 cron 保存拒绝。Client 补 Label/aria。不按租户做多套调度。
+  - **迭代 5（同日，准时触发）**：`*/5` 现场 15:04:27 提前跑（加载 cron 把 10 分钟内的上个到点当补跑）、15:10:22 延后跑（固定每 30 秒才醒）。已去掉补跑；到点前按剩余秒数睡醒。改完需重启 4520。
+  - **迭代 6（同日，需求重定）**：全局两开关方案废弃。定时器挂 Binding id；`config.schedule` 仅首次插入默认 cron；调度中心列表/详情维护变量并看任务日志；用户不新建。PRD 已整篇替换；计划 `.cursor/plans/v5.2_调度中心_binding任务.plan.md`。代码未改；DDL 未执行。
+  - **迭代 7（同日，按 Binding 任务方案开发中）**：落地 `scheduler_jobs` 模型与 Alembic `g3b8e2a91c40`。保存 Binding 时按 `config.schedule` 首次插入 job；再改 JSON 不覆盖 cron；停用 Binding 必停 job，重新启用 Binding 不自动打开 job。`JobScheduler` 替换全局扫单/回签循环，按门户开火。REST `GET/PATCH /scheduler-jobs` 与任务日志。Client 管理中心「调度中心」列表/详情，无新建按钮；设置页全局调度卡片已撤。回填脚本 `scripts/backfill_scheduler_jobs.py` 默认 dry-run。
+  - **迭代 8（同日，用户授权迁库）**：已执行 `alembic upgrade head`（`f1a9c3e74b20` → `g3b8e2a91c40`）。`scheduler_jobs` 已建（含 `uq_scheduler_jobs_binding_id`）。**未** `--apply` 回填；**未**重启 4520。
+- **v5.1 权限代码（管人接口后补）**
+  - Task：门户加 `owner_user_id`；登录缓存 `managed_user_ids`（Auth `/me` 尚未返回时当空）。
+  - 列表/详情按归属人过滤：admin/超管全开；其他人只看自己名下。停用 grants 鉴权。
+  - 任务/对账单/人工操作/看板补齐同一套可见性；改归属人由 Task 校验。
+  - 归属人下拉：普通人只有自己；admin 走组织成员接口。
+  - 归档工号改走门户归属人，去掉写死工号。
+  - Client：门户列表/详情/编辑展示归属人。
+  - 迁移 `f1a9c3e74b20`：**用户授权后已执行** `alembic upgrade head`（`e2b7c14a3d05` → `f1a9c3e74b20`，当前 head）。已有门户回填 `owner_user_id = created_by`；`autotask_user_cache` 增加 `managed_user_ids`。未重启 Task。
+  - 验证：Task pytest 60 passed（permission / portal / user_sync / process_instances）。
+
 ### 2026-08-21
+
+- **v5.1 权限定稿（文档）**
+  - 门户只认 `owner_user_id`；能看 = 归属人是自己或自己管的人。`portal_org_role=admin` 全放开。停用 `portal_access_grants` 鉴权。任务/订单/对账单同一过滤。
+  - Auth `/me` 需后补「管理的人」；登录写入 Task 缓存。未补前非 admin 只看自己名下。
+  - 加列须授权才迁库。未改代码。
 
 - **扫单 Binding `searches` 落地（1.1.3）**
   - 问题：SOP 写 Binding 控样例单号，实际 1.1.2 把 `POJS2607170008` 写死在 `flow.py`；正式 Binding 也从未写入 `searches`。Task 租约原先只传 `portalUrl` / `browserSession` / `dryRun`。

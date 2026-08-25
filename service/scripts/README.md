@@ -19,6 +19,26 @@ cd d:\work_space260811\autotask-workspace\service
 
 `Application startup complete` 不够。那只说明应用初始化完了，还没占上端口。
 
+## 回填 Binding 调度任务（v5.2）
+
+脚本：`backfill_scheduler_jobs.py`
+
+找出扫单/回签模板且 ENABLED 的 Binding：若 config 无 `schedule`，dry-run 打印将写入的 JSON；`--apply` 时写入 config 并走 `sync_scheduler_job_from_binding`。
+
+默认扫单：`cron=0 8 * * *`，`actionName=扫单`。回签：`cron=*/30 * * * *`，`actionName=回签轮询`。
+
+**必须先授权 `alembic upgrade` 建 `scheduler_jobs` 表，再 `--apply`。默认不加 `--apply`。**
+
+```powershell
+cd d:\work_space260811\autotask-workspace\service
+
+# 预览
+.\.venv\Scripts\python.exe scripts\backfill_scheduler_jobs.py
+
+# 写库（建表授权之后）
+.\.venv\Scripts\python.exe scripts\backfill_scheduler_jobs.py --apply
+```
+
 ## 正式门户：对账单「收货应付」能否点（只读，不点提交审核）
 
 脚本：`run_official_stmt_payable_click.py`
@@ -48,6 +68,8 @@ cd d:\work_space260811\autotask-workspace\service
 .\.venv\Scripts\python.exe scripts\seed_tiandi_drill.py --yes POJS2607170008
 ```
 
+
+
 ## 天地伟业 v4.0 演练种子（正式站已有未对账 → 待上传发票）
 
 脚本：`seed_official_unchecked_statement.py`
@@ -64,6 +86,8 @@ cd d:\work_space260811\autotask-workspace\service
 # 写库
 .\.venv\Scripts\python.exe scripts\seed_official_unchecked_statement.py --yes --check-date 2026-04-01 --check-amount 5768205.32
 ```
+
+
 
 ## 刷回待回签（复测回签轮询）
 
@@ -100,7 +124,7 @@ cd d:\work_space260811\autotask-workspace\service
 
 # 指定单号预览 / 删除（可多个）
 .\.venv\Scripts\python.exe scripts\clear_process_instances.py POJS2607240005
-.\.venv\Scripts\python.exe scripts\clear_process_instances.py --yes POJS2607240005 POJS2607240006
+.\.venv\Scripts\python.exe scripts\clear_process_instances.py --yes POJS2607170008 POJS2607240006
 ```
 
 

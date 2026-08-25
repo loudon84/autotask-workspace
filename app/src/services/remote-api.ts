@@ -41,6 +41,7 @@ import {
   deletePortalAccount as remoteDeletePortalAccount,
   getPortalAccount as remoteGetPortalAccount,
   listPortalAccounts as remoteListPortalAccounts,
+  listOwnerCandidates as remoteListOwnerCandidates,
   testOpenPortalAccount as remoteTestOpenPortalAccount,
   updatePortalAccount as remoteUpdatePortalAccount,
 } from "./autotask-api/portal-accounts";
@@ -456,6 +457,8 @@ export const remoteApi = {
   getSrmPortals: async (): Promise<PortalAccount[]> =>
     remoteListPortalAccounts(),
 
+  listOwnerCandidates: async () => remoteListOwnerCandidates(),
+
   getSrmPortalById: async (id: string): Promise<PortalAccount | undefined> =>
     remoteGetPortalAccount(id),
 
@@ -694,6 +697,51 @@ export const remoteApi = {
       query: taskId ? { task_id: taskId } : undefined,
     });
     return mapListResponse<AuditLog>(data);
+  },
+
+  listSchedulerJobs: async (
+    enabled?: boolean
+  ): Promise<import("@/features/schedulers/types").SchedulerJob[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/scheduler-jobs",
+      query: enabled === undefined ? undefined : { enabled },
+    });
+    return mapListResponse(data);
+  },
+
+  getSchedulerJob: async (
+    id: string
+  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/scheduler-jobs/${id}`,
+    });
+    return mapItemResponse(data);
+  },
+
+  patchSchedulerJob: async (
+    id: string,
+    patch: { enabled?: boolean; cron?: string }
+  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "PATCH",
+      path: `/scheduler-jobs/${id}`,
+      body: patch,
+    });
+    return mapItemResponse(data);
+  },
+
+  listSchedulerJobTasks: async (
+    id: string,
+    page = 1
+  ): Promise<import("@/features/schedulers/types").SchedulerJobTaskPage> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/scheduler-jobs/${id}/tasks`,
+      query: { page, pageSize: 20 },
+    });
+    return mapItemResponse(data);
   },
 
   getSettings: async (): Promise<AppSettings> => {

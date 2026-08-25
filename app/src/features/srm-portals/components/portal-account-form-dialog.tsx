@@ -22,6 +22,9 @@ import {
   useCreatePortalAccount,
   useUpdatePortalAccount,
 } from "@/features/srm-portals/api/use-portal-account-mutations";
+import { useOwnerCandidates } from "@/features/srm-portals/api/use-owner-candidates";
+import { OwnerPicker } from "@/features/srm-portals/components/owner-picker";
+import { useAuth } from "@/modules/auth/AutoTaskAuthProvider";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
@@ -50,6 +53,7 @@ type FormState = {
   clientSessionPartition: string;
   credentialRef: string;
   status: PortalStatus;
+  ownerUserId: string;
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -67,6 +71,7 @@ const defaultFormState: FormState = {
   clientSessionPartition: "",
   credentialRef: "",
   status: "ENABLED",
+  ownerUserId: "",
 };
 
 function portalToFormState(portal: PortalAccount): FormState {
@@ -83,6 +88,7 @@ function portalToFormState(portal: PortalAccount): FormState {
     clientSessionPartition: portal.clientSessionPartition,
     credentialRef: "",
     status: portal.status,
+    ownerUserId: portal.ownerUserId ?? "",
   };
 }
 
@@ -153,6 +159,11 @@ export function PortalAccountFormDialog({
 
   const createMutation = useCreatePortalAccount();
   const updateMutation = useUpdatePortalAccount();
+  const { authState } = useAuth();
+  const currentUserId = authState.user?.id ?? "";
+  const currentUserName = authState.user?.displayName ?? "";
+  const currentUsername = authState.user?.username ?? "";
+  const { data: ownerCandidates = [] } = useOwnerCandidates(open);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -164,9 +175,9 @@ export function PortalAccountFormDialog({
     if (mode === "edit" && portal) {
       setForm(portalToFormState(portal));
     } else {
-      setForm(defaultFormState);
+      setForm({ ...defaultFormState, ownerUserId: currentUserId });
     }
-  }, [open, mode, portal]);
+  }, [open, mode, portal, currentUserId]);
 
   const updateField = <K extends keyof FormState>(
     key: K,
@@ -219,6 +230,7 @@ export function PortalAccountFormDialog({
             form.clientSessionPartition.trim() ||
             `persist:portal-${form.erpEntityCode.toLowerCase()}`,
           status: form.status,
+          ownerUserId: form.ownerUserId || currentUserId,
         },
       },
       {
@@ -433,6 +445,25 @@ export function PortalAccountFormDialog({
                 {fieldErrors.clientSessionPartition}
               </p>
             )}
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label>归属人 *</Label>
+            <OwnerPicker
+              candidates={
+                ownerCandidates.length > 0
+                  ? ownerCandidates
+                  : [
+                      {
+                        userId: currentUserId,
+                        name: currentUserName || "当前用户",
+                        username: currentUsername,
+                      },
+                    ]
+              }
+              onChange={(userId) => updateField("ownerUserId", userId)}
+              value={form.ownerUserId || currentUserId}
+            />
           </div>
 
           <DialogFooter className="sm:col-span-2">

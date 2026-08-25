@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.models.base import not_deleted
 from app.models.enums import PortalAccountStatus, PortalPermission
 from app.models.portal_access_grant import PortalAccessGrant
@@ -18,11 +18,18 @@ from app.schemas.portal_account import (
     PortalAccountResponse,
     PortalAccountUpdate,
     PortalListPageResponse,
+    PortalOwnerCandidate,
     PortalTestOpenResponse,
 )
 from app.services import audit_service
 from app.services.json_utils import dumps_json
-from app.services.permission_service import list_accessible_portal_ids
+from app.services.permission_service import (
+    effective_owner_user_id,
+    is_scope_admin,
+    list_accessible_portal_ids,
+    visible_owner_ids,
+)
+from app.services.user_sync import fetch_org_members, fetch_subordinates
 
 _DEFAULT_CREATOR_PERMISSIONS = [
     PortalPermission.PORTAL_VIEW,
@@ -67,6 +74,106 @@ def _apply_keyword_filter(query, keyword: str | None):
             PortalAccount.portal_url.ilike(pattern),
         )
     )
+
+
+async def _owner_name_map(db: AsyncSession, user_ids: set[str]) -> dict[str, str]:
+    ids = {item for item in user_ids if item}
+    if not ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(UserCache).where(UserCache.user_id.in_(ids), not_deleted(UserCache))
+        )
+    ).scalars().all()
+    return {row.user_id: row.name for row in rows}
+
+
+def _to_portal_response(account: PortalAccount, names: dict[str, str]) -> PortalAccountResponse:
+    owner_id = effective_owner_user_id(account)
+    payload = PortalAccountResponse.model_validate(account)
+    return payload.model_copy(
+        update={
+            "owner_user_id": owner_id,
+            "owner_name": names.get(owner_id, ""),
+        }
+    )
+
+
+async def build_portal_response(db: AsyncSession, account: PortalAccount) -> PortalAccountResponse:
+    names = await _owner_name_map(db, {effective_owner_user_id(account)})
+    return _to_portal_response(account, names)
+
+
+async def list_owner_candidates(
+    db: AsyncSession,
+    user: UserCache,
+    token: str | None = None,
+) -> list[PortalOwnerCandidate]:
+    """模块管理员/超管走组织成员全员；其他人走自己 + 下属。"""
+    if is_scope_admin(user) and token:
+        members = await fetch_org_members(token, user.current_org_id or "")
+        if members:
+            return [
+                PortalOwnerCandidate(
+                    user_id=item["user_id"],
+                    name=item.get("name") or "",
+                    username=item.get("username") or "",
+                )
+                for item in members
+            ]
+    candidates = [
+        PortalOwnerCandidate(
+            user_id=user.user_id,
+            name=user.name or "",
+            username="",
+        )
+    ]
+    seen = {user.user_id}
+    if token:
+        subordinates = await fetch_subordinates(token, user.user_id)
+        if subordinates:
+            for item in subordinates:
+                member_id = item["user_id"]
+                if member_id in seen:
+                    continue
+                seen.add(member_id)
+                candidates.append(
+                    PortalOwnerCandidate(
+                        user_id=member_id,
+                        name=item.get("name") or "",
+                        username=item.get("username") or "",
+                    )
+                )
+            return candidates
+    owner_ids = visible_owner_ids(user)
+    names = await _owner_name_map(db, owner_ids)
+    names.setdefault(user.user_id, user.name or "")
+    for user_id in sorted(
+        owner_ids, key=lambda item: (0 if item == user.user_id else 1, item)
+    ):
+        if user_id in seen:
+            continue
+        seen.add(user_id)
+        candidates.append(
+            PortalOwnerCandidate(user_id=user_id, name=names.get(user_id, ""))
+        )
+    return candidates
+
+
+async def _assert_owner_candidate(
+    db: AsyncSession,
+    user: UserCache,
+    owner_user_id: str,
+    token: str | None = None,
+) -> None:
+    if is_scope_admin(user):
+        return
+    candidates = await list_owner_candidates(db, user, token)
+    if owner_user_id not in {item.user_id for item in candidates}:
+        raise ForbiddenError(
+            message="不能把门户转给该用户",
+            message_key="errors.autotask.portal_owner_not_allowed",
+        )
 
 
 async def list_portal_accounts(
@@ -114,8 +221,12 @@ async def list_portal_accounts(
         .limit(size)
     )
     accounts = list(result.scalars().all())
+    names = await _owner_name_map(
+        db,
+        {effective_owner_user_id(account) for account in accounts},
+    )
     return PortalListPageResponse(
-        items=[PortalAccountResponse.model_validate(account) for account in accounts],
+        items=[_to_portal_response(account, names) for account in accounts],
         total=total,
         page=current_page,
         page_size=size,
@@ -175,6 +286,7 @@ async def create_portal_account(
         rpa_profile_id=body.rpa_profile_id,
         status=status,
         owner_dept_id=body.owner_dept_id,
+        owner_user_id=user.user_id,
         created_by=user.user_id,
     )
 
@@ -213,10 +325,18 @@ async def update_portal_account(
     account_id: str,
     body: PortalAccountUpdate,
     actor: UserCache,
+    token: str | None = None,
 ) -> PortalAccount:
     account = await get_portal_account(db, tenant_id, account_id)
     previous_status = account.status
     updates = body.model_dump(exclude_unset=True, by_alias=False)
+    if "owner_user_id" in updates:
+        next_owner = str(updates.get("owner_user_id") or "").strip()
+        if not next_owner:
+            updates.pop("owner_user_id")
+        else:
+            updates["owner_user_id"] = next_owner
+            await _assert_owner_candidate(db, actor, next_owner, token)
     if "credential_ref" in updates and not str(updates.get("credential_ref") or "").strip():
         updates.pop("credential_ref")
     for key in ("business_entity", "ou"):

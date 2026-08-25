@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, Query
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
 from app.core.security import (
+    bearer_scheme,
     get_current_user,
     require_permission,
     require_portal_manage_access,
@@ -18,6 +20,7 @@ from app.schemas.portal_account import (
     PortalAccountResponse,
     PortalAccountUpdate,
     PortalListPageResponse,
+    PortalOwnerCandidate,
     PortalTestOpenResponse,
 )
 from app.services import portal_account_service
@@ -58,7 +61,19 @@ async def create_portal_account(
     require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
     account = await portal_account_service.create_portal_account(db, tenant_id, user, body)
-    return ApiResponse(data=PortalAccountResponse.model_validate(account))
+    return ApiResponse(data=await portal_account_service.build_portal_response(db, account))
+
+
+@router.get("/owner-candidates", response_model=ApiResponse[list[PortalOwnerCandidate]])
+async def list_owner_candidates(
+    db: AsyncSession = Depends(get_db),
+    user: UserCache = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+):
+    require_tenant_access(user)
+    token = credentials.credentials if credentials else None
+    candidates = await portal_account_service.list_owner_candidates(db, user, token)
+    return ApiResponse(data=candidates)
 
 
 @router.get("/{account_id}", response_model=ApiResponse[PortalAccountResponse])
@@ -70,7 +85,7 @@ async def get_portal_account(
     tenant_id = require_tenant_access(user)
     await require_permission(db, user, account_id, PortalPermission.PORTAL_VIEW)
     account = await portal_account_service.get_portal_account(db, tenant_id, account_id)
-    return ApiResponse(data=PortalAccountResponse.model_validate(account))
+    return ApiResponse(data=await portal_account_service.build_portal_response(db, account))
 
 
 @router.patch("/{account_id}", response_model=ApiResponse[PortalAccountResponse])
@@ -79,11 +94,15 @@ async def update_portal_account(
     body: PortalAccountUpdate,
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     tenant_id = require_tenant_access(user)
     await require_permission(db, user, account_id, PortalPermission.PORTAL_EDIT)
-    account = await portal_account_service.update_portal_account(db, tenant_id, account_id, body, user)
-    return ApiResponse(data=PortalAccountResponse.model_validate(account))
+    token = credentials.credentials if credentials else None
+    account = await portal_account_service.update_portal_account(
+        db, tenant_id, account_id, body, user, token
+    )
+    return ApiResponse(data=await portal_account_service.build_portal_response(db, account))
 
 
 @router.delete("/{account_id}", response_model=ApiResponse[None])

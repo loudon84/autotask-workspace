@@ -17,6 +17,9 @@ export interface PortalAccount {
   clientOpenMode: ClientOpenMode;
   clientSessionPartition: string;
   status: PortalStatus;
+  ownerUserId: string;
+  ownerName: string;
+  ownerUsername?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -24,9 +27,15 @@ export interface PortalAccount {
 
 export type CreatePortalAccountInput = Omit<
   PortalAccount,
-  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt"
+  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt" | "ownerUserId" | "ownerName"
 > & {
   credentialRef?: string;
+};
+
+export type PortalOwnerCandidate = {
+  userId: string;
+  name: string;
+  username?: string;
 };
 
 export type UpdatePortalAccountInput = Partial<
@@ -43,6 +52,7 @@ export type UpdatePortalAccountInput = Partial<
     | "erpEntityCode"
     | "businessEntity"
     | "ou"
+    | "ownerUserId"
   >
 > & {
   credentialRef?: string;

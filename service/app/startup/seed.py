@@ -117,6 +117,7 @@ async def _seed_portal_accounts(db: AsyncSession) -> tuple[int, int]:
                 rpa_profile_id=item.get("rpaProfileId"),
                 status=item.get("status", "ENABLED"),
                 owner_dept_id=item.get("ownerDeptId"),
+                owner_user_id=item.get("ownerUserId") or item.get("createdBy", DEFAULT_USER_ID),
                 created_by=item.get("createdBy", DEFAULT_USER_ID),
             )
         )

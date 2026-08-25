@@ -542,6 +542,7 @@ async def list_bills(
     *,
     check_status: str | None = None,
     stage: str | None = None,
+    accessible_portal_ids: list[str] | None = None,
 ) -> list[tuple[StatementBill, ProcessInstance | None]]:
     query = (
         select(StatementBill, ProcessInstance)
@@ -561,6 +562,11 @@ async def list_bills(
             ProcessInstance.stage == stage,
             not_deleted(ProcessInstance),
         )
+    from app.services.permission_service import apply_accessible_portal_filter
+
+    query = apply_accessible_portal_filter(
+        query, StatementBill.portal_account_id, accessible_portal_ids
+    )
     result = await db.execute(query.order_by(StatementBill.created_at.desc()))
     return [(bill, instance) for bill, instance in result.all()]
 

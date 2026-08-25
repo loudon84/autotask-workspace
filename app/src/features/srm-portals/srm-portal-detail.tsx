@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePortalAccount } from "@/features/srm-portals/api/use-portal-accounts";
 import { PortalAccountFormDialog } from "@/features/srm-portals/components/portal-account-form-dialog";
+import { formatOwnerLabel } from "@/features/srm-portals/owner-label";
 import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-portal-write-permission";
 import { WorkflowBindingManager } from "@/features/workflows/workflow-binding-manager";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -97,6 +98,14 @@ export function SrmPortalDetailPage({ portalId }: { portalId: string }) {
           <Field label="门户名称" value={portal.portalName} />
           <Field label="门户地址" value={portal.portalUrl} />
           <Field label="登录账号" value={portal.loginAccount || "-"} />
+          <Field
+            label="归属人"
+            value={
+              formatOwnerLabel(portal.ownerName, portal.ownerUsername) ||
+              portal.ownerUserId ||
+              "—"
+            }
+          />
           <Field
             label="打开方式"
             value={openModeLabels[portal.clientOpenMode]}

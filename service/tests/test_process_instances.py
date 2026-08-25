@@ -280,9 +280,29 @@ async def test_archive_requires_sdms_username() -> None:
 
 
 @pytest.mark.asyncio
-async def test_resolve_archive_username_uses_creator(monkeypatch: pytest.MonkeyPatch) -> None:
-    """轮询无登录人时，用流程实例创建人的工号即可。"""
-    instance = _instance(created_by="creator-1")
+async def test_resolve_archive_username_uses_portal_owner(monkeypatch: pytest.MonkeyPatch) -> None:
+    """轮询无登录人时，用门户归属人工号，而不是实例创建人。"""
+    instance = _instance(created_by="creator-1", portal_account_id="portal-1")
+    portal = MagicMock()
+    portal.owner_user_id = "owner-1"
+    portal.created_by = "creator-1"
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result(portal))
+
+    async def _owner_username(_db, user_id):
+        assert user_id == "owner-1"
+        return "OWNER-JOB-ID"
+
+    monkeypatch.setattr(svc, "username_from_user_cache", _owner_username)
+    username = await svc._resolve_archive_username(db, instance, "")
+    assert username == "OWNER-JOB-ID"
+
+
+@pytest.mark.asyncio
+async def test_resolve_archive_username_uses_creator_without_portal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _instance(created_by="creator-1", portal_account_id=None)
 
     async def _creator_username(_db, user_id):
         assert user_id == "creator-1"
@@ -294,16 +314,18 @@ async def test_resolve_archive_username_uses_creator(monkeypatch: pytest.MonkeyP
 
 
 @pytest.mark.asyncio
-async def test_resolve_archive_username_falls_back_to_hardcoded(monkeypatch: pytest.MonkeyPatch) -> None:
-    """创建人工号也没有时，兜底固定工号，避免轮询上传缺 username。"""
-    instance = _instance(created_by="scripts/seed_sign_poll_test")
+async def test_resolve_archive_username_empty_when_cache_misses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """查不到工号时返回空，不再写死兜底工号。"""
+    instance = _instance(created_by="scripts/seed_sign_poll_test", portal_account_id=None)
 
     async def _empty_username(_db, _user_id):
         return ""
 
     monkeypatch.setattr(svc, "username_from_user_cache", _empty_username)
     username = await svc._resolve_archive_username(MagicMock(), instance, "")
-    assert username == svc._FALLBACK_ARCHIVE_SDMS_USERNAME
+    assert username == ""
 
 
 @pytest.mark.asyncio

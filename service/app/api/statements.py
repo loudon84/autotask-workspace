@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_db
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.core.security import bearer_scheme, get_current_user, require_tenant_access
+from app.core.security import bearer_scheme, get_current_user, require_portal_visible, require_tenant_access
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
+from app.models.enums import PortalPermission
 from app.models.rpa_run import RpaRun
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
@@ -27,6 +28,7 @@ from app.schemas.statement import (
     StatementTaskResponse,
 )
 from app.services import process_instance_service, statement_service
+from app.services.permission_service import list_accessible_portal_ids
 from app.services.user_sync import resolve_login_username
 
 router = APIRouter()
@@ -36,6 +38,14 @@ _MAX_FILES = 10
 _MAX_BYTES = 20 * 1024 * 1024
 
 
+async def _require_bill_visible(
+    db: AsyncSession, user: UserCache, tenant_id: str, bill_id: str
+):
+    bill = await statement_service.get_bill(db, tenant_id, bill_id)
+    await require_portal_visible(db, user, bill.portal_account_id)
+    return bill
+
+
 @router.post("/query-receipts", response_model=ApiResponse[StatementTaskResponse])
 async def query_receipts(
     body: StatementQueryReceiptsRequest,
@@ -43,6 +53,7 @@ async def query_receipts(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await require_portal_visible(db, user, body.portal_account_id)
     task = await statement_service.query_receipts(
         db,
         tenant_id,
@@ -72,6 +83,7 @@ async def get_query_receipts_result(
     ).scalar_one_or_none()
     if task is None:
         raise NotFoundError(message="查询任务不存在", message_key="errors.autotask.task_not_found")
+    await require_portal_visible(db, user, task.portal_account_id)
     run = (
         await db.execute(
             select(RpaRun)
@@ -108,6 +120,7 @@ async def generate_statement(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await require_portal_visible(db, user, body.portal_account_id)
     result = await statement_service.generate_statement(
         db,
         tenant_id,
@@ -127,6 +140,7 @@ async def retry_generate(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    bill = await _require_bill_visible(db, user, tenant_id, bill_id)
     result = await statement_service.retry_generate(db, tenant_id, bill_id, actor=user.user_id)
     return ApiResponse(data=StatementGenerateResponse.model_validate(result))
 
@@ -139,8 +153,15 @@ async def list_statements(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    accessible_ids = await list_accessible_portal_ids(
+        db, user, tenant_id, PortalPermission.PORTAL_VIEW
+    )
     rows = await statement_service.list_bills(
-        db, tenant_id, check_status=check_status, stage=stage
+        db,
+        tenant_id,
+        check_status=check_status,
+        stage=stage,
+        accessible_portal_ids=accessible_ids,
     )
     return ApiResponse(
         data=[statement_service.to_list_item(bill, instance) for bill, instance in rows]
@@ -154,7 +175,7 @@ async def get_statement(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
-    bill = await statement_service.get_bill(db, tenant_id, bill_id)
+    bill = await _require_bill_visible(db, user, tenant_id, bill_id)
     instance = await statement_service.get_bill_instance(db, bill.process_instance_id)
     sub_tasks = await process_instance_service.list_sub_tasks(db, bill.process_instance_id)
     history = await process_instance_service.list_stage_history(db, bill.process_instance_id)
@@ -209,6 +230,7 @@ async def upload_invoice_files(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_bill_visible(db, user, tenant_id, bill_id)
     file_paths = await _save_upload_files(bill_id, files)
     task = await statement_service.upload_invoice(
         db, tenant_id, bill_id, file_paths=file_paths, actor=user.user_id
@@ -224,6 +246,7 @@ async def upload_invoice_paths(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_bill_visible(db, user, tenant_id, bill_id)
     task = await statement_service.upload_invoice(
         db, tenant_id, bill_id, file_paths=body.file_paths, actor=user.user_id
     )
@@ -239,6 +262,7 @@ async def submit_review(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_bill_visible(db, user, tenant_id, bill_id)
     username = await resolve_login_username(
         credentials.credentials if credentials else None,
         user,
@@ -261,5 +285,6 @@ async def cancel_statement(
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
+    await _require_bill_visible(db, user, tenant_id, bill_id)
     bill = await statement_service.cancel_statement(db, tenant_id, bill_id, actor=user.user_id)
     return ApiResponse(data=StatementBillListItem.model_validate(bill))

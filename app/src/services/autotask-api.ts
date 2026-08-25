@@ -21,6 +21,10 @@ import type {
   ProcessSignPollRunResult,
 } from "@/types/process-instance";
 import type { RpaComponent } from "@/types/rpa-component";
+import type {
+  SchedulerJob,
+  SchedulerJobTaskPage,
+} from "@/features/schedulers/types";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
 import type { Worker } from "@/types/worker";
@@ -162,6 +166,16 @@ export const autotaskApi = {
       }
       throw new Error("当前模式不支持删除门户");
     },
+    listOwnerCandidates: () => {
+      const api = pickApi();
+      if (
+        "listOwnerCandidates" in api &&
+        typeof api.listOwnerCandidates === "function"
+      ) {
+        return api.listOwnerCandidates();
+      }
+      return Promise.resolve([]);
+    },
     testOpen: (id: string): Promise<PortalAccount | undefined> => {
       const api = pickApi();
       if (
@@ -250,6 +264,55 @@ export const autotaskApi = {
     get: (): Promise<AppSettings> => pickApi().getSettings(),
     update: (patch: Partial<AppSettings>): Promise<AppSettings> =>
       pickApi().updateSettings(patch),
+  },
+
+  schedulerJobs: {
+    list: (enabled?: boolean): Promise<SchedulerJob[]> => {
+      const api = pickApi();
+      if (
+        "listSchedulerJobs" in api &&
+        typeof api.listSchedulerJobs === "function"
+      ) {
+        return api.listSchedulerJobs(enabled);
+      }
+      return Promise.resolve([]);
+    },
+    get: (id: string): Promise<SchedulerJob> => {
+      const api = pickApi();
+      if (
+        "getSchedulerJob" in api &&
+        typeof api.getSchedulerJob === "function"
+      ) {
+        return api.getSchedulerJob(id);
+      }
+      throw new Error("当前模式不支持读取调度任务");
+    },
+    patch: (
+      id: string,
+      patch: { enabled?: boolean; cron?: string }
+    ): Promise<SchedulerJob> => {
+      const api = pickApi();
+      if (
+        "patchSchedulerJob" in api &&
+        typeof api.patchSchedulerJob === "function"
+      ) {
+        return api.patchSchedulerJob(id, patch);
+      }
+      throw new Error("当前模式不支持更新调度任务");
+    },
+    listTasks: (
+      id: string,
+      page = 1
+    ): Promise<SchedulerJobTaskPage> => {
+      const api = pickApi();
+      if (
+        "listSchedulerJobTasks" in api &&
+        typeof api.listSchedulerJobTasks === "function"
+      ) {
+        return api.listSchedulerJobTasks(id, page);
+      }
+      return Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 });
+    },
   },
 
   rpaComponents: {

@@ -11,6 +11,8 @@ from app.core.config import settings
 from app.core.exceptions import ForbiddenError
 from app.models.base import not_deleted
 from app.models.user_cache import UserCache
+from app.services.json_utils import dumps_json
+from app.services.permission_service import extract_managed_user_ids
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,9 @@ async def _fetch_user_from_backend(token: str) -> dict:
     return body.get("data") or body
 
 
-def _upsert_user_cache(existing: UserCache | None, user_data: dict) -> UserCache:
+def _upsert_user_cache(
+    existing: UserCache | None, user_data: dict, managed_ids: list[str]
+) -> UserCache:
     now = datetime.now(UTC)
     org_role = user_data.get("org_role") or user_data.get("role")
     fields = {
@@ -51,6 +55,8 @@ def _upsert_user_cache(existing: UserCache | None, user_data: dict) -> UserCache
         "org_role": org_role,
         "portal_org_role": user_data.get("portal_org_role"),
         "is_super_admin": bool(user_data.get("is_super_admin")),
+        "is_task_admin": bool(user_data.get("is_task_admin")),
+        "managed_user_ids": dumps_json(managed_ids),
         "synced_at": now,
     }
     if existing is None:
@@ -77,12 +83,21 @@ async def sync_user_from_token(db: AsyncSession, user_id: str, token: str) -> Us
             message_key="errors.auth.user_not_found_or_disabled",
         )
 
-    entity = _upsert_user_cache(cached, user_data)
+    managed_ids = await _load_managed_user_ids(token, user_id, user_data)
+    entity = _upsert_user_cache(cached, user_data, managed_ids)
     if cached is None:
         db.add(entity)
     await db.commit()
     await db.refresh(entity)
     return entity
+
+
+async def _load_managed_user_ids(token: str, user_id: str, user_data: dict) -> list[str]:
+    fallback = extract_managed_user_ids(user_data)
+    subordinates = await fetch_subordinates(token, user_id)
+    if subordinates is None:
+        return fallback
+    return [item["user_id"] for item in subordinates]
 
 
 async def resolve_login_username(token: str | None, user: UserCache) -> str:
@@ -114,6 +129,108 @@ async def username_from_user_cache(db: AsyncSession, user_id: str | None) -> str
     if cached is None:
         return ""
     return str(cached.name or "").strip()
+
+
+def _first_text(*values: object) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _parse_auth_people(payload: object) -> list[dict[str, str]]:
+    data = payload.get("data") if isinstance(payload, dict) else payload
+    if isinstance(data, dict):
+        data = data.get("items") or data.get("members") or data.get("list") or []
+    if not isinstance(data, list):
+        return []
+    people: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        user = item.get("user") if isinstance(item.get("user"), dict) else item
+        member_id = _first_text(
+            user.get("user_id"),
+            user.get("userId"),
+            item.get("user_id"),
+            item.get("userId"),
+            user.get("id"),
+            item.get("id"),
+        )
+        if not member_id or member_id in seen:
+            continue
+        seen.add(member_id)
+        people.append(
+            {
+                "user_id": member_id,
+                "name": _first_text(
+                    user.get("name"),
+                    user.get("user_name"),
+                    user.get("userName"),
+                    user.get("display_name"),
+                    user.get("displayName"),
+                    item.get("name"),
+                    item.get("user_name"),
+                ),
+                "username": _first_text(
+                    user.get("username"),
+                    user.get("employee_no"),
+                    user.get("employeeNo"),
+                    item.get("username"),
+                    item.get("employee_no"),
+                ),
+            }
+        )
+    return people
+
+
+async def fetch_subordinates(token: str, user_id: str) -> list[dict[str, str]] | None:
+    """登录人下属。失败返回 None（保留 /me 回退）；成功无下属返回 []。"""
+    actor = str(user_id or "").strip()
+    if not actor or not token:
+        return None
+    url = (
+        f"{settings.NODESKCLAW_BACKEND_URL.rstrip('/')}"
+        f"/api/v1/members/{actor}/subordinate"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
+            response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+    except Exception:
+        logger.warning("fetch subordinates failed for %s", actor, exc_info=True)
+        return None
+    if response.status_code >= 400:
+        logger.warning(
+            "subordinates failed: status=%s body=%s",
+            response.status_code,
+            response.text[:200],
+        )
+        return None
+    return _parse_auth_people(response.json())
+
+
+async def fetch_org_members(token: str, org_id: str) -> list[dict[str, str]]:
+    """组织成员，给 admin 归属人下拉用。Auth 接口形态做宽松解析。"""
+    org = str(org_id or "").strip()
+    if not org or not token:
+        return []
+    url = f"{settings.NODESKCLAW_BACKEND_URL.rstrip('/')}/api/v1/orgs/{org}/members"
+    try:
+        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
+            response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+    except Exception:
+        logger.warning("fetch org members failed for org %s", org, exc_info=True)
+        return []
+    if response.status_code >= 400:
+        logger.warning(
+            "org members failed: status=%s body=%s",
+            response.status_code,
+            response.text[:200],
+        )
+        return []
+    return _parse_auth_people(response.json())
 
 
 async def refresh_user_cache_background(user_id: str, token: str) -> None:

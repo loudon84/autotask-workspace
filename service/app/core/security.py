@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.core.deps import get_db
 from app.core.exceptions import ForbiddenError
 from app.models.user_cache import UserCache
-from app.services.permission_service import check_portal_permission
+from app.services.permission_service import check_portal_permission, is_scope_admin
 from app.services.user_sync import sync_user_from_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -97,14 +97,31 @@ async def require_permission(
         )
 
 
+async def require_portal_visible(
+    db: AsyncSession,
+    user: UserCache,
+    portal_account_id: str | None,
+) -> None:
+    from app.models.enums import PortalPermission
+
+    if is_scope_admin(user):
+        return
+    if not portal_account_id:
+        raise ForbiddenError(
+            message="无权限执行该操作",
+            message_key="errors.autotask.permission_denied",
+        )
+    await require_permission(db, user, portal_account_id, PortalPermission.PORTAL_VIEW)
+
+
 _PORTAL_MANAGE_ROLES = {"admin", "operator"}
 
 
 def require_portal_manage_access(user: UserCache) -> None:
-    """建/管门户门槛：门户维度角色 portal_org_role=admin/operator 放行；
-    兼容组织管理员 org_role=admin/operator 与超管。"""
+    """建/管门户门槛：超管、AutoTask 模块管理员全部放开；
+    其余看 portal_org_role / org_role 的 admin/operator。"""
     require_tenant_access(user)
-    if user.is_super_admin:
+    if user.is_super_admin or getattr(user, "is_task_admin", False):
         return
     if (user.portal_org_role or "") in _PORTAL_MANAGE_ROLES:
         return

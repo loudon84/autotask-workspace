@@ -10,7 +10,7 @@ import type { ForgeConfig } from "@electron-forge/shared-types";
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    executableName: "SMC-Copilot",
+    executableName: "AutoTaskStudio",
     download: {
       mirrorOptions: {
         mirror: "https://npmmirror.com/mirrors/electron/",
@@ -20,7 +20,7 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      setupExe: "SMC-Copilot.exe",
+      setupExe: "AutoTask-Studio.exe",
     }),
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({}),

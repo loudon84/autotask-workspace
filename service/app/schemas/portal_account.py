@@ -84,6 +84,7 @@ class PortalAccountUpdate(CamelModel):
     rpa_profile_id: str | None = Field(None, alias="rpaProfileId")
     status: PortalAccountStatus | None = None
     owner_dept_id: str | None = Field(None, alias="ownerDeptId")
+    owner_user_id: str | None = Field(None, alias="ownerUserId")
 
     @field_validator("portal_url")
     @classmethod
@@ -120,9 +121,18 @@ class PortalAccountResponse(CamelModel):
     client_open_mode: str = Field(serialization_alias="clientOpenMode")
     client_session_partition: str = Field(serialization_alias="clientSessionPartition")
     status: str
+    owner_user_id: str = Field("", serialization_alias="ownerUserId")
+    owner_name: str = Field("", serialization_alias="ownerName")
+    owner_username: str = Field("", serialization_alias="ownerUsername")
     created_by: str = Field(serialization_alias="createdBy")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class PortalOwnerCandidate(CamelModel):
+    user_id: str = Field(serialization_alias="userId")
+    name: str = ""
+    username: str = ""
 
 
 class PortalListPageResponse(CamelModel):
