@@ -16,7 +16,7 @@ from app.core.deps import async_session_factory, engine as db_engine
 from app.models.base import not_deleted
 from app.models.portal_account import PortalAccount
 
-PORTAL_NAME = "天地伟业-国际-正式演练"
+PORTAL_NAME = "天地伟业-芯云-正式演练"
 ENGINE_PY = Path(r"d:\work_space260811\autotask-workspace\rpa-engine\.venv\Scripts\python.exe")
 PROBE = Path(r"d:\work_space260811\autotask-workspace\rpa-engine\scripts\probe_official_stmt_payable_click.py")
 
