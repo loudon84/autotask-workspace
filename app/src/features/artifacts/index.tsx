@@ -4,7 +4,7 @@ import { Eye } from "lucide-react";
 import { useState } from "react";
 import {
   ArtifactDownloadButton,
-  ArtifactPreview,
+  ArtifactPreviewDialog,
   isDownloadableArtifact,
 } from "@/components/business/artifact-preview";
 import { DataTable } from "@/components/common/data-table";
@@ -14,12 +14,6 @@ import { PageHeader } from "@/components/common/page-header";
 import { SearchInput } from "@/components/common/search-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -142,27 +136,14 @@ export function ArtifactsPage() {
 
       <DataTable columns={columns} data={filtered} />
 
-      <Dialog onOpenChange={() => setPreview(null)} open={!!preview}>
-        <DialogContent
-          className={
-            preview?.type === "screenshot"
-              ? "sm:max-w-[96vw] xl:max-w-[1600px]"
-              : "sm:max-w-xl"
+      <ArtifactPreviewDialog
+        artifact={preview}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreview(null);
           }
-        >
-          <DialogHeader>
-            <DialogTitle>证据预览</DialogTitle>
-          </DialogHeader>
-          {preview && (
-            <ArtifactPreview
-              allowDownload={isDownloadableArtifact(preview)}
-              artifact={preview}
-              key={preview.id}
-              loadScreenshot
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        }}
+      />
     </div>
   );
 }

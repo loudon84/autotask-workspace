@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Code,
   Download as DownloadIcon,
+  Eye,
   FileImage,
   FileText,
   LoaderCircle,
@@ -9,11 +10,18 @@ import {
   ScrollText,
   Upload,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { downloadFile } from "@/actions/shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useArtifactDownloadUrl } from "@/features/artifacts/api/use-artifacts";
 import type { Artifact, ArtifactType } from "@/types/artifact";
 
@@ -85,13 +93,16 @@ export function ArtifactPreview({
   allowDownload = false,
   artifact,
   loadScreenshot = false,
+  onPreview,
 }: {
   allowDownload?: boolean;
   artifact: Artifact;
   loadScreenshot?: boolean;
+  onPreview?: () => void;
 }) {
   const Icon = typeIcons[artifact.type] ?? FileText;
   const isScreenshot = artifact.type === "screenshot";
+  const canPreview = Boolean(onPreview) && isScreenshot && !loadScreenshot;
   const preview = useArtifactDownloadUrl(
     artifact.id,
     loadScreenshot && isScreenshot
@@ -115,9 +126,22 @@ export function ArtifactPreview({
               </span>
               <Badge variant="outline">{typeLabels[artifact.type]}</Badge>
             </div>
-            {allowDownload ? (
-              <ArtifactDownloadButton artifact={artifact} />
-            ) : null}
+            <div className="flex shrink-0 items-center gap-1">
+              {canPreview ? (
+                <Button
+                  onClick={onPreview}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Eye />
+                  查看
+                </Button>
+              ) : null}
+              {allowDownload ? (
+                <ArtifactDownloadButton artifact={artifact} />
+              ) : null}
+            </div>
           </div>
           <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md bg-muted text-muted-foreground">
             {loadScreenshot && preview.isLoading ? (
@@ -150,7 +174,17 @@ export function ArtifactPreview({
                 width={1920}
               />
             ) : null}
-            {loadScreenshot ? null : (
+            {loadScreenshot ? null : canPreview ? (
+              <button
+                className="w-full cursor-pointer py-8 text-center"
+                onClick={onPreview}
+                type="button"
+              >
+                <FileImage className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                <p className="text-xs">点击查看截图</p>
+                <p className="text-xs">{artifact.sizeText}</p>
+              </button>
+            ) : (
               <div className="text-center">
                 <FileImage className="mx-auto mb-2 h-12 w-12 opacity-50" />
                 <p className="text-xs">截图占位预览</p>
@@ -183,15 +217,68 @@ export function ArtifactPreview({
   );
 }
 
+export function ArtifactPreviewDialog({
+  artifact,
+  onOpenChange,
+}: {
+  artifact: Artifact | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog onOpenChange={onOpenChange} open={Boolean(artifact)}>
+      <DialogContent
+        className={
+          artifact?.type === "screenshot"
+            ? "sm:max-w-[96vw] xl:max-w-[1600px]"
+            : "sm:max-w-xl"
+        }
+      >
+        <DialogHeader>
+          <DialogTitle>证据预览</DialogTitle>
+        </DialogHeader>
+        {artifact ? (
+          <ArtifactPreview
+            allowDownload={isDownloadableArtifact(artifact)}
+            artifact={artifact}
+            key={artifact.id}
+            loadScreenshot
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ArtifactList({ artifacts }: { artifacts: Artifact[] }) {
+  const [preview, setPreview] = useState<Artifact | null>(null);
+
   if (artifacts.length === 0) {
     return <p className="text-muted-foreground text-sm">暂无证据</p>;
   }
   return (
-    <div className="space-y-2">
-      {artifacts.map((artifact) => (
-        <ArtifactPreview artifact={artifact} key={artifact.id} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-2">
+        {artifacts.map((artifact) => (
+          <ArtifactPreview
+            allowDownload={isDownloadableArtifact(artifact)}
+            artifact={artifact}
+            key={artifact.id}
+            onPreview={
+              artifact.type === "screenshot"
+                ? () => setPreview(artifact)
+                : undefined
+            }
+          />
+        ))}
+      </div>
+      <ArtifactPreviewDialog
+        artifact={preview}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreview(null);
+          }
+        }}
+      />
+    </>
   );
 }
