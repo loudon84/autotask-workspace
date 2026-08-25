@@ -21,6 +21,9 @@ dist/
 env/
 venv/
 
+# Local one-click start logs
+/logs/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

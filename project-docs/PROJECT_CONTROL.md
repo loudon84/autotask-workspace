@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-11
+最后更新：2026-08-25
 
 ## 1. 用途
 
@@ -212,6 +212,15 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-08-25
+
+#### Ubuntu 一键启动脚本 `dev.sh`
+
+- 新增工作区根目录 `dev.sh`（仅 Ubuntu）：对 `service/` 与 `rpa-engine/` 使用各自的 `uv.lock` + `pyproject.toml` 执行 `uv sync --frozen --python 3.12` 创建 `.venv`。
+- Task（`service/`）用 `.venv/bin/uvicorn app.main:app --env-file .env` 启动，bind 地址取自 `.env` 的 `HOST`/`PORT`（默认 `0.0.0.0:4520`）。
+- Engine（`rpa-engine/`）用 `.venv/bin/python -m nodeskclaw_rpa_engine` 启动（Linux 对应 Windows 的 `.venv\Scripts\python.exe -m nodeskclaw_rpa_engine`），host/port 仍由 Engine 自身 `.env` 读取。
+- 缺少 `.env` 时拒绝启动并提示从 `.env.example` 复制；日志写入工作区 `logs/`（已加入根 `.gitignore`）。未连接数据库、未执行 DDL。
 
 ### 2026-08-11
 
