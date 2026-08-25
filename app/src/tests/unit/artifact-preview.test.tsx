@@ -78,6 +78,22 @@ describe("ArtifactPreview", () => {
     expect(screen.getByText("截图占位预览")).toBeInTheDocument();
   });
 
+  it("opens the screenshot from the task evidence list", async () => {
+    const user = userEvent.setup();
+    const onPreview = vi.fn();
+    render(
+      <ArtifactPreview
+        allowDownload
+        artifact={screenshot}
+        onPreview={onPreview}
+      />
+    );
+
+    expect(screen.getByText("点击查看截图")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "查看" }));
+    expect(onPreview).toHaveBeenCalledTimes(1);
+  });
+
   it("downloads an XLSX artifact through the Electron download handler", async () => {
     const user = userEvent.setup();
     render(<ArtifactPreview allowDownload artifact={spreadsheet} />);

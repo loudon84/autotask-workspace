@@ -1,7 +1,7 @@
 {
   "name": "AutoTask-studio",
   "productName": "AutoTask Studio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AutoTask Studio - SRM Automation Desktop Workbench",
   "main": ".vite/build/main.js",
   "private": true,
