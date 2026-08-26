@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_submit_review",
+  "rpaFlowVersion": "1.1.5",
+  "rpaFlowVersionId": "cf284be9-3a64-4bee-a6d8-6ba1ac78f122",
+  "packageChecksum": "sha256:3e33ad4007039faacaa3f820d0c7ff0dc71bfde81a25022ee54291ef37e9ecee",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_stmt_submit_review"
+}

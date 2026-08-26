@@ -14,6 +14,7 @@ from app.api import (
     rpa_runs,
     rpa_workers,
     scheduler_jobs,
+    session,
     settings,
     statements,
     tasks,
@@ -32,6 +33,7 @@ async def health_check():
 
 
 api_router.include_router(dashboard.router, tags=["Dashboard"])
+api_router.include_router(session.router, tags=["Session"])
 api_router.include_router(integration.router, tags=["Integration"])
 api_router.include_router(portal_accounts.router, prefix="/portal-accounts", tags=["Portal Account"])
 api_router.include_router(workflow_templates.router, prefix="/workflow-templates", tags=["Workflow Template"])

@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-25
+最后更新：2026-08-26
 
 ## 1. 用途
 
@@ -64,9 +64,9 @@
 | 天地伟业对账单 SOP 体验（v3.01） | 详情已补回勾选明细；需重启唯一 Task 4520 | 六步进度：填单页待创建/SDMS核准；列表按 stage；详情对齐客户订单并展示 `summary.lines`。 |
 | 天地伟业对账单优化（v3.02） | 代码已改，需重启唯一 Task 4520 | 详情「对账明细」；展示 SDMS `check_num` 链接；SRM 提交成功后 HTTP 把发票传到 SDMS（`flag=SDMS_ARR`）。 |
 | 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
-| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.4 dryRun=true** 已绑正式演练 | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
+| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
-| 权限 v5.1（管人接口后补） | 代码已接 Auth：`/me` 的 `is_super_admin` / `is_task_admin`；登录拉 `GET /members/{id}/subordinate` 写入 `managed_user_ids`。模块管理员与超管在 AutoTask 内全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后新列与下属缓存才对运行中的进程生效。 |
+| 权限 v5.1（管人接口后补） | 代码已接 Auth：`/me` 的 `is_super_admin` / `is_task_admin`；登录拉 `GET /members/{id}/subordinate` 写入 `managed_user_ids`。模块管理员与超管在 AutoTask 内全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head）。登录后 `POST /session/sync` 强制刷新缓存；平时 TTL；新 token `iat` 也会强制刷新 | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
 | 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
 
 ## 5. 未决问题
@@ -231,6 +231,12 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-08-26
+
+- **本地模拟提交审核成功**：演练 dryRun 不点 SRM，本地停在待上传发票。新增 `service/scripts/simulate_stmt_submit_review.py`，按日期+金额写成已对账 / 审批中 / 已完成。不写 SRM。默认预览，`--yes` 才写库。
+- **模块管理员缓存仍是 false**：Auth 已是 `is_task_admin: true`，Task 缓存停在登录前。已改成你说的模型：AutoTask **登录成功后立刻** `POST /session/sync` 强制拉 Auth `/me` 写入缓存；平时 Task 请求走 10 分钟 TTL；新 token 的 `iat` 晚于缓存也会强制刷新。不再每个接口都打 `/me`。**需重启唯一 Task 4520**，并用 AutoTask 重新登录一次。
+- **提交审核点「确定」超时**：正式演练 1.1.4 在扫描前就装 dryRun 写闸；正式站发票上传 URL 不含 `/upload` 等关键字，POST 被 abort，Playwright 点弹窗确定 4s 超时。重试时弹窗还在，列表 `.el-table` 15s 找不到。Engine 写闸改为放行 `multipart/form-data`；提交包 **1.1.5** 改为扫描完成后再装写闸。**需重启 Engine 4610**；1.1.5 发布后把正式 Binding 从 1.1.4 切过去。
 
 ### 2026-08-25
 

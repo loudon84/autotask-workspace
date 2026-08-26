@@ -86,6 +86,17 @@ function resolveAuthUser(
   return fallbackUser;
 }
 
+async function syncTaskSession(): Promise<void> {
+  try {
+    const { requestAutotaskApi } = await import(
+      "@/main/autotask-api/autotask-api-client"
+    );
+    await requestAutotaskApi({ method: "POST", path: "/session/sync" });
+  } catch (err) {
+    console.warn("Task session sync failed after login", err);
+  }
+}
+
 function sessionUserToAuthUser(
   user: StoredAuthSession["user"]
 ): AuthUserResponse {
@@ -114,6 +125,7 @@ export async function loginWithCredentials(
 
   const session = toStoredSession(tokenData, tokenData.user);
   await saveSession(session);
+  await syncTaskSession();
   return session;
 }
 

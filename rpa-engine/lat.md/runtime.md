@@ -98,6 +98,15 @@ into an `ErrorDecision`.
 safe code `FLOW_UNHANDLED_ERROR`. Filesystem errors use `FLOW_CACHE_*` and
 `RUNTIME_WORKDIR_*` codes and never leak absolute paths.
 
+## Dry-run write guard
+
+[[src/nodeskclaw_rpa_engine/runtime/dry_run.py#install_write_guard]] aborts
+`POST`/`PUT`/`PATCH`/`DELETE` while a Flow is in `dryRun`. Login/captcha URLs are
+allowed. When `allow_upload=True`, invoice scan uploads are allowed if the URL contains
+`/upload` `/scan` `/invoice` `/attach`, or the request is `multipart/form-data`.
+Official portal OSS URLs often have none of those path markers; blocking them makes the
+upload-confirm click hang and then fail.
+
 ## Structured Output
 
 A successful `flow.py:run(ctx)` may return a JSON object.

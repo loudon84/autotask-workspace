@@ -86,7 +86,7 @@ cd d:\work_space260811\autotask-workspace\service
 .\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py --yes POJS2607170008
 
 # 全部行指定同一天
-.\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py --yes --date 2026-08-25 POJS2607170008
+.\.venv\Scripts\python.exe scripts\simulate_fill_delivery_dates.py --yes --date 2026-08-21 POJS2607170008
 ```
 
 
@@ -107,6 +107,26 @@ cd d:\work_space260811\autotask-workspace\service
 # 写库
 .\.venv\Scripts\python.exe scripts\seed_official_unchecked_statement.py --yes --check-date 2026-04-01 --check-amount 5768205.32
 ```
+
+
+
+## 本地模拟提交审核成功（dryRun 不点 SRM）
+
+脚本：`simulate_stmt_submit_review.py`
+
+正式演练提交审核 `dryRun: true`，RPA 任务可以 SUCCESS，但不会点门户「提交审核」，本地仍停在待上传发票 / 未对账。本脚本按对账日期 + 金额把已有账单写成真提交成功后的本地态：**已对账 / 审批中 / 已完成**。不调 SRM、不派 RPA、不传 SDMS。默认门户「天地伟业-芯云-正式演练」。默认预览，加 `--yes` 才写库。
+
+```powershell
+cd d:\work_space260811\autotask-workspace\service
+
+# 预览（默认 2026-04-01 / 5768205.32）
+.\.venv\Scripts\python.exe scripts\simulate_stmt_submit_review.py
+
+# 写库
+.\.venv\Scripts\python.exe scripts\simulate_stmt_submit_review.py --yes --check-date 2026-04-01 --check-amount 5768205.32
+```
+
+Client 刷新后进「已完成」。门户对账行不会变。
 
 
 

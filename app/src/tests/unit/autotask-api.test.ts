@@ -38,6 +38,9 @@ describe("default endpoint config", () => {
     expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/tasks")).toBe(
       "http://127.0.0.1:4520/api/v1/autotask/tasks"
     );
+    expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/session/sync")).toBe(
+      "http://127.0.0.1:4520/api/v1/autotask/session/sync"
+    );
     expect(buildRpaEngineUrl(defaultAutoTaskEndpointConfig, "/flows")).toBe(
       "http://127.0.0.1:4610/api/v1/flows"
     );
