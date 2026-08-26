@@ -2,11 +2,12 @@
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import BadRequestError, ConflictError
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.services import statement_service as svc
 from app.services.sdms_client import SdmsCheckLookup
 
@@ -474,7 +475,9 @@ async def test_on_upload_finished_writes_invoice_keeps_unchecked() -> None:
 
 
 @pytest.mark.asyncio
-async def test_upload_invoice_queues_scan_task() -> None:
+async def test_upload_invoice_queues_scan_task(tmp_path) -> None:
+    invoice = tmp_path / "a.pdf"
+    invoice.write_bytes(b"%PDF")
     bill = MagicMock()
     bill.check_status = "UNCHECKED"
     bill.process_instance_id = "inst-1"
@@ -494,10 +497,27 @@ async def test_upload_invoice_queues_scan_task() -> None:
         ) as create_task,
     ):
         result = await svc.upload_invoice(
-            db, "t1", "bill-1", file_paths=["a.pdf"], actor="u1"
+            db, "t1", "bill-1", file_paths=[str(invoice)], actor="u1"
         )
     assert result is task
     assert create_task.await_args.kwargs["template_code"] == "srm_stmt_upload_invoice"
+    assert create_task.await_args.kwargs["task_input"]["filePaths"] == [str(invoice.resolve())]
+
+
+def test_save_invoice_uploads_appends(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    first = svc.save_invoice_uploads("bill-1", [("a.pdf", b"one")])
+    second = svc.save_invoice_uploads("bill-1", [("b.pdf", b"two")])
+    names = [Path(path).name for path in svc.saved_invoice_file_paths("bill-1")]
+    assert names == ["00_a.pdf", "01_b.pdf"]
+    assert Path(first[0]).read_bytes() == b"one"
+    assert Path(second[0]).read_bytes() == b"two"
+
+
+def test_resolve_invoice_files_rejects_missing_local_paths() -> None:
+    with pytest.raises(BadRequestError) as exc:
+        svc.resolve_invoice_files_for_run("bill-1", [r"C:\missing\a.pdf"])
+    assert "重新选择后上传" in exc.value.message
 
 
 @pytest.mark.asyncio
@@ -538,30 +558,92 @@ async def test_submit_review_requires_files() -> None:
     bill.check_status = "UNCHECKED"
     bill.invoice_no = "INV1"
     bill.invoice_amount = Decimal("10.00")
-    with patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)):
+    bill.process_instance_id = "inst-1"
+    instance = MagicMock()
+    instance.summary = "{}"
+    with (
+        patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)),
+        patch("app.services.statement_service.get_bill_instance", AsyncMock(return_value=instance)),
+        patch("app.services.statement_service.saved_invoice_file_paths", return_value=[]),
+    ):
         with pytest.raises(BadRequestError) as exc:
             await svc.submit_review(MagicMock(), "t1", "bill-1", file_paths=[], actor="u1")
         assert "发票文件" in exc.value.message
 
 
 @pytest.mark.asyncio
-async def test_submit_review_rejects_changed_files() -> None:
+async def test_submit_review_uses_saved_files_not_client_paths(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    saved = svc.save_invoice_uploads("bill-1", [("a.pdf", b"%PDF")])
     bill = MagicMock()
     bill.check_status = "UNCHECKED"
     bill.invoice_no = "INV1"
     bill.invoice_amount = Decimal("10.00")
     bill.process_instance_id = "inst-1"
+    bill.portal_account_id = "pa1"
+    bill.check_date = date(2026, 4, 1)
+    bill.check_amount = Decimal("10.00")
+    bill.id = "bill-1"
     instance = MagicMock()
-    instance.summary = '{"invoice_scan":{"filePaths":["C:\\\\invoices\\\\a.pdf"]}}'
+    instance.summary = "{}"
+    task = MagicMock()
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    with (
+        patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)),
+        patch("app.services.statement_service.get_bill_instance", AsyncMock(return_value=instance)),
+        patch(
+            "app.services.statement_service._create_standalone_task",
+            AsyncMock(return_value=task),
+        ) as create_task,
+    ):
+        result = await svc.submit_review(
+            db, "t1", "bill-1", file_paths=[r"C:\users\foo\b.pdf"], actor="u1"
+        )
+    assert result is task
+    assert create_task.await_args.kwargs["task_input"]["filePaths"] == saved
+
+
+@pytest.mark.asyncio
+async def test_delete_invoice_file_removes_disk_and_clears_scan(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    saved = svc.save_invoice_uploads("bill-1", [("a.pdf", b"one"), ("b.pdf", b"two")])
+    bill = MagicMock()
+    bill.check_status = "UNCHECKED"
+    bill.invoice_no = "INV1"
+    bill.invoice_amount = Decimal("10.00")
+    bill.invoice_status = "UPLOADED"
+    bill.process_instance_id = "inst-1"
+    instance = MagicMock()
+    instance.summary = '{"invoice_scan":{"filePaths":["x"],"invoiceNo":"INV1"}}'
+    db = MagicMock()
+    db.commit = AsyncMock()
     with (
         patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)),
         patch("app.services.statement_service.get_bill_instance", AsyncMock(return_value=instance)),
     ):
-        with pytest.raises(BadRequestError) as exc:
-            await svc.submit_review(
-                MagicMock(), "t1", "bill-1", file_paths=["C:\\invoices\\b.pdf"], actor="u1"
+        remaining = await svc.delete_invoice_file(
+            db, "t1", "bill-1", file_name=Path(saved[0]).name, actor="u1"
+        )
+    assert Path(saved[0]).exists() is False
+    assert Path(saved[1]).exists() is True
+    assert remaining == [saved[1]]
+    assert bill.invoice_no is None
+    assert bill.invoice_status == "NOT_UPLOADED"
+    assert '"INV1"' not in instance.summary
+
+
+@pytest.mark.asyncio
+async def test_delete_invoice_file_missing(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    bill = MagicMock()
+    bill.check_status = "UNCHECKED"
+    with patch("app.services.statement_service.get_bill", AsyncMock(return_value=bill)):
+        with pytest.raises(NotFoundError):
+            await svc.delete_invoice_file(
+                MagicMock(), "t1", "bill-1", file_name="00_a.pdf", actor="u1"
             )
-        assert "重新扫描" in exc.value.message
 
 
 @pytest.mark.asyncio

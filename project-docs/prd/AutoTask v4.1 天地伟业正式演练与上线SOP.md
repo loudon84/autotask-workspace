@@ -123,7 +123,7 @@
 | 查收货 | `srm_stmt_query_receipts` | **1.1.3** | 无 | 不改闸 |
 | 生成对账单 | `srm_stmt_generate` | **1.1.0** | **true** | 去掉 `dryRun` |
 | 扫描发票 | `srm_stmt_upload_invoice` | **1.1.2** | 无 | 不改闸 |
-| 提交审核 | `srm_stmt_submit_review` | **1.1.4** | **true** | 去掉 `dryRun` |
+| 提交审核 | `srm_stmt_submit_review` | **1.1.5** | **true** | 去掉 `dryRun` |
 
 扫单演练 Binding（**已写入**门户「天地伟业-国际-正式演练」，打开 Binding 编辑即可看到）：
 
@@ -143,7 +143,7 @@
 
 填交期 / 签章：**正式门户尚未绑定**。现有 1.0.3 是演示包（`data-rpa`），不读 `dryRun`，禁止绑到正式站。
 
-生成对账单 / 提交审核的 `dryRun: true` 已在 Binding 里，且 Flow 会读。
+生成对账单 / 提交审核的 `dryRun: true` 已在 Binding 里，且 Flow 会读。提交审核演练包为 **1.1.5**（扫描完成后再装写闸；1.1.4 会拦正式站发票上传 POST）。
 
 ---
 

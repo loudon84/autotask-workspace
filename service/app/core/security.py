@@ -55,10 +55,9 @@ def extract_user_id(payload: dict) -> str:
     return str(user_id)
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> UserCache:
+def _require_access_token(
+    credentials: HTTPAuthorizationCredentials | None,
+) -> tuple[str, dict, str]:
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -69,8 +68,34 @@ async def get_current_user(
             },
         )
     payload = decode_token(credentials.credentials)
-    user_id = extract_user_id(payload)
-    return await sync_user_from_token(db, user_id, credentials.credentials)
+    return extract_user_id(payload), payload, credentials.credentials
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> UserCache:
+    user_id, payload, token = _require_access_token(credentials)
+    return await sync_user_from_token(
+        db,
+        user_id,
+        token,
+        issued_at=payload.get("iat"),
+    )
+
+
+async def get_fresh_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> UserCache:
+    user_id, payload, token = _require_access_token(credentials)
+    return await sync_user_from_token(
+        db,
+        user_id,
+        token,
+        force=True,
+        issued_at=payload.get("iat"),
+    )
 
 
 def require_tenant_access(user: UserCache) -> str:

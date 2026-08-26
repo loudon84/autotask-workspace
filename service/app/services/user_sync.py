@@ -17,11 +17,62 @@ from app.services.permission_service import extract_managed_user_ids
 logger = logging.getLogger(__name__)
 
 
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
 def _is_cache_stale(synced_at: datetime) -> bool:
     ttl = timedelta(minutes=settings.USER_CACHE_TTL_MINUTES)
-    now = datetime.now(UTC)
-    synced = synced_at if synced_at.tzinfo else synced_at.replace(tzinfo=UTC)
-    return now - synced > ttl
+    return datetime.now(UTC) - _aware(synced_at) > ttl
+
+
+def _token_issued_after_cache(issued_at: object, synced_at: datetime) -> bool:
+    if issued_at is None:
+        return False
+    try:
+        token_dt = datetime.fromtimestamp(float(issued_at), tz=UTC)
+    except (TypeError, ValueError):
+        return False
+    return token_dt > _aware(synced_at)
+
+
+def _should_refresh_user_cache(
+    cached: UserCache | None,
+    *,
+    force: bool = False,
+    issued_at: object = None,
+) -> bool:
+    if cached is None or force:
+        return True
+    if _token_issued_after_cache(issued_at, cached.synced_at):
+        return True
+    return _is_cache_stale(cached.synced_at)
+
+
+def _auth_flag(user_data: dict, *keys: str) -> bool:
+    for key in keys:
+        if key not in user_data:
+            continue
+        value = user_data[key]
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y"}
+        return bool(value)
+    return False
+
+
+def _unwrap_auth_user(body: object) -> dict:
+    """Auth /me 可能是 data 扁平用户，也可能是 data.user / user 包一层。"""
+    if not isinstance(body, dict):
+        return {}
+    payload = body.get("data") if body.get("data") is not None else body
+    if not isinstance(payload, dict):
+        return body
+    nested = payload.get("user")
+    if isinstance(nested, dict):
+        return {**payload, **nested}
+    return payload
 
 
 async def _fetch_user_from_backend(token: str) -> dict:
@@ -39,8 +90,7 @@ async def _fetch_user_from_backend(token: str) -> dict:
             message="无法从认证服务获取用户信息",
             message_key="errors.auth.user_sync_failed",
         )
-    body = response.json()
-    return body.get("data") or body
+    return _unwrap_auth_user(response.json())
 
 
 def _upsert_user_cache(
@@ -54,8 +104,8 @@ def _upsert_user_cache(
         "current_org_id": user_data.get("current_org_id"),
         "org_role": org_role,
         "portal_org_role": user_data.get("portal_org_role"),
-        "is_super_admin": bool(user_data.get("is_super_admin")),
-        "is_task_admin": bool(user_data.get("is_task_admin")),
+        "is_super_admin": _auth_flag(user_data, "is_super_admin", "isSuperAdmin"),
+        "is_task_admin": _auth_flag(user_data, "is_task_admin", "isTaskAdmin"),
         "managed_user_ids": dumps_json(managed_ids),
         "synced_at": now,
     }
@@ -66,12 +116,19 @@ def _upsert_user_cache(
     return existing
 
 
-async def sync_user_from_token(db: AsyncSession, user_id: str, token: str) -> UserCache:
+async def sync_user_from_token(
+    db: AsyncSession,
+    user_id: str,
+    token: str,
+    *,
+    force: bool = False,
+    issued_at: object = None,
+) -> UserCache:
     result = await db.execute(
         select(UserCache).where(UserCache.user_id == user_id, not_deleted(UserCache))
     )
     cached = result.scalar_one_or_none()
-    if cached is not None and not _is_cache_stale(cached.synced_at):
+    if not _should_refresh_user_cache(cached, force=force, issued_at=issued_at):
         return cached
 
     user_data = await _fetch_user_from_backend(token)

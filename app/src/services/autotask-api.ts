@@ -493,29 +493,53 @@ export const autotaskApi = {
       }
       throw new Error("当前模式不支持重新生成对账单");
     },
-    uploadInvoicePaths: (input: {
+    uploadInvoiceFiles: (input: {
       billId: string;
       filePaths: string[];
     }): Promise<import("@/types/statement").StatementTaskResult> => {
       const api = pickApi();
       if (
-        "uploadStatementInvoicePaths" in api &&
-        typeof api.uploadStatementInvoicePaths === "function"
+        "uploadStatementInvoiceFiles" in api &&
+        typeof api.uploadStatementInvoiceFiles === "function"
       ) {
-        return api.uploadStatementInvoicePaths(input);
+        return api.uploadStatementInvoiceFiles(input);
       }
       throw new Error("当前模式不支持上传发票");
     },
+    rescanInvoice: (
+      billId: string
+    ): Promise<import("@/types/statement").StatementTaskResult> => {
+      const api = pickApi();
+      if (
+        "rescanStatementInvoice" in api &&
+        typeof api.rescanStatementInvoice === "function"
+      ) {
+        return api.rescanStatementInvoice(billId);
+      }
+      throw new Error("当前模式不支持扫描发票");
+    },
+    deleteInvoiceFile: (input: {
+      billId: string;
+      fileName: string;
+    }): Promise<{ filePaths: string[] }> => {
+      const api = pickApi();
+      if (
+        "deleteStatementInvoiceFile" in api &&
+        typeof api.deleteStatementInvoiceFile === "function"
+      ) {
+        return api.deleteStatementInvoiceFile(input);
+      }
+      throw new Error("当前模式不支持删除发票");
+    },
     submitReview: (
-      billId: string,
-      input: { filePaths: string[] }
+      billId: string
     ): Promise<import("@/types/statement").StatementTaskResult> => {
       const api = pickApi();
       if (
         "submitStatementReview" in api &&
         typeof api.submitStatementReview === "function"
       ) {
-        return api.submitStatementReview(billId, input);
+        return api.submitStatementReview(billId);
       }
       throw new Error("当前模式不支持提交审核");
     },

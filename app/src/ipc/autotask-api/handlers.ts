@@ -3,14 +3,35 @@ import { os } from "@orpc/server";
 import {
   AutotaskApiError,
   requestAutotaskApi,
+  uploadStatementInvoiceFiles,
 } from "@/main/autotask-api/autotask-api-client";
-import { autotaskApiRequestSchema } from "./schemas";
+import {
+  autotaskApiRequestSchema,
+  uploadInvoiceFilesInputSchema,
+} from "./schemas";
 
 export const request = os
   .input(autotaskApiRequestSchema)
   .handler(async ({ input }) => {
     try {
       return await requestAutotaskApi(input);
+    } catch (err) {
+      if (err instanceof AutotaskApiError) {
+        throw new ORPCError("AUTOTASK_API_ERROR", {
+          message: err.message,
+          status: err.status,
+          data: err.body,
+        });
+      }
+      throw err;
+    }
+  });
+
+export const uploadInvoiceFiles = os
+  .input(uploadInvoiceFilesInputSchema)
+  .handler(async ({ input }) => {
+    try {
+      return await uploadStatementInvoiceFiles(input);
     } catch (err) {
       if (err instanceof AutotaskApiError) {
         throw new ORPCError("AUTOTASK_API_ERROR", {

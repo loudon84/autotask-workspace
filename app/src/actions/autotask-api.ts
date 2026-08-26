@@ -66,3 +66,15 @@ export async function requestAutotaskApi<T>(
     throw toApiClientError(err);
   }
 }
+
+export async function uploadStatementInvoiceFiles<T>(input: {
+  billId: string;
+  filePaths: string[];
+}): Promise<T> {
+  try {
+    const response = await ipc.client.autotaskApi.uploadInvoiceFiles(input);
+    return unwrapApiResponse<T>(response);
+  } catch (err) {
+    throw toApiClientError(err);
+  }
+}

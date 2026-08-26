@@ -1,4 +1,7 @@
-import { requestAutotaskApi } from "@/actions/autotask-api";
+import {
+  requestAutotaskApi,
+  uploadStatementInvoiceFiles,
+} from "@/actions/autotask-api";
 import type { Artifact } from "@/types/artifact";
 import type { AuditLog } from "@/types/audit-log";
 import type {
@@ -656,26 +659,44 @@ export const remoteApi = {
     return mapItemResponse(data);
   },
 
-  uploadStatementInvoicePaths: async (input: {
+  uploadStatementInvoiceFiles: async (input: {
     billId: string;
     filePaths: string[];
   }): Promise<import("@/types/statement").StatementTaskResult> => {
+    const data = await uploadStatementInvoiceFiles<unknown>(input);
+    return mapItemResponse(data);
+  },
+
+  rescanStatementInvoice: async (
+    billId: string
+  ): Promise<import("@/types/statement").StatementTaskResult> => {
     const data = await requestAutotaskApi<unknown>({
       method: "POST",
-      path: `/statements/${input.billId}/invoice/paths`,
-      body: { filePaths: input.filePaths },
+      path: `/statements/${billId}/invoice/paths`,
+      body: { filePaths: [] },
+    });
+    return mapItemResponse(data);
+  },
+
+  deleteStatementInvoiceFile: async (input: {
+    billId: string;
+    fileName: string;
+  }): Promise<{ filePaths: string[] }> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "DELETE",
+      path: `/statements/${input.billId}/invoice-file`,
+      query: { fileName: input.fileName },
     });
     return mapItemResponse(data);
   },
 
   submitStatementReview: async (
-    billId: string,
-    input: { filePaths: string[] }
+    billId: string
   ): Promise<import("@/types/statement").StatementTaskResult> => {
     const data = await requestAutotaskApi<unknown>({
       method: "POST",
       path: `/statements/${billId}/submit-review`,
-      body: { filePaths: input.filePaths },
+      body: {},
     });
     return mapItemResponse(data);
   },

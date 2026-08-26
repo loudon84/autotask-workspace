@@ -8,6 +8,7 @@ from app.schemas.statement import (
     StatementBillListItem,
     StatementGenerateRequest,
     StatementGenerateResponse,
+    StatementInvoiceFilesResponse,
     StatementQueryReceiptsRequest,
 )
 
@@ -94,3 +95,10 @@ def test_detail_includes_stage_history_alias() -> None:
     assert payload["scannedFilePaths"] == []
     assert payload["subTasks"] == []
     assert payload["lines"][0]["receiptNo"] == "R1"
+
+
+def test_invoice_files_response_alias() -> None:
+    payload = StatementInvoiceFilesResponse(file_paths=["00_a.pdf"]).model_dump(
+        by_alias=True
+    )
+    assert payload["filePaths"] == ["00_a.pdf"]

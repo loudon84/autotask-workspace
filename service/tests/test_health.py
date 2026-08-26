@@ -17,3 +17,9 @@ def test_root_health():
     assert isinstance(payload["pid"], int)
     assert payload["pid"] > 0
     assert payload["startedAt"]
+
+
+def test_session_sync_requires_auth():
+    client = TestClient(app)
+    response = client.post("/api/v1/autotask/session/sync")
+    assert response.status_code == 401

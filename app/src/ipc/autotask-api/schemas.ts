@@ -8,3 +8,8 @@ export const autotaskApiRequestSchema = z.object({
     .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
     .optional(),
 });
+
+export const uploadInvoiceFilesInputSchema = z.object({
+  billId: z.string().min(1),
+  filePaths: z.array(z.string().min(1)).min(1).max(10),
+});

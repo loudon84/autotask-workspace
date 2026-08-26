@@ -34,3 +34,26 @@ def test_invoice_upload_only_when_allowed():
     url = "https://supplier.tiandy.com/api/invoice/upload"
     assert should_block_write("POST", url, allow_upload=False) is True
     assert should_block_write("POST", url, allow_upload=True) is False
+
+
+def test_allow_upload_accepts_multipart_without_upload_marker():
+    url = "https://supplier.tiandy.com/api/oss/putObject"
+    assert (
+        should_block_write(
+            "POST",
+            url,
+            allow_upload=True,
+            content_type="multipart/form-data; boundary=x",
+        )
+        is False
+    )
+    assert should_block_write("POST", url, allow_upload=True) is True
+    assert (
+        should_block_write(
+            "POST",
+            "https://supplier.tiandy.com/api/reconciliation/submit",
+            allow_upload=True,
+            content_type="application/json",
+        )
+        is True
+    )
