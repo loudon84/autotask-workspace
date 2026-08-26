@@ -18,6 +18,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.core.config import settings
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
@@ -42,6 +44,9 @@ from app.services.sdms_attachment_client import upload_statement_invoices_to_sdm
 from app.services.sdms_client import build_custom_son_code, describe_lookup, fetch_check_amount
 
 PROCESS_CODE = process_svc.PROCESS_CODE_SRM_TIANDI_STATEMENT
+INVOICE_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".pdf", ".ofd"}
+MAX_INVOICE_FILES = 10
+MAX_INVOICE_BYTES = 20 * 1024 * 1024
 
 AMOUNT_KEYS = (
     "taxIncludedAmount",
@@ -474,14 +479,99 @@ def scanned_file_paths_from_summary(summary: object) -> list[str]:
     return [str(path).strip() for path in raw if str(path).strip()]
 
 
-def normalize_invoice_file_paths(paths: list[str]) -> list[str]:
-    normalized: list[str] = []
-    for item in paths:
-        text = str(item or "").strip()
-        if not text:
+def statement_invoice_dir(bill_id: str) -> Path:
+    return Path(settings.ARTIFACT_LOCAL_DIR) / "statements" / bill_id
+
+
+def saved_invoice_file_paths(bill_id: str) -> list[str]:
+    root = statement_invoice_dir(bill_id)
+    if not root.is_dir():
+        return []
+    files = [
+        path
+        for path in root.iterdir()
+        if path.is_file() and path.suffix.lower() in INVOICE_ALLOWED_SUFFIXES
+    ]
+    files.sort(key=lambda path: path.name)
+    return [str(path.resolve()) for path in files]
+
+
+def _next_invoice_index(root: Path) -> int:
+    highest = -1
+    if not root.is_dir():
+        return 0
+    for path in root.iterdir():
+        if not path.is_file():
             continue
-        normalized.append(str(Path(text).expanduser()).casefold())
-    return normalized
+        prefix = path.name.split("_", 1)[0]
+        if prefix.isdigit():
+            highest = max(highest, int(prefix))
+    return highest + 1
+
+
+def save_invoice_uploads(bill_id: str, uploads: list[tuple[str, bytes]]) -> list[str]:
+    if not uploads:
+        raise BadRequestError(
+            message="请选择发票文件",
+            message_key="errors.autotask.statement.invoice_files_required",
+        )
+    if len(uploads) > MAX_INVOICE_FILES:
+        raise BadRequestError(
+            message="最多上传 10 个发票文件",
+            message_key="errors.autotask.statement.invoice_files_limit",
+        )
+    existing = saved_invoice_file_paths(bill_id)
+    if len(existing) + len(uploads) > MAX_INVOICE_FILES:
+        raise BadRequestError(
+            message="最多上传 10 个发票文件",
+            message_key="errors.autotask.statement.invoice_files_limit",
+        )
+    root = statement_invoice_dir(bill_id)
+    root.mkdir(parents=True, exist_ok=True)
+    index = _next_invoice_index(root)
+    saved: list[str] = []
+    for name, content in uploads:
+        filename = Path(name or "").name or f"invoice-{index}"
+        suffix = Path(filename).suffix.lower()
+        if suffix not in INVOICE_ALLOWED_SUFFIXES:
+            raise BadRequestError(
+                message=f"不支持的文件格式: {suffix or filename}",
+                message_key="errors.autotask.statement.invoice_file_type",
+            )
+        if not content:
+            raise BadRequestError(
+                message=f"{filename} 是空文件",
+                message_key="errors.autotask.statement.invoice_file_empty",
+            )
+        if len(content) > MAX_INVOICE_BYTES:
+            raise BadRequestError(
+                message=f"单个文件不能超过 20M: {filename}",
+                message_key="errors.autotask.statement.invoice_file_size",
+            )
+        target = root / f"{index:02d}_{filename}"
+        target.write_bytes(content)
+        saved.append(str(target.resolve()))
+        index += 1
+    return saved
+
+
+def resolve_invoice_files_for_run(bill_id: str, file_paths: list[str] | None) -> list[str]:
+    requested = [str(path).strip() for path in (file_paths or []) if str(path).strip()]
+    if requested:
+        missing = [path for path in requested if not Path(path).is_file()]
+        if missing:
+            raise BadRequestError(
+                message="发票文件不在任务服务本机，请重新选择后上传",
+                message_key="errors.autotask.statement.invoice_files_not_on_server",
+            )
+        return require_invoice_file_paths([str(Path(path).resolve()) for path in requested])
+    saved = saved_invoice_file_paths(bill_id)
+    if not saved:
+        raise BadRequestError(
+            message="请选择发票文件",
+            message_key="errors.autotask.statement.invoice_files_required",
+        )
+    return require_invoice_file_paths(saved)
 
 
 def to_list_item(
@@ -526,7 +616,8 @@ def to_detail(
             "sdms_check_num": sdms_check_num_from_summary(
                 instance.summary if instance else None
             ),
-            "scanned_file_paths": scanned_file_paths_from_summary(
+            "scanned_file_paths": saved_invoice_file_paths(bill.id)
+            or scanned_file_paths_from_summary(
                 instance.summary if instance else None
             ),
             "lines": receipt_lines_from_summary(instance.summary if instance else None),
@@ -604,7 +695,7 @@ async def upload_invoice(
             message="待生成草稿尚未在 SRM 生成成功，不能上传发票",
             message_key="errors.autotask.statement.draft_no_invoice",
         )
-    paths = require_invoice_file_paths(file_paths)
+    paths = resolve_invoice_files_for_run(bill_id, file_paths)
     task = await _create_standalone_task(
         db,
         tenant_id=tenant_id,
@@ -630,10 +721,11 @@ async def submit_review(
     tenant_id: str,
     bill_id: str,
     *,
-    file_paths: list[str],
+    file_paths: list[str] | None = None,
     actor: str,
     sdms_username: str = "",
 ) -> AutomationTask:
+    _ = file_paths
     bill = await get_bill(db, tenant_id, bill_id)
     if bill.check_status == "VOID":
         raise BadRequestError(
@@ -652,18 +744,8 @@ async def submit_review(
             message="请先扫描发票，并核对页面上的发票号和发票总额后再提交",
             message_key="errors.autotask.statement.scan_before_submit",
         )
-    paths = require_invoice_file_paths(file_paths)
     instance = await get_bill_instance(db, bill.process_instance_id)
-    scanned_paths = scanned_file_paths_from_summary(
-        instance.summary if instance else None
-    )
-    if scanned_paths and normalize_invoice_file_paths(paths) != normalize_invoice_file_paths(
-        scanned_paths
-    ):
-        raise BadRequestError(
-            message="发票文件已更换，请重新扫描后再提交审核",
-            message_key="errors.autotask.statement.invoice_files_changed",
-        )
+    paths = resolve_invoice_files_for_run(bill_id, saved_invoice_file_paths(bill_id))
     task = await _create_standalone_task(
         db,
         tenant_id=tenant_id,
@@ -688,6 +770,62 @@ async def submit_review(
     await db.commit()
     await db.refresh(task)
     return task
+
+
+async def delete_invoice_file(
+    db: AsyncSession,
+    tenant_id: str,
+    bill_id: str,
+    *,
+    file_name: str,
+    actor: str,
+) -> list[str]:
+    _ = actor
+    bill = await get_bill(db, tenant_id, bill_id)
+    if bill.check_status == "VOID":
+        raise BadRequestError(
+            message="已作废对账单不可删除发票",
+            message_key="errors.autotask.statement.void_readonly",
+        )
+    stored_name = Path(str(file_name or "").strip()).name
+    if not stored_name:
+        raise BadRequestError(
+            message="请指定要删除的发票文件",
+            message_key="errors.autotask.statement.invoice_file_required",
+        )
+    root = statement_invoice_dir(bill_id).resolve()
+    target = (root / stored_name).resolve()
+    if target.parent != root:
+        raise BadRequestError(
+            message="发票文件无效",
+            message_key="errors.autotask.statement.invoice_file_invalid",
+        )
+    if not target.is_file():
+        raise NotFoundError(
+            message="发票文件不存在",
+            message_key="errors.autotask.statement.invoice_file_not_found",
+        )
+    target.unlink()
+    remaining = saved_invoice_file_paths(bill_id)
+    bill.invoice_no = None
+    bill.invoice_amount = None
+    bill.invoice_status = "NOT_UPLOADED"
+    bill.last_error = None
+    instance = await get_bill_instance(db, bill.process_instance_id)
+    if instance is not None:
+        summary = loads_json(instance.summary, {})
+        if not isinstance(summary, dict):
+            summary = {}
+        scan = summary.get("invoice_scan")
+        if not isinstance(scan, dict):
+            scan = {}
+        scan["filePaths"] = remaining
+        scan.pop("invoiceNo", None)
+        scan.pop("invoiceAmount", None)
+        summary["invoice_scan"] = scan
+        instance.summary = dumps_json(summary)
+    await db.commit()
+    return remaining
 
 
 async def cancel_statement(

@@ -100,9 +100,22 @@ class StatementBillDetail(StatementBillListItem):
     )
 
 
+class StatementInvoiceFilesResponse(CamelModel):
+    file_paths: list[str] = Field(
+        default_factory=list,
+        serialization_alias="filePaths",
+    )
+
+
 class StatementInvoicePathsRequest(CamelModel):
     file_paths: list[str] = Field(
         default_factory=list,
         validation_alias=AliasChoices("file_paths", "filePaths"),
         serialization_alias="filePaths",
+    )
+
+
+class StatementInvoiceFilesResponse(CamelModel):
+    file_paths: list[str] = Field(
+        default_factory=list, serialization_alias="filePaths"
     )

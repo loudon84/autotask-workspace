@@ -234,6 +234,7 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-26
 
+- **扫描发票改成真正上传到 Task**：原先 Client 只把用户本机路径传给 `/invoice/paths`，换电脑 Worker 找不到文件，报 `invoice file input missing`。现改为 Main 读文件后 `multipart` 传到 `POST /statements/{billId}/invoice`，按对账单目录追加保存；扫描/提交都用服务器上的文件。详情打开看磁盘清单。Client 删除已上传文件会打 `DELETE /invoice-file`，服务器文件和扫描结果一起清掉，下次打开与列表一致。`tests/test_statement_service.py` + `test_statements_api.py` 41 passed。**需重启唯一 Task 4520**；Client 需重开（Main 有新 IPC）。
 - **本地模拟提交审核成功**：演练 dryRun 不点 SRM，本地停在待上传发票。新增 `service/scripts/simulate_stmt_submit_review.py`，按日期+金额写成已对账 / 审批中 / 已完成。不写 SRM。默认预览，`--yes` 才写库。
 - **模块管理员缓存仍是 false**：Auth 已是 `is_task_admin: true`，Task 缓存停在登录前。已改成你说的模型：AutoTask **登录成功后立刻** `POST /session/sync` 强制拉 Auth `/me` 写入缓存；平时 Task 请求走 10 分钟 TTL；新 token 的 `iat` 晚于缓存也会强制刷新。不再每个接口都打 `/me`。**需重启唯一 Task 4520**，并用 AutoTask 重新登录一次。
 - **提交审核点「确定」超时**：正式演练 1.1.4 在扫描前就装 dryRun 写闸；正式站发票上传 URL 不含 `/upload` 等关键字，POST 被 abort，Playwright 点弹窗确定 4s 超时。重试时弹窗还在，列表 `.el-table` 15s 找不到。Engine 写闸改为放行 `multipart/form-data`；提交包 **1.1.5** 改为扫描完成后再装写闸。**需重启 Engine 4610**；1.1.5 发布后把正式 Binding 从 1.1.4 切过去。

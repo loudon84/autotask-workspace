@@ -56,9 +56,13 @@ type SelectedInvoiceFile = {
   size: number;
 };
 
+function storedFileName(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() || filePath;
+}
+
 function filesFromPaths(paths: string[]): SelectedInvoiceFile[] {
   return paths.map((path) => ({
-    name: path.split(/[/\\]/).pop() || path,
+    name: storedFileName(path),
     path,
     size: 0,
   }));
@@ -140,6 +144,8 @@ export function StatementDetailPage({ billId }: { billId: string }) {
   const scannedPaths = data.scannedFilePaths ?? [];
   const scannedAsFiles = filesFromPaths(scannedPaths);
   const workingFiles = selectedFiles ?? scannedAsFiles;
+  const isServerFile = (file: SelectedInvoiceFile) =>
+    scannedPaths.includes(file.path);
 
   const onUpdated = async () => {
     await queryClient.invalidateQueries({
@@ -172,10 +178,28 @@ export function StatementDetailPage({ billId }: { billId: string }) {
     }
   };
 
-  const removeInvoice = (filePath: string) => {
-    setSelectedFiles(
-      workingFiles.filter((file) => file.path !== filePath)
-    );
+  const removeInvoice = async (filePath: string) => {
+    const target = workingFiles.find((file) => file.path === filePath);
+    if (!target) {
+      return;
+    }
+    if (isServerFile(target)) {
+      setActing(true);
+      try {
+        await autotaskApi.statements.deleteInvoiceFile({
+          billId,
+          fileName: storedFileName(target.path),
+        });
+        setSelectedFiles(workingFiles.filter((file) => file.path !== filePath));
+        await onUpdated();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "删除失败");
+      } finally {
+        setActing(false);
+      }
+      return;
+    }
+    setSelectedFiles(workingFiles.filter((file) => file.path !== filePath));
   };
 
   const retryGenerate = async () => {
@@ -218,12 +242,18 @@ export function StatementDetailPage({ billId }: { billId: string }) {
       await scanInvoice(picked);
       return;
     }
+    const localFiles = targets.filter((file) => !isServerFile(file));
     setActing(true);
     try {
-      await autotaskApi.statements.uploadInvoicePaths({
-        billId,
-        filePaths: targets.map((file) => file.path),
-      });
+      if (localFiles.length > 0) {
+        await autotaskApi.statements.uploadInvoiceFiles({
+          billId,
+          filePaths: localFiles.map((file) => file.path),
+        });
+      } else {
+        await autotaskApi.statements.rescanInvoice(billId);
+      }
+      setSelectedFiles(null);
       toast.success("已发起扫描发票：完成后请核对发票号和发票总额");
       await onUpdated();
     } catch (error) {
@@ -233,9 +263,8 @@ export function StatementDetailPage({ billId }: { billId: string }) {
     }
   };
 
-  const submitReview = async (files?: SelectedInvoiceFile[]) => {
-    const targets = files ?? workingFiles;
-    if (targets.length === 0) {
+  const submitReview = async () => {
+    if (workingFiles.length === 0) {
       toast.error("请先选择发票并扫描");
       return;
     }
@@ -245,9 +274,7 @@ export function StatementDetailPage({ billId }: { billId: string }) {
     }
     setActing(true);
     try {
-      await autotaskApi.statements.submitReview(billId, {
-        filePaths: targets.map((file) => file.path),
-      });
+      await autotaskApi.statements.submitReview(billId);
       toast.success("已发起提交审核：将再次扫描并核对后提交");
       await onUpdated();
     } catch (error) {

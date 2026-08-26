@@ -1,15 +1,12 @@
 """天地伟业对账单 API。"""
 
-from pathlib import Path
-
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.deps import get_db
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.core.security import bearer_scheme, get_current_user, require_portal_visible, require_tenant_access
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
@@ -22,6 +19,7 @@ from app.schemas.statement import (
     StatementBillListItem,
     StatementGenerateRequest,
     StatementGenerateResponse,
+    StatementInvoiceFilesResponse,
     StatementInvoicePathsRequest,
     StatementQueryReceiptsRequest,
     StatementQueryReceiptsResult,
@@ -32,10 +30,6 @@ from app.services.permission_service import list_accessible_portal_ids
 from app.services.user_sync import resolve_login_username
 
 router = APIRouter()
-
-_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".pdf", ".ofd"}
-_MAX_FILES = 10
-_MAX_BYTES = 20 * 1024 * 1024
 
 
 async def _require_bill_visible(
@@ -189,37 +183,12 @@ async def get_statement(
 
 
 async def _save_upload_files(bill_id: str, files: list[UploadFile]) -> list[str]:
-    if not files:
-        raise BadRequestError(
-            message="请选择发票文件",
-            message_key="errors.autotask.statement.invoice_files_required",
-        )
-    if len(files) > _MAX_FILES:
-        raise BadRequestError(
-            message="最多上传 10 个发票文件",
-            message_key="errors.autotask.statement.invoice_files_limit",
-        )
-    root = Path(settings.ARTIFACT_LOCAL_DIR) / "statements" / bill_id
-    root.mkdir(parents=True, exist_ok=True)
-    saved: list[str] = []
+    uploads: list[tuple[str, bytes]] = []
     for index, upload in enumerate(files):
         name = upload.filename or f"invoice-{index}"
-        suffix = Path(name).suffix.lower()
-        if suffix not in _ALLOWED_SUFFIXES:
-            raise BadRequestError(
-                message=f"不支持的文件格式: {suffix or name}",
-                message_key="errors.autotask.statement.invoice_file_type",
-            )
         content = await upload.read()
-        if len(content) > _MAX_BYTES:
-            raise BadRequestError(
-                message=f"单个文件不能超过 20M: {name}",
-                message_key="errors.autotask.statement.invoice_file_size",
-            )
-        target = root / f"{index:02d}_{Path(name).name}"
-        target.write_bytes(content)
-        saved.append(str(target.resolve()))
-    return saved
+        uploads.append((name, content))
+    return statement_service.save_invoice_uploads(bill_id, uploads)
 
 
 @router.post("/{bill_id}/invoice", response_model=ApiResponse[StatementTaskResponse])
@@ -231,9 +200,13 @@ async def upload_invoice_files(
 ):
     tenant_id = require_tenant_access(user)
     await _require_bill_visible(db, user, tenant_id, bill_id)
-    file_paths = await _save_upload_files(bill_id, files)
+    await _save_upload_files(bill_id, files)
     task = await statement_service.upload_invoice(
-        db, tenant_id, bill_id, file_paths=file_paths, actor=user.user_id
+        db,
+        tenant_id,
+        bill_id,
+        file_paths=statement_service.saved_invoice_file_paths(bill_id),
+        actor=user.user_id,
     )
     return ApiResponse(data=StatementTaskResponse(task_id=task.id, status=task.status))
 
@@ -251,6 +224,21 @@ async def upload_invoice_paths(
         db, tenant_id, bill_id, file_paths=body.file_paths, actor=user.user_id
     )
     return ApiResponse(data=StatementTaskResponse(task_id=task.id, status=task.status))
+
+
+@router.delete("/{bill_id}/invoice-file", response_model=ApiResponse[StatementInvoiceFilesResponse])
+async def delete_invoice_file(
+    bill_id: str,
+    file_name: str = Query(..., alias="fileName"),
+    db: AsyncSession = Depends(get_db),
+    user: UserCache = Depends(get_current_user),
+):
+    tenant_id = require_tenant_access(user)
+    await _require_bill_visible(db, user, tenant_id, bill_id)
+    remaining = await statement_service.delete_invoice_file(
+        db, tenant_id, bill_id, file_name=file_name, actor=user.user_id
+    )
+    return ApiResponse(data=StatementInvoiceFilesResponse(file_paths=remaining))
 
 
 @router.post("/{bill_id}/submit-review", response_model=ApiResponse[StatementTaskResponse])
