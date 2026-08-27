@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-26
+最后更新：2026-08-27
 
 ## 1. 用途
 
@@ -66,8 +66,9 @@
 | 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
 | 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
-| 权限 v5.1（管人接口后补） | 代码已接 Auth：`/me` 的 `is_super_admin` / `is_task_admin`；登录拉 `GET /members/{id}/subordinate` 写入 `managed_user_ids`。模块管理员与超管在 AutoTask 内全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head）。登录后 `POST /session/sync` 强制刷新缓存；平时 TTL；新 token `iat` 也会强制刷新 | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
+| 权限 v5.1（管人接口后补） | 登录缓存 `managed_user_ids` 只做列表/详情权限。门户选归属人现拉 `GET /members/{id}/subordinate`（Auth 按角色返回全员/自己/自己+下属），不再打 `/orgs/{org}/members`。模块管理员与超管看数仍全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
 | 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
+| 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
 
 ## 5. 未决问题
 
@@ -108,8 +109,9 @@
 17. **v4.0 阶段 1 已落地**：正式门户「天地伟业-国际-正式演练」已绑扫单/回签/收货 **1.1.0**（正式选择器）。演示 Binding 仍 1.0.x。下一步：Client 手动扫单验收；阶段 2 出正式建单+下合同（不设 dryRun），阶段 3 写步骤 + dryRun。
 18. **v5.0**：PRD 已扩。换人/换门户不准改 `.env` 和 Flow 源码。门户存密码；ERP/SDMS 地址进 Binding.config；Engine `mock_env` 去掉。探测脚本硬编码不纳入本期。
 19. **正式 Flow 演练/上线**：现行说明见 v4.1 SOP。扫描正式 **1.1.3**（Binding 已写 `searches`，无包内默认 PO）、提交正式 **1.1.4 dryRun** 已绑。选文件后必须点弹窗「确定」才识别。dryRun 对「提交审核」做 trial click，不真点。填交期/签章正式包未绑。
-20. **v5.1**：Auth `/me` 管理员字段与下属接口已到。代码已接：`is_task_admin` 全放开；登录缓存下属。迁移 `a7e4b2c81d09` **已执行**（`g3b8e2a91c40` → `a7e4b2c81d09`，当前 head）。**需重启唯一 Task 4520**。
+20. **v5.1**：登录缓存下属只做权限过滤。门户选归属人现拉下属接口（Auth 按角色返回可见人员），禁止组织全员接口。**需重启唯一 Task 4520**。
 21. **v5.2 调度中心（Binding 任务）**：迁移与回填已完成。4520 已于 2026-08-25 09:48 换成 `JobScheduler`。正式演练回签 `*/5` 会到点开火，但无待回签候选时不建任务。
+22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -232,8 +234,13 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-08-27
+
+- **门户归属人下拉不再打组织全员**：Auth 已改 `GET /members/{id}/subordinate` 的 `data`：管理员全员、领导自己+下属、员工自己。Task 归属人候选一律现拉这条，删掉 `GET /orgs/{org}/members`。登录写入的 `managed_user_ids` 仍只做门户/任务/对账单可见性。接口失败时下拉只露当前用户，不回退登录缓存。Client 打开选择框每次现拉（`staleTime: 0`）。**需重启唯一 Task 4520**。
+
 ### 2026-08-26
 
+- **v5.3 需求已落 PRD**：`project-docs/prd/AutoTask v5.3 对账单发票上传.md`。记录现场失败（用户电脑 `invoice file input missing`）、口径（传到 Task、上传原样、删除同步服务器、打开能找回）和接口/验收，便于以后溯源。
 - **扫描发票改成真正上传到 Task**：原先 Client 只把用户本机路径传给 `/invoice/paths`，换电脑 Worker 找不到文件，报 `invoice file input missing`。现改为 Main 读文件后 `multipart` 传到 `POST /statements/{billId}/invoice`，按对账单目录追加保存；扫描/提交都用服务器上的文件。详情打开看磁盘清单。Client 删除已上传文件会打 `DELETE /invoice-file`，服务器文件和扫描结果一起清掉，下次打开与列表一致。`tests/test_statement_service.py` + `test_statements_api.py` 41 passed。**需重启唯一 Task 4520**；Client 需重开（Main 有新 IPC）。
 - **本地模拟提交审核成功**：演练 dryRun 不点 SRM，本地停在待上传发票。新增 `service/scripts/simulate_stmt_submit_review.py`，按日期+金额写成已对账 / 审批中 / 已完成。不写 SRM。默认预览，`--yes` 才写库。
 - **模块管理员缓存仍是 false**：Auth 已是 `is_task_admin: true`，Task 缓存停在登录前。已改成你说的模型：AutoTask **登录成功后立刻** `POST /session/sync` 强制拉 Auth `/me` 写入缓存；平时 Task 请求走 10 分钟 TTL；新 token 的 `iat` 晚于缓存也会强制刷新。不再每个接口都打 `/me`。**需重启唯一 Task 4520**，并用 AutoTask 重新登录一次。

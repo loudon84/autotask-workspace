@@ -3,7 +3,7 @@
 | 项 | 内容 |
 | --- | --- |
 | 版本 | **v5.1** |
-| 状态 | **2026-08-21 定稿**；Auth `/me` 管理员字段与下属接口已到（2026-08-25） |
+| 状态 | **2026-08-21 定稿**；Auth `/me` 管理员字段与下属接口已到（2026-08-25）；归属人下拉改走下属接口现拉（2026-08-27） |
 | 原则 | 门户只认归属人；你能看的门户 = 归属人是你自己，或归属人是你管理的人。`is_super_admin` / `is_task_admin` / `portal_org_role=admin` 全放开。不再用 `portal_access_grants` 做鉴权。 |
 
 ---
@@ -35,12 +35,18 @@
 | `is_super_admin` | 超管 | 全部放开，可操作任何权限 |
 | `is_task_admin` | AutoTask 模块管理员（如 IT 运维） | **本模块内全部放开**（门户/任务/订单/对账单/调度/模板） |
 
-`GET /api/v1/members/{登录人id}/subordinate` 返回当前用户管理的人（id、姓名、工号）。
+`GET /api/v1/members/{登录人id}/subordinate` 的 `data` 按登录人角色返回**当前能看见的人**（id、姓名、工号）：
 
-- AutoTask 登录同步 `/me` 时：写入 `is_super_admin` / `is_task_admin`，并始终拉下属名单写入 `managed_user_ids`（模块管理员也写，方便核对组织关系）。列表过滤不再每次打 Auth；超管/模块管理员看数仍全放开，不靠这份名单。
+| 角色 | 接口返回 |
+| --- | --- |
+| 管理员（超管 / 模块管理员 / 组织 admin） | 组织全部员工 |
+| 领导 | 自己 + 下属 |
+| 普通人 | 自己 |
+
+- AutoTask 登录同步 `/me` 时：写入 `is_super_admin` / `is_task_admin`，并始终拉下属名单写入 `managed_user_ids`（模块管理员也写，方便核对组织关系）。**列表/详情权限过滤继续用这份登录缓存**，不每次打 Auth；超管/模块管理员看数仍全放开，不靠这份名单。
 - 下属接口失败时：若 `/me` 里另有管人字段则回退；否则管人列表当空。非 admin 只能看到归属人是自己的门户。超管/模块管理员不受影响。
 
-不要用 `GET /api/v1/auth/users`（超管全站用户）。
+不要用 `GET /api/v1/auth/users`（超管全站用户）。**不要用** `GET /api/v1/orgs/{org_id}/members`（组织全员）。
 
 ---
 
@@ -61,7 +67,9 @@
 | --- | --- |
 | 普通人 | 只有自己 |
 | 领导（有「管理的人」） | 自己 + 自己管理的所有人 |
-| `is_task_admin` / `is_super_admin` / `portal_org_role=admin` | 组织成员全员：`GET /api/v1/orgs/{org_id}/members`（`user_id` + `user_name` 人名 + `username` 工号） |
+| `is_task_admin` / `is_super_admin` / `portal_org_role=admin` | 组织全部员工 |
+
+打开门户编辑/选择归属人时，**现拉** `GET /api/v1/members/{登录人id}/subordinate`（Auth 已按角色返回全员/自己/自己+下属）。**不读登录缓存的 `managed_user_ids`**，也不打组织全员接口。
 
 普通人把字段亮出来，但不能把门户转给别人。领导才能改到自己管的人。Task 按同一规则校验，不能只靠前端藏选项。
 
@@ -101,7 +109,7 @@ admin / 超管 / 模块管理员 → 全部
 **Auth（本仓库外，已提供）**
 
 - `/me` 返回 `is_super_admin`、`is_task_admin`。
-- `GET /api/v1/members/{user_id}/subordinate` 返回下属。
+- `GET /api/v1/members/{user_id}/subordinate` 按角色返回可见人员（管理员全员、领导自己+下属、员工自己）。
 
 **Task**
 
@@ -109,13 +117,13 @@ admin / 超管 / 模块管理员 → 全部
 - 登录同步 `/me` 缓存管理员标志；再拉下属写入 `managed_user_ids`。
 - `user_cache.is_task_admin` 列须授权才迁库。
 - 列表/详情：门户、任务、订单实例、对账单按第 3.2 节过滤。
-- 代理归属人下拉：普通人/领导 = 自己 + `/members/{id}/subordinate`。模块管理员/超管 = `GET /api/v1/orgs/{org_id}/members`（OpenAPI `MemberInfo`：`user_id`、`user_name`、`username`）。选项展示「姓名（工号）」，可搜索。
+- 代理归属人下拉：打开选择时现拉 `/members/{id}/subordinate`（Auth 已按角色返回可见人员）。登录缓存只做列表权限，不填下拉。选项展示「姓名（工号）」，可搜索。
 - 停用 grants 鉴权；归档工号改走归属人。
 
 **Client**
 
 - 门户列表/详情/编辑**必须展示归属人**。
-- 下拉：普通人只有自己；领导选自己 + 下属；模块管理员/超管选组织全员，展示姓名（工号），可搜索。
+- 下拉打开时现拉可见人员（普通人自己；领导自己+下属；模块管理员/超管全员），展示姓名（工号），可搜索。不复用登录人员缓存。
 - 不做「可见人」勾选。
 - 不做人员编制页。
 

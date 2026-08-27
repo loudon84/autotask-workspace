@@ -27,9 +27,8 @@ from app.services.permission_service import (
     effective_owner_user_id,
     is_scope_admin,
     list_accessible_portal_ids,
-    visible_owner_ids,
 )
-from app.services.user_sync import fetch_org_members, fetch_subordinates
+from app.services.user_sync import fetch_subordinates
 
 _DEFAULT_CREATOR_PERMISSIONS = [
     PortalPermission.PORTAL_VIEW,
@@ -104,60 +103,49 @@ async def build_portal_response(db: AsyncSession, account: PortalAccount) -> Por
     return _to_portal_response(account, names)
 
 
+def _owner_candidates_from_people(
+    people: list[dict[str, str]],
+    user: UserCache,
+) -> list[PortalOwnerCandidate]:
+    candidates: list[PortalOwnerCandidate] = []
+    seen: set[str] = set()
+    for item in people:
+        member_id = str(item.get("user_id") or "").strip()
+        if not member_id or member_id in seen:
+            continue
+        seen.add(member_id)
+        candidates.append(
+            PortalOwnerCandidate(
+                user_id=member_id,
+                name=item.get("name") or "",
+                username=item.get("username") or "",
+            )
+        )
+    if user.user_id not in seen:
+        candidates.insert(
+            0,
+            PortalOwnerCandidate(
+                user_id=user.user_id,
+                name=user.name or "",
+                username="",
+            ),
+        )
+    return candidates
+
+
 async def list_owner_candidates(
     db: AsyncSession,
     user: UserCache,
     token: str | None = None,
 ) -> list[PortalOwnerCandidate]:
-    """模块管理员/超管走组织成员全员；其他人走自己 + 下属。"""
-    if is_scope_admin(user) and token:
-        members = await fetch_org_members(token, user.current_org_id or "")
-        if members:
-            return [
-                PortalOwnerCandidate(
-                    user_id=item["user_id"],
-                    name=item.get("name") or "",
-                    username=item.get("username") or "",
-                )
-                for item in members
-            ]
-    candidates = [
-        PortalOwnerCandidate(
-            user_id=user.user_id,
-            name=user.name or "",
-            username="",
-        )
-    ]
-    seen = {user.user_id}
+    """归属人下拉现拉下属接口。Auth 已按角色返回全员/自己/自己+下属。不读登录缓存。"""
+    _ = db
+    people: list[dict[str, str]] = []
     if token:
-        subordinates = await fetch_subordinates(token, user.user_id)
-        if subordinates:
-            for item in subordinates:
-                member_id = item["user_id"]
-                if member_id in seen:
-                    continue
-                seen.add(member_id)
-                candidates.append(
-                    PortalOwnerCandidate(
-                        user_id=member_id,
-                        name=item.get("name") or "",
-                        username=item.get("username") or "",
-                    )
-                )
-            return candidates
-    owner_ids = visible_owner_ids(user)
-    names = await _owner_name_map(db, owner_ids)
-    names.setdefault(user.user_id, user.name or "")
-    for user_id in sorted(
-        owner_ids, key=lambda item: (0 if item == user.user_id else 1, item)
-    ):
-        if user_id in seen:
-            continue
-        seen.add(user_id)
-        candidates.append(
-            PortalOwnerCandidate(user_id=user_id, name=names.get(user_id, ""))
-        )
-    return candidates
+        fetched = await fetch_subordinates(token, user.user_id)
+        if fetched is not None:
+            people = fetched
+    return _owner_candidates_from_people(people, user)
 
 
 async def _assert_owner_candidate(
@@ -166,10 +154,21 @@ async def _assert_owner_candidate(
     owner_user_id: str,
     token: str | None = None,
 ) -> None:
+    fetched = None
+    if token:
+        fetched = await fetch_subordinates(token, user.user_id)
+    if fetched is not None:
+        allowed = {item["user_id"] for item in fetched}
+        allowed.add(user.user_id)
+        if owner_user_id not in allowed:
+            raise ForbiddenError(
+                message="不能把门户转给该用户",
+                message_key="errors.autotask.portal_owner_not_allowed",
+            )
+        return
     if is_scope_admin(user):
         return
-    candidates = await list_owner_candidates(db, user, token)
-    if owner_user_id not in {item.user_id for item in candidates}:
+    if owner_user_id != user.user_id:
         raise ForbiddenError(
             message="不能把门户转给该用户",
             message_key="errors.autotask.portal_owner_not_allowed",

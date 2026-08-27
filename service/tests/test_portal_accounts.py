@@ -32,6 +32,7 @@ def _user(
     current_org_id: str = "tenant-001",
     portal_org_role: str | None = None,
     is_task_admin: bool = False,
+    managed_user_ids: str = "[]",
 ) -> UserCache:
     return UserCache(
         user_id=user_id,
@@ -42,6 +43,7 @@ def _user(
         portal_org_role=portal_org_role,
         is_super_admin=is_super_admin,
         is_task_admin=is_task_admin,
+        managed_user_ids=managed_user_ids,
         synced_at=datetime.now(UTC),
     )
 
@@ -395,24 +397,26 @@ def test_test_open_api_returns_403_without_permission():
 
 
 @pytest.mark.asyncio
-async def test_task_admin_owner_candidates_come_from_org_members(monkeypatch):
-    async def _members(_token, _org_id):
+async def test_admin_owner_candidates_come_from_subordinates(monkeypatch):
+    async def _subs(_token, _user_id):
         return [
+            {
+                "user_id": "user-001",
+                "name": "测试用户",
+                "username": "u001",
+            },
             {
                 "user_id": "user-2",
                 "name": "张站",
                 "username": "smc-sz-hr15563",
-            }
+            },
         ]
 
-    async def _subs(_token, _user_id):
-        raise AssertionError("task admin should use org members")
-
-    monkeypatch.setattr(portal_account_service, "fetch_org_members", _members)
     monkeypatch.setattr(portal_account_service, "fetch_subordinates", _subs)
     user = _user(is_task_admin=True, org_role="member")
     rows = await portal_account_service.list_owner_candidates(AsyncMock(), user, "token")
     assert [(item.user_id, item.name, item.username) for item in rows] == [
+        ("user-001", "测试用户", "u001"),
         ("user-2", "张站", "smc-sz-hr15563"),
     ]
 
@@ -435,3 +439,55 @@ async def test_leader_owner_candidates_come_from_subordinates(monkeypatch):
         ("user-001", "测试用户", ""),
         ("user-2", "张站", "smc-sz-hr15563"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_member_owner_candidates_use_live_subordinates(monkeypatch):
+    async def _subs(_token, _user_id):
+        return [
+            {
+                "user_id": "user-001",
+                "name": "测试用户",
+                "username": "u001",
+            }
+        ]
+
+    monkeypatch.setattr(portal_account_service, "fetch_subordinates", _subs)
+    user = _user(org_role="member", managed_user_ids='["user-2"]')
+    rows = await portal_account_service.list_owner_candidates(AsyncMock(), user, "token")
+    assert [(item.user_id, item.name, item.username) for item in rows] == [
+        ("user-001", "测试用户", "u001"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_owner_candidates_ignore_cache_when_subordinates_fail(monkeypatch):
+    async def _subs(_token, _user_id):
+        return None
+
+    monkeypatch.setattr(portal_account_service, "fetch_subordinates", _subs)
+    user = _user(org_role="member", managed_user_ids='["user-2"]')
+    rows = await portal_account_service.list_owner_candidates(AsyncMock(), user, "token")
+    assert [(item.user_id, item.name, item.username) for item in rows] == [
+        ("user-001", "测试用户", ""),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_assert_owner_candidate_uses_live_list_even_for_admin(monkeypatch):
+    async def _subs(_token, _user_id):
+        return [
+            {"user_id": "user-001", "name": "测试用户", "username": "u001"},
+            {"user_id": "user-2", "name": "张站", "username": "smc-sz-hr15563"},
+        ]
+
+    monkeypatch.setattr(portal_account_service, "fetch_subordinates", _subs)
+    user = _user(is_task_admin=True, org_role="member")
+    await portal_account_service._assert_owner_candidate(
+        AsyncMock(), user, "user-2", "token"
+    )
+    with pytest.raises(ForbiddenError) as exc_info:
+        await portal_account_service._assert_owner_candidate(
+            AsyncMock(), user, "user-3", "token"
+        )
+    assert exc_info.value.message_key == "errors.autotask.portal_owner_not_allowed"
