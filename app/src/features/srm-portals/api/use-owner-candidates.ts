@@ -7,5 +7,7 @@ export function useOwnerCandidates(enabled: boolean) {
     queryKey: queryKeys.portalAccounts.ownerCandidates(),
     queryFn: () => autotaskApi.portalAccounts.listOwnerCandidates(),
     enabled,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

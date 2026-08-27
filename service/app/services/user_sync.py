@@ -244,7 +244,7 @@ def _parse_auth_people(payload: object) -> list[dict[str, str]]:
 
 
 async def fetch_subordinates(token: str, user_id: str) -> list[dict[str, str]] | None:
-    """登录人下属。失败返回 None（保留 /me 回退）；成功无下属返回 []。"""
+    """可见人员：管理员全员、领导自己+下属、员工自己。失败 None（登录缓存可回退 /me）；成功无人 []。"""
     actor = str(user_id or "").strip()
     if not actor or not token:
         return None
@@ -265,28 +265,6 @@ async def fetch_subordinates(token: str, user_id: str) -> list[dict[str, str]] |
             response.text[:200],
         )
         return None
-    return _parse_auth_people(response.json())
-
-
-async def fetch_org_members(token: str, org_id: str) -> list[dict[str, str]]:
-    """组织成员，给 admin 归属人下拉用。Auth 接口形态做宽松解析。"""
-    org = str(org_id or "").strip()
-    if not org or not token:
-        return []
-    url = f"{settings.NODESKCLAW_BACKEND_URL.rstrip('/')}/api/v1/orgs/{org}/members"
-    try:
-        async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
-            response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
-    except Exception:
-        logger.warning("fetch org members failed for org %s", org, exc_info=True)
-        return []
-    if response.status_code >= 400:
-        logger.warning(
-            "org members failed: status=%s body=%s",
-            response.status_code,
-            response.text[:200],
-        )
-        return []
     return _parse_auth_people(response.json())
 
 
