@@ -112,6 +112,29 @@ class RunArtifactCreate(CamelModel):
     )
 
 
+class IntegrationCallCreate(CamelModel):
+    """Worker 回调：记录一次接口调用。run_id 从 path 取。"""
+
+    system: str
+    method: str
+    url: str
+    request_body: str | None = Field(
+        None, validation_alias=AliasChoices("request_body", "requestBody"), serialization_alias="requestBody"
+    )
+    response_body: str | None = Field(
+        None, validation_alias=AliasChoices("response_body", "responseBody"), serialization_alias="responseBody"
+    )
+    status_code: int | None = Field(
+        None, validation_alias=AliasChoices("status_code", "statusCode"), serialization_alias="statusCode"
+    )
+    error_code: str | None = Field(
+        None, validation_alias=AliasChoices("error_code", "errorCode"), serialization_alias="errorCode"
+    )
+    duration_ms: int | None = Field(
+        None, validation_alias=AliasChoices("duration_ms", "durationMs"), serialization_alias="durationMs"
+    )
+
+
 class RunFinishRequest(CamelModel):
     status: str
     error_code: str | None = Field(

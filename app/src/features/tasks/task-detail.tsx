@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArtifactList } from "@/components/business/artifact-preview";
 import { HumanCheckpointPanel } from "@/components/business/human-checkpoint-panel";
+import { IntegrationCallPanel } from "@/components/business/integration-call-panel";
 import { PriorityBadge } from "@/components/business/priority-badge";
 import { RunLogPanel } from "@/components/business/run-log-panel";
 import { StatusBadge } from "@/components/business/status-badge";
@@ -156,6 +157,14 @@ export function TaskDetailPage({ taskId }: { taskId: string }) {
             </CardHeader>
             <CardContent>
               <ArtifactList artifacts={artifacts} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">接口调用</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <IntegrationCallPanel taskId={task.id} />
             </CardContent>
           </Card>
         </div>

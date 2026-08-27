@@ -15,6 +15,7 @@ PROCESS_ERROR_MESSAGES_ZH: dict[str, str] = {
     "ORDER_DETAIL_LINES_UNAVAILABLE": "无法读取订单行明细，请检查门户页面或附件",
     "ORDER_ATTACHMENT_LINE_DUPLICATE": "订单附件存在重复行号，请检查附件数据",
     "ERP_ORDER_IMPORT_ROW_FAILED": "创建 SDMS 销售订单时行级导入失败",
+    "FLOW_UNHANDLED_ERROR": "执行失败，请打开任务详情「接口调用」查看对方返回，或联系技术支持",
     "PROCESS_OUTPUT_LINES_MISSING": "建单成功但缺少订单行输出，无法继续填交期",
     "PROCESS_BINDING_MISSING": "当前门户未配置对应流程 Binding",
     "SRM_LOGIN_PAGE_UNAVAILABLE": "无法打开或识别 SRM 登录页",
@@ -36,7 +37,13 @@ def localize_process_error(
     code = (error_code or "").strip() or None
     raw = (error_message or "").strip() or None
     if code and code in PROCESS_ERROR_MESSAGES_ZH:
-        return code, PROCESS_ERROR_MESSAGES_ZH[code]
+        zh = PROCESS_ERROR_MESSAGES_ZH[code]
+        detail = raw if raw and raw != zh and not _looks_mostly_english(raw) else None
+        if detail:
+            if detail.startswith(zh):
+                return code, detail
+            return code, f"{zh}：{detail}"
+        return code, zh
     if raw:
         # 已是中文或未知英文：有码时附带通用说明，避免纯英文吓客服
         if code and _looks_mostly_english(raw):

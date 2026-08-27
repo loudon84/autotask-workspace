@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import date, datetime
@@ -42,6 +43,8 @@ from app.services.json_utils import dumps_json, loads_json
 from app.services.runtime_endpoints import sdms_check_url
 from app.services.sdms_attachment_client import upload_statement_invoices_to_sdms
 from app.services.sdms_client import build_custom_son_code, describe_lookup, fetch_check_amount
+
+logger = logging.getLogger(__name__)
 
 PROCESS_CODE = process_svc.PROCESS_CODE_SRM_TIANDI_STATEMENT
 INVOICE_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".pdf", ".ofd"}
@@ -343,6 +346,27 @@ async def generate_statement(
     await db.refresh(task)
     await db.refresh(instance)
     await db.refresh(bill)
+    # 任务创建成功后补写 SDMS 对账查询的接口调用行（挂生成任务）。
+    # 查询失败时还没有 task_id，不写表（见上文 raise）。
+    try:
+        from app.services.integration_call_log_service import record_httpx_exchange
+
+        await record_httpx_exchange(
+            db,
+            task_id=task.id,
+            tenant_id=tenant_id,
+            run_id=None,
+            system="SDMS",
+            method="GET",
+            url=lookup.url,
+            request_body=dumps_json(lookup.params),
+            response_or_exc=lookup.response_body,
+            status_code=lookup.status_code,
+            error_code=lookup.error,
+            commit=True,
+        )
+    except Exception:  # noqa: BLE001  补写失败不影响生成结果
+        logger.warning("record sdms check_amount call failed for task %s", task.id)
     return {
         "ok": True,
         "instance_id": instance.id,
@@ -1164,6 +1188,10 @@ async def on_submit_finished(db: AsyncSession, task: AutomationTask, run: RpaRun
         check_num=check_num,
         username=str(task_input.get("sdmsUsername") or "").strip(),
         file_paths=paths,
+        db=db,
+        task_id=task.id,
+        tenant_id=task.tenant_id,
+        run_id=run.id,
     )
     if attach_error:
         bill.last_error = attach_error

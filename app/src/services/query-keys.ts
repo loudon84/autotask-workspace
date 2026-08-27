@@ -12,6 +12,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.tasks.all, id] as const,
     auditLogs: (taskId: string) => ["audit-logs", taskId] as const,
     humanAction: (taskId: string) => ["human-action", taskId] as const,
+    integrationCalls: (taskId: string) =>
+      ["tasks", taskId, "integration-calls"] as const,
   },
   workflows: {
     all: ["workflows"] as const,

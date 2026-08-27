@@ -198,6 +198,19 @@ class RunArtifactCreate(CamelModel):
     mime_type: str | None = None
 
 
+class IntegrationCallCreate(CamelModel):
+    """v5.4 接口调用日志：一次主动 HTTP 一行。run_id 从 path 取。"""
+
+    system: str
+    method: str
+    url: str
+    request_body: str | None = None
+    response_body: str | None = None
+    status_code: int | None = None
+    error_code: str | None = None
+    duration_ms: int | None = None
+
+
 class ResolvedFlowVersion(CamelModel):
     flow_version_id: UUID
     rpa_flow_id: str

@@ -28,6 +28,9 @@ from nodeskclaw_rpa_engine.runtime.browser import (
 from nodeskclaw_rpa_engine.runtime.context import (
     CredentialResolver,
     DisabledCredentialResolver,
+    IntegrationCallSink,
+    IntegrationHttp,
+    NoopIntegrationCallSink,
     RunContext,
     RuntimeEventSink,
 )
@@ -55,6 +58,7 @@ from nodeskclaw_rpa_engine.workers.schemas import (
 logger = logging.getLogger(__name__)
 
 EventSinkFactory = Callable[[RunCommand], RuntimeEventSink]
+IntegrationCallSinkFactory = Callable[[RunCommand], IntegrationCallSink]
 _SENSITIVE_OUTPUT_KEY_PARTS = (
     "authorization",
     "credential",
@@ -83,6 +87,7 @@ class RpaRuntime:
         event_sink_factory: EventSinkFactory,
         credential_resolver: CredentialResolver | None = None,
         error_handler: ErrorHandler | None = None,
+        integration_call_sink_factory: IntegrationCallSinkFactory | None = None,
     ) -> None:
         self._settings = settings
         self._loader = loader
@@ -93,10 +98,18 @@ class RpaRuntime:
             credential_resolver or DisabledCredentialResolver()
         )
         self._error_handler = error_handler or ErrorHandler()
+        self._integration_call_sink_factory = integration_call_sink_factory
         self._work_root = settings.runtime_work_dir.resolve()
         self._session_cache = PortalSessionCache(
             settings.runtime_session_cache_dir.resolve()
         )
+
+    def _build_integration_http(self, command: RunCommand) -> IntegrationHttp:
+        """构造本次 run 的 ctx.http。无 sink 工厂时用 no-op sink（不记录）。"""
+        if self._integration_call_sink_factory is None:
+            return IntegrationHttp(sink=NoopIntegrationCallSink())
+        sink = self._integration_call_sink_factory(command)
+        return IntegrationHttp(sink=sink)
 
     async def handle(self, command: RunCommand) -> RunResult:
         lease = command.lease
@@ -143,6 +156,7 @@ class RpaRuntime:
                     self._settings.runtime_trace_mode is not RuntimeTraceMode.OFF
                 )
                 async with self._session_cache.lock(cache_key):
+                    integration_http: IntegrationHttp | None = None
                     try:
                         session = await self._browser_manager.start(
                             lease.config.browser_session,
@@ -160,6 +174,7 @@ class RpaRuntime:
                             sink=self._artifact_sink,
                             max_bytes=self._settings.artifact_max_bytes,
                         )
+                        integration_http = self._build_integration_http(command)
                         context = RunContext.create(
                             input_data=lease.input,
                             credentials=credentials,
@@ -169,6 +184,7 @@ class RpaRuntime:
                             artifacts=recorder,
                             event_sink=sink,
                             safe_config=self._safe_config(command),
+                            integration_http=integration_http,
                         )
                         execution = await self._execute_with_retries(
                             loaded.run,
@@ -275,6 +291,9 @@ class RpaRuntime:
                                 self._resolved_session_error_code(outcome_error_code),
                             )
                             await session.close()
+                        if integration_http is not None:
+                            with contextlib.suppress(Exception):
+                                await integration_http.aclose()
             except Exception as exc:
                 decision = self._error_handler.classify(
                     exc,

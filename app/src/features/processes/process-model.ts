@@ -129,6 +129,8 @@ const PROCESS_ERROR_MESSAGES_ZH: Record<string, string> = {
   ORDER_DETAIL_LINES_UNAVAILABLE: "无法读取订单行明细，请检查门户页面或附件",
   ORDER_ATTACHMENT_LINE_DUPLICATE: "订单附件存在重复行号，请检查附件数据",
   ERP_ORDER_IMPORT_ROW_FAILED: "创建 SDMS 销售订单时行级导入失败",
+  FLOW_UNHANDLED_ERROR:
+    "执行失败，请打开任务详情「接口调用」查看对方返回，或联系技术支持",
   PROCESS_OUTPUT_LINES_MISSING: "建单成功但缺少订单行输出，无法继续填交期",
   SRM_LOGIN_PAGE_UNAVAILABLE: "无法打开或识别 SRM 登录页",
   SRM_LOGIN_FAILED: "SRM 登录失败，请检查账号或验证码",
@@ -157,7 +159,11 @@ export function formatProcessError(
   const code = errorCode?.trim() || "";
   const raw = errorMessage?.trim() || "";
   if (code && PROCESS_ERROR_MESSAGES_ZH[code]) {
-    return PROCESS_ERROR_MESSAGES_ZH[code];
+    const zh = PROCESS_ERROR_MESSAGES_ZH[code];
+    if (raw && raw !== zh && !looksMostlyEnglish(raw)) {
+      return raw.startsWith(zh) ? raw : `${zh}：${raw}`;
+    }
+    return zh;
   }
   if (raw) {
     if (code && looksMostlyEnglish(raw)) {

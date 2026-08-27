@@ -109,6 +109,25 @@ class ArtifactResponse(CamelModel):
     created_at: datetime = Field(serialization_alias="createdAt")
 
 
+class IntegrationCallLogResponse(CamelModel):
+    """接口调用日志：列表项含入参/出参全文（单任务调用次数少，不拆详情接口）。"""
+
+    id: str
+    task_id: str = Field(serialization_alias="taskId")
+    run_id: str | None = Field(None, serialization_alias="runId")
+    system: str
+    method: str
+    url: str
+    request_body: str | None = Field(None, serialization_alias="requestBody")
+    response_body: str | None = Field(None, serialization_alias="responseBody")
+    status_code: int | None = Field(None, serialization_alias="statusCode")
+    error_code: str | None = Field(None, serialization_alias="errorCode")
+    duration_ms: int | None = Field(None, serialization_alias="durationMs")
+    request_truncated: bool = Field(False, serialization_alias="requestTruncated")
+    response_truncated: bool = Field(False, serialization_alias="responseTruncated")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
 class ArtifactUploadUrlRequest(CamelModel):
     task_id: str = Field(validation_alias=AliasChoices("task_id", "taskId"), serialization_alias="taskId")
     run_id: str | None = Field(

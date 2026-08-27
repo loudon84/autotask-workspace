@@ -109,8 +109,13 @@ async def create_workflow_binding(
     db.add(binding)
     await db.flush()
     portal = await get_portal_account(db, tenant_id, body.portal_account_id)
+    template = await get_workflow_template(db, tenant_id, body.workflow_template_id)
     await scheduler_job_svc.sync_scheduler_job_from_binding(
-        db, binding=binding, portal=portal, config=body.config
+        db,
+        binding=binding,
+        portal=portal,
+        config=body.config,
+        template_code=template.code,
     )
     await db.commit()
     await db.refresh(binding)
@@ -156,8 +161,13 @@ async def update_workflow_binding(
     for field, value in data.items():
         setattr(binding, field, value)
     portal = await get_portal_account(db, tenant_id, binding.portal_account_id)
+    template = await get_workflow_template(db, tenant_id, binding.workflow_template_id)
     await scheduler_job_svc.sync_scheduler_job_from_binding(
-        db, binding=binding, portal=portal, config=final_config
+        db,
+        binding=binding,
+        portal=portal,
+        config=final_config,
+        template_code=template.code,
     )
     await db.commit()
     await db.refresh(binding)

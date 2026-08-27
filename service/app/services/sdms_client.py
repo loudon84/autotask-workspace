@@ -23,6 +23,8 @@ class SdmsCheckLookup:
     error: str | None = None
     check_num: str | None = None
     url: str = ""
+    status_code: int | None = None
+    response_body: str | None = None
 
 
 def month_range(today: date) -> tuple[date, date]:
@@ -77,11 +79,13 @@ async def fetch_check_amount(
     params = _month_params(day, customer_site)
     status = 0
     payload: Any = None
+    response_text: str | None = None
     try:
         # Windows 系统代理会让该接口返回空 502；与 curl 直连不一致，故不读环境/系统代理。
         async with httpx.AsyncClient(timeout=15.0, trust_env=False) as client:
             resp = await client.get(url, params=params)
             status = resp.status_code
+            response_text = resp.text
             payload = resp.json()
     except httpx.HTTPError as exc:
         return SdmsCheckLookup(
@@ -90,6 +94,8 @@ async def fetch_check_amount(
             params,
             error=f"HTTP 调用失败 {type(exc).__name__}: {_excerpt(exc)}",
             url=url,
+            status_code=None,
+            response_body=f"{type(exc).__name__}: {_excerpt(exc)}",
         )
     except ValueError as exc:
         return SdmsCheckLookup(
@@ -98,12 +104,20 @@ async def fetch_check_amount(
             params,
             error=f"响应不是 JSON: {_excerpt(exc)}",
             url=url,
+            status_code=status,
+            response_body=response_text,
         )
 
     if status >= 400:
-        return SdmsCheckLookup(None, None, params, error=f"HTTP {status}", url=url)
+        return SdmsCheckLookup(
+            None, None, params, error=f"HTTP {status}", url=url,
+            status_code=status, response_body=response_text,
+        )
     if not isinstance(payload, dict):
-        return SdmsCheckLookup(None, None, params, error="响应不是对象", url=url)
+        return SdmsCheckLookup(
+            None, None, params, error="响应不是对象", url=url,
+            status_code=status, response_body=response_text,
+        )
     if payload.get("code") not in (1, "1"):
         return SdmsCheckLookup(
             None,
@@ -111,13 +125,21 @@ async def fetch_check_amount(
             params,
             error=f"code={payload.get('code')} {_excerpt(payload.get('msg'))}",
             url=url,
+            status_code=status,
+            response_body=response_text,
         )
     data = payload.get("data")
     if not isinstance(data, list) or not data:
-        return SdmsCheckLookup(None, None, params, error="data 为空", url=url)
+        return SdmsCheckLookup(
+            None, None, params, error="data 为空", url=url,
+            status_code=status, response_body=response_text,
+        )
     row = data[0]
     if not isinstance(row, dict) or row.get("check_amount") is None:
-        return SdmsCheckLookup(None, None, params, error="缺少 check_amount", url=url)
+        return SdmsCheckLookup(
+            None, None, params, error="缺少 check_amount", url=url,
+            status_code=status, response_body=response_text,
+        )
     try:
         amount = Decimal(str(row["check_amount"]).replace(",", ""))
     except (InvalidOperation, ValueError):
@@ -127,6 +149,8 @@ async def fetch_check_amount(
             params,
             error=f"check_amount 无法解析: {row.get('check_amount')}",
             url=url,
+            status_code=status,
+            response_body=response_text,
         )
     head_id = row.get("check_head_id")
     return SdmsCheckLookup(
@@ -135,6 +159,8 @@ async def fetch_check_amount(
         params,
         check_num=_optional_text(row.get("check_num")),
         url=url,
+        status_code=status,
+        response_body=response_text,
     )
 
 

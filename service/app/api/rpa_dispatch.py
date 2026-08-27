@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db
 from app.schemas.common import ApiResponse
 from app.schemas.dispatch import (
+    IntegrationCallCreate,
     RunArtifactCreate,
     RunEventCreate,
     RunFinishRequest,
@@ -74,10 +75,23 @@ async def create_run_event(run_id: str, body: RunEventCreate, db: AsyncSession =
 
 @router.post("/runs/{run_id}/artifacts", response_model=ApiResponse[None])
 async def create_run_artifact(
-    run_id: str, body: RunArtifactCreate, db: AsyncSession = Depends(get_db)
+    run_id: str,
+    body: RunArtifactCreate,
+    db: AsyncSession = Depends(get_db),
 ):
     await dispatch_service.append_run_artifact(db, run_id, body, created_by=None)
     return ApiResponse(data=None, message="Artifact 已记录")
+
+
+@router.post("/runs/{run_id}/integration-calls", response_model=ApiResponse[None])
+async def create_integration_call(
+    run_id: str,
+    body: IntegrationCallCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Worker 回调：记录一次接口调用。无 JWT，与 events/artifacts 同鉴权。"""
+    await dispatch_service.append_integration_call(db, run_id, body)
+    return ApiResponse(data=None, message="接口调用已记录")
 
 
 @router.post("/runs/{run_id}/finish", response_model=ApiResponse[RpaRunResponse])
