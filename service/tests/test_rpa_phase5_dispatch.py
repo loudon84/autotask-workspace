@@ -109,6 +109,7 @@ def test_build_command_snapshot_includes_dry_run_from_binding():
     assert snapshot["config"]["dryRun"] is True
     assert snapshot["config"]["portalUrl"] == "https://supplier.tiandy.com"
     assert snapshot["config"]["customerName"] == "天地伟业"
+    assert snapshot["config"]["customerCode"] == "C007193-01_104"
     assert snapshot["config"]["businessEntity"] == "深圳市芯云信息科技有限公司"
     assert snapshot["config"]["ou"] == "104"
     assert snapshot["config"]["searches"] is None

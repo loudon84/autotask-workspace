@@ -6,6 +6,7 @@ from app.models.automation_task import AutomationTask  # noqa: F401
 from app.models.autotask_setting import AutotaskSetting  # noqa: F401
 from app.models.base import Base, BaseModel, not_deleted  # noqa: F401
 from app.models.human_action import HumanAction  # noqa: F401
+from app.models.integration_call_log import IntegrationCallLog  # noqa: F401
 from app.models.portal_access_grant import PortalAccessGrant  # noqa: F401
 from app.models.portal_account import PortalAccount  # noqa: F401
 from app.models.process_instance import ProcessInstance  # noqa: F401

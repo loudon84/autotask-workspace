@@ -1,4 +1,4 @@
-"""Build + publish official-portal prepare ERP order 1.2.12.
+"""Build + publish official-portal prepare ERP order 1.2.20.
 
 Do not bind this version to demo portals (192.168.102.247).
 """
@@ -14,7 +14,7 @@ ENGINE = "http://127.0.0.1:4610"
 HEADERS = {"X-Actor-Id": "flow-registry-operator"}
 FLOWS = Path(r"d:\work_space260811\autotask-workspace\rpa-flows")
 FLOW_ID = "rpa_flow_supplier_portal_prepare_erp_order"
-VERSION = "1.2.15"
+VERSION = "1.2.20"
 SRC = FLOWS / FLOW_ID / VERSION
 DIST = FLOWS / "dist"
 ZIP = DIST / f"{FLOW_ID}-{VERSION}.zip"
@@ -44,7 +44,7 @@ def main() -> None:
                 files={"package": (ZIP.name, fh, "application/zip")},
                 data={
                     "scope": "GLOBAL",
-                    "description": f"{FLOW_ID} {VERSION} official portal prepare ERP",
+                    "description": f"{FLOW_ID} {VERSION} official prepare; ctx.http ERP call logs",
                 },
             )
         print("upload", resp.status_code, resp.text[:400])

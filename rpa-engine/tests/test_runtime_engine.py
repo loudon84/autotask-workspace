@@ -178,6 +178,7 @@ def runtime(
     entrypoint,
     *,
     credential_resolver=None,
+    integration_call_sink_factory=None,
     **settings_updates: object,
 ):
     values: dict[str, object] = {
@@ -202,6 +203,7 @@ def runtime(
         artifact_sink=artifacts,
         event_sink_factory=lambda _command: events,
         credential_resolver=credential_resolver,
+        integration_call_sink_factory=integration_call_sink_factory,
     )
     return handler, browser, artifacts, events
 
@@ -218,6 +220,7 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
         observed["config"] = dict(ctx.config["browserSession"])
         observed["dryRun"] = ctx.config.get("dryRun")
         observed["searches"] = ctx.config.get("searches")
+        observed["http"] = ctx.http
         await ctx.log.info(
             "safe log",
             {"password": "must-not-leak", "visible": "value"},
@@ -242,6 +245,8 @@ async def test_runtime_success_injects_safe_context_and_closes_browser(
     assert observed["selector"] == "#search"
     assert observed["portal"] == "http://mock.test"
     assert observed["dryRun"] is True
+    assert observed["http"] is not None
+    assert hasattr(observed["http"], "post")
     assert observed["searches"] == [
         {"replyStatus": "待签章"},
         {"poNo": "POJS2607170008", "treatAsPending": True},
@@ -448,6 +453,7 @@ async def test_runtime_uses_lease_credentials_without_resolver(tmp_path) -> None
                 "erpBaseUrl": "http://erp.example",
                 "sdmsBaseUrl": "http://sdms.example",
                 "customerName": "客户A",
+                "customerCode": "C007193-01",
                 "businessEntity": "深圳市芯云信息科技有限公司",
                 "ou": "104",
                 "erpClientId": "smc_erp",
@@ -462,6 +468,7 @@ async def test_runtime_uses_lease_credentials_without_resolver(tmp_path) -> None
     assert observed["erpSecret"] == "erp-secret"
     assert observed["config"]["erpBaseUrl"] == "http://erp.example"
     assert observed["config"]["customerName"] == "客户A"
+    assert observed["config"]["customerCode"] == "C007193-01"
     assert observed["config"]["businessEntity"] == "深圳市芯云信息科技有限公司"
     assert observed["config"]["ou"] == "104"
     assert "erpClientSecret" not in observed["config"]

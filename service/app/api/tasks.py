@@ -6,7 +6,12 @@ from app.core.security import get_current_user, require_portal_visible, require_
 from app.models.enums import PortalPermission
 from app.models.user_cache import UserCache
 from app.schemas.common import ApiResponse
-from app.schemas.resource import ArtifactResponse, HumanActionResponse, RpaRunResponse
+from app.schemas.resource import (
+    ArtifactResponse,
+    HumanActionResponse,
+    IntegrationCallLogResponse,
+    RpaRunResponse,
+)
 from app.schemas.task import (
     AutomationTaskCreate,
     AutomationTaskResponse,
@@ -22,6 +27,7 @@ from app.services import (
     artifact_service,
     automation_task_service,
     human_action_service,
+    integration_call_log_service,
     task_successor_service,
     task_view_service,
 )
@@ -291,3 +297,24 @@ async def list_task_artifacts(
     await _require_task_visible(db, user, tenant_id, task_id)
     artifacts = await artifact_service.list_artifacts(db, tenant_id, task_id=task_id)
     return ApiResponse(data=[ArtifactResponse.model_validate(a) for a in artifacts])
+
+
+@router.get(
+    "/{task_id}/integration-calls",
+    response_model=ApiResponse[list[IntegrationCallLogResponse]],
+)
+async def list_task_integration_calls(
+    task_id: str,
+    run_id: str | None = Query(None, alias="runId"),
+    db: AsyncSession = Depends(get_db),
+    user: UserCache = Depends(get_current_user),
+):
+    """该任务全部接口调用，按时间升序；可 query runId 过滤。权限与看该任务相同。"""
+    tenant_id = require_tenant_access(user)
+    await _require_task_visible(db, user, tenant_id, task_id)
+    logs = await integration_call_log_service.list_by_task(
+        db, task_id=task_id, run_id=run_id
+    )
+    return ApiResponse(
+        data=[IntegrationCallLogResponse.model_validate(log) for log in logs]
+    )

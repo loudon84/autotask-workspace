@@ -22,6 +22,7 @@ from nodeskclaw_rpa_engine.object_storage.factory import build_object_storage
 from nodeskclaw_rpa_engine.runtime.artifacts import TaskArtifactSink
 from nodeskclaw_rpa_engine.runtime.browser import ManagedBrowserSessionManager, ensure_playwright_browsers_path
 from nodeskclaw_rpa_engine.runtime.callbacks import TaskRuntimeEventSink
+from nodeskclaw_rpa_engine.runtime.context import TaskIntegrationCallSink
 from nodeskclaw_rpa_engine.runtime.credentials import build_credential_resolver
 from nodeskclaw_rpa_engine.runtime.engine import RpaRuntime
 from nodeskclaw_rpa_engine.runtime.filesystem import RuntimeFilesystemProbe
@@ -171,6 +172,10 @@ def create_app(
                 worker_id=resolved_settings.worker_id,
             ),
             credential_resolver=build_credential_resolver(resolved_settings),
+            integration_call_sink_factory=lambda command: TaskIntegrationCallSink(
+                resolved_task_client,
+                run_id=command.lease.run_id,
+            ),
         )
         resolved_run_handler = resolved_runtime
 

@@ -46,3 +46,11 @@ export function useHumanAction(taskId: string, enabled = true) {
     enabled: Boolean(taskId) && enabled,
   });
 }
+
+export function useIntegrationCalls(taskId: string) {
+  return useQuery({
+    queryKey: queryKeys.tasks.integrationCalls(taskId),
+    queryFn: () => autotaskApi.tasks.integrationCalls(taskId),
+    enabled: Boolean(taskId),
+  });
+}

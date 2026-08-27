@@ -81,19 +81,49 @@ async def get_scheduler_job_with_portal(
     return row[0], row[1]
 
 
+_SCHEDULABLE_TEMPLATE_CODES = frozenset(
+    {SCAN_TASK_TYPE, CHECK_REPLY_TEMPLATE_CODE}
+)
+
+
+async def _template_code_for_binding(
+    db: AsyncSession, binding: WorkflowBinding, template_code: str | None
+) -> str | None:
+    if template_code:
+        return template_code
+    template_id = getattr(binding, "workflow_template_id", None)
+    if not template_id:
+        return None
+    return (
+        await db.execute(
+            select(WorkflowTemplate.code).where(
+                WorkflowTemplate.id == template_id,
+                not_deleted(WorkflowTemplate),
+            )
+        )
+    ).scalar_one_or_none()
+
+
 async def sync_scheduler_job_from_binding(
     db: AsyncSession,
     *,
     binding: WorkflowBinding,
     portal: PortalAccount,
     config: dict[str, Any],
+    template_code: str | None = None,
 ) -> SchedulerJob | None:
-    """已有 job 则不覆盖 cron/name；Binding 停用则关掉 job。首次带 schedule 才插入。"""
+    """已有 job 则不覆盖 cron/name；Binding 停用则关掉 job。
+
+    仅扫单/回签模板首次带 schedule 才插入。建单等拷了扫单 schedule 不得进调度中心。
+    """
     existing = await get_job_by_binding_id(db, binding.id)
     if existing is not None:
         if binding.status == BindingStatus.DISABLED:
             existing.enabled = False
         return existing
+    code = await _template_code_for_binding(db, binding, template_code)
+    if code not in _SCHEDULABLE_TEMPLATE_CODES:
+        return None
     decl = parse_schedule(config)
     if decl is None:
         return None

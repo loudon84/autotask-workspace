@@ -38,7 +38,7 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行（当前 head）。**
+10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行（当前 head）。**
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -64,11 +64,13 @@
 | 天地伟业对账单 SOP 体验（v3.01） | 详情已补回勾选明细；需重启唯一 Task 4520 | 六步进度：填单页待创建/SDMS核准；列表按 stage；详情对齐客户订单并展示 `summary.lines`。 |
 | 天地伟业对账单优化（v3.02） | 代码已改，需重启唯一 Task 4520 | 详情「对账明细」；展示 SDMS `check_num` 链接；SRM 提交成功后 HTTP 把发票传到 SDMS（`flag=SDMS_ARR`）。 |
 | 客户订单节点4 SDMS 附件（v2.02 R4） | Flow **1.2.2 已发布并切 Binding**；**需重启唯一 Task 4520** | `username`=Auth 登录工号。Registry `e8cdd181-…`；Binding `8c272818-…`。 |
-| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.15**；回签探测 **1.1.4**；下合同 **1.3.2**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。**需重启唯一 Task 4520**；建议重启 Engine 4610。 |
+| 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.20**；回签探测 **1.1.4**；下合同 **1.3.3**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。4520 / 4610 已于 2026-08-27 14:33 重启。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
 | 权限 v5.1（管人接口后补） | 登录缓存 `managed_user_ids` 只做列表/详情权限。门户选归属人现拉 `GET /members/{id}/subordinate`（Auth 按角色返回全员/自己/自己+下属），不再打 `/orgs/{org}/members`。模块管理员与超管看数仍全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
 | 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
 | 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
+| 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
+| 正式上线（空库） | 你维护 `.env` 和门户；助手发 Flow / 模板 / Binding。迁库与关闸须口头授权 | `prd/AutoTask 正式上线操作清单.md`。填交期/签章正式包仍未绑 |
 
 ## 5. 未决问题
 
@@ -112,6 +114,8 @@
 20. **v5.1**：登录缓存下属只做权限过滤。门户选归属人现拉下属接口（Auth 按角色返回可见人员），禁止组织全员接口。**需重启唯一 Task 4520**。
 21. **v5.2 调度中心（Binding 任务）**：迁移与回填已完成。4520 已于 2026-08-25 09:48 换成 `JobScheduler`。正式演练回签 `*/5` 会到点开火，但无待回签候选时不建任务。
 22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
+23. **正式上线操作清单**：你维护 `.env`+门户；助手发 Flow/绑 Binding（本机可达正式环境时）。迁库与关闸须口头授权。见 `prd/AutoTask 正式上线操作清单.md`。
+24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -236,7 +240,28 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-27
 
+- **联调库清空历史任务**：用户要求清掉任务列表无效数据。客户订单/对账单本来就是 0；实际是 644 条任务（扫单 607、取单 31、建单 6）和 690 条 Run。已硬删任务/Run/事件/租约/制品/接口调用日志。Binding、门户、调度未动。Engine 上当时有 19 条 RUNNING 取单，Worker 可能报一次找不到任务，可忽略。
+
+- **建单 ERP 行表不再传 unTaxPrice**：正式包 **1.2.20**（Registry `60e0e876-…`，checksum `sha256:c99e83eb…`）。行对象去掉 `unTaxPrice`，也不再倒算未税价。正式 Binding `30a451be-…` 已切 1.2.20。演示仍 1.2.11。**需新开建单任务**。
+
+- **建单 ERP 行表不再传 taxRate**：正式包 **1.2.19**（Registry `0ed257b1-…`，checksum `sha256:3a8db0f8…`）。行对象去掉 `taxRate`；`unTaxPrice` 仍按 0.13 从含税单价倒算。正式 Binding `30a451be-…` 已切 1.2.19。演示仍 1.2.11。**需新开建单任务**。
+
+- **建单失败被吞成 Flow execution failed；调度中心重复任务**：1.2.17 `__aexit__` `del exc` 后再读，ERP 行失败（缺价目表）变成 `FLOW_UNHANDLED_ERROR`。已发 **1.2.18** 并切正式 Binding `30a451be-…`。切 1.2.17 时误把扫单 `schedule` 拷进建单/下合同 Binding，保存建单后调度中心多了一条同名「扫单」。已删该 job，建单/下合同不再拷 `schedule`；sync 只允许扫单/回签模板插入。流程错误展示改为保留 ERP 行原因（价目表等），不再被「行级导入失败」盖掉。演示未改。**需新开建单任务**才走 1.2.18。
+
 - **门户归属人下拉不再打组织全员**：Auth 已改 `GET /members/{id}/subordinate` 的 `data`：管理员全员、领导自己+下属、员工自己。Task 归属人候选一律现拉这条，删掉 `GET /orgs/{org}/members`。登录写入的 `managed_user_ids` 仍只做门户/任务/对账单可见性。接口失败时下拉只露当前用户，不回退登录缓存。Client 打开选择框每次现拉（`staleTime: 0`）。**需重启唯一 Task 4520**。
+
+- **正式上线操作清单**：新应用服务器 + 新库。客服维护真实门户；我们负责 Flow / 模板 / Binding / 调度 / `.env`。空库用 alembic + 重发 Registry，禁止 `SEED_DATA_ENABLED` 和整库拷测试数据。文档：`prd/AutoTask 正式上线操作清单.md`。
+- **正式建单 1.2.16 已发布并切 Binding**：SDMS 主表补 `customerSubCode`（门户 `customerCode`）和 `orgCode`（门户 `ou`）。Registry `8156f349-…`，checksum `sha256:e454fe43…`。正式门户「天地伟业-芯云-正式演练」Binding `30a451be-…` 1.2.15→1.2.16。演示仍 1.2.11。缺字段会在 ERP 调用前报 `ERP_REQUIRED_FIELD_MISSING`。新租约即走 1.2.16；已在跑的租约仍是旧快照。**需重启唯一 Task 4520** 后新派发才稳。
+- **v5.4 接口调用日志需求已定稿**：运维排障要 URL/入参/出参，用 `task_id` 挂到现有任务，不进证据文件、不加厚报错。文档：`prd/AutoTask v5.4 接口调用日志.md`。代码已改；迁库须口头授权。
+- **v5.4 对照 plan 补齐缺口**：统一 `record_httpx_exchange`（生成查询 / 发票上传）；Engine `ctx.http` 发送前再走 `redact_sensitive`；`record_call` 对 JSON 字符串入参/出参也脱敏；补 GET 无门户权限 403、生成成功落 SDMS 查询行、提交挂发票写行、假 httpx 会 POST worker-api 且超时仍记、`status_code` 为空。PRD 改为「代码已改，迁库待授权」。**未** `alembic upgrade`，**未**发 1.2.17 / 1.3.3。
+- **v5.4 代码已改，迁库待授权**：
+  - **Task 侧**：模型 `IntegrationCallLog`（`service/app/models/integration_call_log.py`）+ 休眠迁移 `b8c9d0e12f51`（`down_revision = a7e4b2c81d09`，未执行）。脱敏+截断 `integration_redact.py`（Header/JSON/query 敏感键 `[REDACTED]`，oauth/token 响应抹 token；入参出参各 1MB）。Service `record_call` / `list_by_task`。Worker `POST /runs/{run_id}/integration-calls`（`rpa_dispatch.py` + `dispatch_service.append_integration_call`）。Client `GET /{task_id}/integration-calls?runId=`（`tasks.py` + `_require_task_visible`）。
+  - **SDMS 出口**：`sdms_client.fetch_check_amount` 返回 `status_code` + `response_body`；`generate_statement` 在任务 commit 成功后补写查询行。`sdms_attachment_client.upload_statement_invoices_to_sdms` 增加 `db`/`task_id`/`tenant_id`/`run_id`，每个文件 POST 一行。
+  - **Engine ctx.http**：`IntegrationHttp`（`runtime/context.py`）封装 `httpx.AsyncClient(trust_env=False, follow_redirects=False)`，每次请求（含超时/连接失败）记录一行到 Worker。`RunContext` 增加 `http` 字段。`TaskWorkerApiClient` 新增 `integration_call` 方法。修复 `post` 方法 `json_body` → `json` 参数名 bug。
+  - **Flow 升版**：`rpa_flow_supplier_portal_prepare_erp_order` 1.2.16 → 1.2.17（`ErpSalesOrderClient` 用 `ctx.http`，`system="ERP"`）。`rpa_flow_supplier_portal_upload_order_attachment` 1.3.2 → 1.3.3（`AttachmentSystemClient` 用 `ctx.http`，`system="SDMS"`）。两包 manifest 已改版本号，测试已加 `StubHttp`。**发布与切 Binding 等口头授权**。
+  - **Client**：`IntegrationCallLog` 类型 + `queryKeys.tasks.integrationCalls` + `remoteApi.getIntegrationCallsByTaskId` + mock 返 `[]` + `useIntegrationCalls` hook + `IntegrationCallPanel` 组件（列表时间/system/method/url/status/errorCode，点开看入参/出参等宽可滚动）挂在任务详情右栏「关联证据」下方。
+  - **单测**：`service/tests/test_integration_call_logs.py` 覆盖脱敏（含 oauth token、Authorization、JSON 字符串 body）、1MB 截断、Worker POST 挂 task、GET 无权限 403、`runId` 过滤。Engine `tests/test_runtime_integration_http.py` 覆盖假 httpx POST worker-api 与超时仍记。
+  - **后续**：授权后 `alembic upgrade head`；重启 Task 4520；有正式 Binding 时再发 1.2.17 / 1.3.3。
 
 ### 2026-08-26
 

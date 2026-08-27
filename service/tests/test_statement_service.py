@@ -87,6 +87,10 @@ async def test_generate_blocks_when_sdms_missing() -> None:
                 )
             ),
         ),
+        patch(
+            "app.services.integration_call_log_service.record_httpx_exchange",
+            new=AsyncMock(),
+        ) as record,
     ):
         with pytest.raises(BadRequestError) as exc:
             await svc.generate_statement(
@@ -99,6 +103,7 @@ async def test_generate_blocks_when_sdms_missing() -> None:
         assert "未找到" in exc.value.message
         assert "data 为空" in exc.value.message
         assert "view_doc_srm" in exc.value.message
+        record.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -221,7 +226,15 @@ async def test_generate_ok_creates_draft_bill_and_task() -> None:
     binding.rpa_flow_id = "rpa_flow_srm_stmt_generate"
 
     fetch_mock = AsyncMock(
-        return_value=SdmsCheckLookup(Decimal("10.00"), "36599", {}, check_num="104DZ26080001")
+        return_value=SdmsCheckLookup(
+            Decimal("10.00"),
+            "36599",
+            {"create_date_s": "2026-08-01", "custom_son_code": "C1_104"},
+            check_num="104DZ26080001",
+            url="http://sdms.test/sdms/ar_check/view_doc_srm",
+            status_code=200,
+            response_body='{"code":1,"data":[{"check_amount":10}]}',
+        )
     )
     with (
         patch(
@@ -256,6 +269,15 @@ async def test_generate_ok_creates_draft_bill_and_task() -> None:
     assert result["bill_id"]
     added_bills = [call.args[0] for call in db.add.call_args_list if call.args[0].__class__.__name__ == "StatementBill"]
     assert added_bills[0].check_status == "DRAFT"
+    logs = [
+        call.args[0]
+        for call in db.add.call_args_list
+        if call.args[0].__class__.__name__ == "IntegrationCallLog"
+    ]
+    assert len(logs) == 1
+    assert logs[0].system == "SDMS"
+    assert logs[0].method == "GET"
+    assert "view_doc_srm" in logs[0].url
     db.commit.assert_awaited()
 
 

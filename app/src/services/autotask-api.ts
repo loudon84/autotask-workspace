@@ -7,6 +7,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationCallLog } from "@/types/integration-call-log";
 import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
@@ -127,6 +128,8 @@ export const autotaskApi = {
       confirmedBy?: string;
       note?: string;
     }) => pickApi().confirmHumanAction(input),
+    integrationCalls: (taskId: string): Promise<IntegrationCallLog[]> =>
+      pickApi().getIntegrationCallsByTaskId(taskId),
   },
 
   portalAccounts: {

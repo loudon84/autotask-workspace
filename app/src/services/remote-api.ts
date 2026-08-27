@@ -11,6 +11,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationCallLog } from "@/types/integration-call-log";
 import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
@@ -718,6 +719,16 @@ export const remoteApi = {
       query: taskId ? { task_id: taskId } : undefined,
     });
     return mapListResponse<AuditLog>(data);
+  },
+
+  getIntegrationCallsByTaskId: async (
+    taskId: string
+  ): Promise<IntegrationCallLog[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: `/tasks/${taskId}/integration-calls`,
+    });
+    return mapListResponse<IntegrationCallLog>(data);
   },
 
   listSchedulerJobs: async (

@@ -25,6 +25,7 @@ import type {
 } from "@/types/automation-task";
 import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction } from "@/types/human-action";
+import type { IntegrationCallLog } from "@/types/integration-call-log";
 import type { IntegrationEndpoints } from "@/types/integration-endpoints";
 import type {
   CreatePortalAccountInput,
@@ -502,6 +503,10 @@ export const mockApi = {
     const logs = auditLogsData as AuditLog[];
     return delay(taskId ? logs.filter((l) => l.taskId === taskId) : logs);
   },
+
+  getIntegrationCallsByTaskId: async (
+    _taskId: string
+  ): Promise<IntegrationCallLog[]> => delay([]),
 
   listSchedulerJobs: async (enabled?: boolean) => {
     const jobs = mockSchedulerJobs.filter((job) =>

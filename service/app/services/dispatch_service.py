@@ -35,6 +35,7 @@ from app.models.workflow_binding import WorkflowBinding
 from app.models.workflow_template import WorkflowTemplate
 from app.schemas.dispatch import (
     BrowserSessionConfig,
+    IntegrationCallCreate,
     LeaseCommandConfig,
     LeaseCredentials,
     RunArtifactCreate,
@@ -594,6 +595,27 @@ async def append_run_artifact(db: AsyncSession, run_id: str, body: RunArtifactCr
             payload=dumps_json({"storageKey": body.storage_key, "expectedPrefix": expected_prefix}),
         )
     )
+    await db.commit()
+
+
+async def append_integration_call(db: AsyncSession, run_id: str, body: IntegrationCallCreate) -> None:
+    """Worker 回调：记录一次接口调用。run 不存在则 404，与 append_run_event 一致。"""
+    from app.services.integration_call_log_service import record_call_by_run
+
+    log = await record_call_by_run(
+        db,
+        run_id=run_id,
+        system=body.system,
+        method=body.method,
+        url=body.url,
+        request_body=body.request_body,
+        response_body=body.response_body,
+        status_code=body.status_code,
+        error_code=body.error_code,
+        duration_ms=body.duration_ms,
+    )
+    if log is None:
+        raise NotFoundError(message="Run 不存在", message_key="errors.autotask.run_not_found")
     await db.commit()
 
 

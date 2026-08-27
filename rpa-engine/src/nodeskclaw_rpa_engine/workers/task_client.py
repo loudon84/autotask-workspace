@@ -15,6 +15,7 @@ from nodeskclaw_rpa_engine.workers.errors import TaskApiError
 from nodeskclaw_rpa_engine.workers.schemas import (
     ArtifactUploadTarget,
     ArtifactUploadUrlRequest,
+    IntegrationCallCreate,
     LeaseRenewal,
     LeaseRunCommand,
     RunArtifactCreate,
@@ -184,6 +185,22 @@ class TaskWorkerApiClient:
         return await self._request_data(
             "POST",
             f"worker-api/runs/{quote(run_id, safe='')}/artifacts",
+            json=request.model_dump(
+                mode="json",
+                by_alias=False,
+                exclude_none=True,
+            ),
+        )
+
+    async def integration_call(
+        self,
+        run_id: str,
+        request: IntegrationCallCreate,
+    ) -> Any:
+        """v5.4 记录一次接口调用。失败只 warning，不挡业务（调用方捕获）。"""
+        return await self._request_data(
+            "POST",
+            f"worker-api/runs/{quote(run_id, safe='')}/integration-calls",
             json=request.model_dump(
                 mode="json",
                 by_alias=False,

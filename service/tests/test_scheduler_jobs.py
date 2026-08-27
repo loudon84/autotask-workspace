@@ -76,7 +76,11 @@ async def test_first_save_with_schedule_inserts_job(monkeypatch: pytest.MonkeyPa
         }
     }
     job = await job_svc.sync_scheduler_job_from_binding(
-        session, binding=binding, portal=portal, config=config
+        session,
+        binding=binding,
+        portal=portal,
+        config=config,
+        template_code=SCAN_TASK_TYPE,
     )
     assert job is not None
     assert job.name == "天地伟业-客户订单-扫单"
@@ -140,7 +144,35 @@ async def test_invalid_schedule_rejects_without_insert(monkeypatch: pytest.Monke
                     "actionName": "y",
                 }
             },
+            template_code=SCAN_TASK_TYPE,
         )
+    session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_prepare_binding_with_schedule_does_not_insert(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(job_svc, "get_job_by_binding_id", AsyncMock(return_value=None))
+    session = MagicMock()
+    session.add = MagicMock()
+    binding = SimpleNamespace(id="b-prepare", status=BindingStatus.ENABLED)
+    portal = SimpleNamespace(id="p1", portal_name="天地伟业-芯云-正式演练")
+    job = await job_svc.sync_scheduler_job_from_binding(
+        session,
+        binding=binding,
+        portal=portal,
+        config={
+            "schedule": {
+                "enabled": True,
+                "cron": "0 8 * * *",
+                "processName": "客户订单",
+                "actionName": "扫单",
+            }
+        },
+        template_code="srm_prepare_erp_order",
+    )
+    assert job is None
     session.add.assert_not_called()
 
 

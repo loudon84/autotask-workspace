@@ -367,6 +367,7 @@ async def test_create_sdms_failure_fails_instance() -> None:
     assert instance.status == ProcessInstanceStatus.FAILED.value
     assert instance.stage == ProcessStage.FAILED.value
     assert instance.last_error_code == "ERP_ORDER_IMPORT_ROW_FAILED"
+    assert instance.last_error_message == "创建 SDMS 销售订单时行级导入失败：ERP 行级失败"
     history = next(item for item in db.add.call_args_list if isinstance(item.args[0], ProcessStageHistory))
     assert history.args[0].to_stage == ProcessStage.FAILED.value
 
@@ -925,4 +926,27 @@ async def test_create_from_scan_repairs_stuck_existing_instance(
     )
     assert created == []
     assert repaired is True
+
+
+def test_localize_erp_row_failed_keeps_price_list_detail():
+    from app.services.process_error_messages import localize_process_error
+
+    code, message = localize_process_error(
+        "ERP_ORDER_IMPORT_ROW_FAILED",
+        "1.登记订单行需要 价目表。登记订单行需要 价目表价格。",
+    )
+    assert code == "ERP_ORDER_IMPORT_ROW_FAILED"
+    assert "价目表" in (message or "")
+    assert message.startswith("创建 SDMS 销售订单时行级导入失败")
+
+
+def test_localize_unhandled_does_not_keep_english_flow_failed():
+    from app.services.process_error_messages import localize_process_error
+
+    _, message = localize_process_error(
+        "FLOW_UNHANDLED_ERROR",
+        "Flow execution failed",
+    )
+    assert "Flow execution failed" not in (message or "")
+    assert "接口调用" in (message or "")
 

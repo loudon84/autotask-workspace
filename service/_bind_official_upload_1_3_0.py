@@ -1,4 +1,4 @@
-"""Bind official signed-contract upload 1.3.1 to 天地伟业-国际-正式演练.
+"""Bind official signed-contract upload 1.3.3 to 天地伟业-芯云-正式演练.
 
 Does not change demo-portal upload bindings (1.2.5).
 Does not set dryRun: this Flow writes our SDMS.
@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,20 +17,21 @@ from sqlalchemy import select
 from app.core.deps import async_session_factory, engine as db_engine
 from app.models.base import not_deleted
 from app.models.portal_account import PortalAccount
+from app.models.scheduler_job import SchedulerJob
 from app.models.workflow_binding import WorkflowBinding
 from app.models.workflow_template import WorkflowTemplate
 from app.services.json_utils import dumps_json, loads_json
 from app.services.rpa_engine_client import normalize_checksum
 
-OFFICIAL_PORTAL_NAME = "天地伟业-国际-正式演练"
+OFFICIAL_PORTAL_NAME = "天地伟业-芯云-正式演练"
 OFFICIAL_PORTAL_URL = "https://supplier.tiandy.com"
 DEMO_HOST = "192.168.102.247"
 TEMPLATE_CODE = "srm_upload_order_attachment"
 FLOW_ID = "rpa_flow_supplier_portal_upload_order_attachment"
-EXPECTED_VERSION = "1.3.2"
+EXPECTED_VERSION = "1.3.3"
 PUBLISH_JSON = Path(
     r"d:\work_space260811\autotask-workspace\rpa-flows"
-    r"\rpa_flow_supplier_portal_upload_order_attachment\_publish_1.3.2.json"
+    r"\rpa_flow_supplier_portal_upload_order_attachment\_publish_1.3.3.json"
 )
 SCAN_TEMPLATE_CODE = "srm_scan_pending_orders"
 
@@ -59,9 +61,19 @@ async def main() -> None:
             )
         ).scalar_one_or_none()
         if official is None:
+            official = (
+                await db.execute(
+                    select(PortalAccount).where(
+                        PortalAccount.portal_url.contains(OFFICIAL_PORTAL_URL),
+                        not_deleted(PortalAccount),
+                    )
+                )
+            ).scalar_one_or_none()
+        if official is None:
             raise SystemExit(f"portal not found: {OFFICIAL_PORTAL_NAME}")
         if OFFICIAL_PORTAL_URL not in (official.portal_url or ""):
             raise SystemExit(f"official portal URL mismatch: {official.portal_url!r}")
+        print("portal", official.portal_name, official.portal_url)
 
         template = (
             await db.execute(
@@ -100,6 +112,7 @@ async def main() -> None:
             config = {}
         config["portalUrl"] = OFFICIAL_PORTAL_URL
         config.pop("dryRun", None)
+        config.pop("schedule", None)
         config.setdefault(
             "browserSession",
             {
@@ -146,6 +159,19 @@ async def main() -> None:
             binding.status = "ENABLED"
             binding.config = dumps_json(config)
             print("binding_update", binding.id, version)
+
+        stray = (
+            await db.execute(
+                select(SchedulerJob).where(
+                    SchedulerJob.binding_id == binding.id,
+                    not_deleted(SchedulerJob),
+                )
+            )
+        ).scalars().all()
+        for job in stray:
+            job.enabled = False
+            job.deleted_at = datetime.now(timezone.utc)
+            print("scheduler_job_remove", job.id, job.name)
 
         await db.commit()
 

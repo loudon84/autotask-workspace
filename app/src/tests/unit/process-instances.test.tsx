@@ -451,3 +451,26 @@ describe("ProcessDatesPage", () => {
     expect(screen.queryByLabelText("第 10 行预计交货日期")).not.toBeInTheDocument();
   });
 });
+
+describe("formatProcessError", () => {
+  it("keeps ERP row failure detail instead of dropping it", async () => {
+    const { formatProcessError } = await import(
+      "@/features/processes/process-model"
+    );
+    expect(
+      formatProcessError(
+        "ERP_ORDER_IMPORT_ROW_FAILED",
+        "1.登记订单行需要 价目表。"
+      )
+    ).toBe("创建 SDMS 销售订单时行级导入失败：1.登记订单行需要 价目表。");
+  });
+
+  it("does not append English Flow text onto the Chinese code label", async () => {
+    const { formatProcessError } = await import(
+      "@/features/processes/process-model"
+    );
+    expect(
+      formatProcessError("ERP_ORDER_IMPORT_ROW_FAILED", "Flow execution failed")
+    ).toBe("创建 SDMS 销售订单时行级导入失败");
+  });
+});
