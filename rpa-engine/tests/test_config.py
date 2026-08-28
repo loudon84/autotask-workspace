@@ -26,16 +26,16 @@ def test_enabled_database_requires_url() -> None:
         Settings(_env_file=None, database_enabled=True)
 
 
-def test_database_url_is_restricted_to_engine_driver_and_task_database() -> None:
+def test_database_url_requires_asyncpg_driver_and_database_name() -> None:
     with pytest.raises(ValidationError, match=r"postgresql\+asyncpg"):
         Settings(
             _env_file=None,
             database_url="postgresql://user:secret@db/nodeskclaw_task",
         )
-    with pytest.raises(ValidationError, match="nodeskclaw_task"):
+    with pytest.raises(ValidationError, match="database name"):
         Settings(
             _env_file=None,
-            database_url="postgresql+asyncpg://user:secret@db/other_database",
+            database_url="postgresql+asyncpg://user:secret@db/",
         )
 
 

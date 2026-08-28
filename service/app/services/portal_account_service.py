@@ -75,32 +75,29 @@ def _apply_keyword_filter(query, keyword: str | None):
     )
 
 
-async def _owner_name_map(db: AsyncSession, user_ids: set[str]) -> dict[str, str]:
-    ids = {item for item in user_ids if item}
-    if not ids:
-        return {}
-    rows = (
-        await db.execute(
-            select(UserCache).where(UserCache.user_id.in_(ids), not_deleted(UserCache))
-        )
-    ).scalars().all()
-    return {row.user_id: row.name for row in rows}
+def _actor_display_name(user: UserCache) -> str:
+    return str(user.name or "").strip()
 
 
-def _to_portal_response(account: PortalAccount, names: dict[str, str]) -> PortalAccountResponse:
+def _to_portal_response(account: PortalAccount) -> PortalAccountResponse:
     owner_id = effective_owner_user_id(account)
     payload = PortalAccountResponse.model_validate(account)
     return payload.model_copy(
         update={
             "owner_user_id": owner_id,
-            "owner_name": names.get(owner_id, ""),
+            "owner_name": str(getattr(account, "owner_user_name", None) or ""),
+            "created_by_name": str(getattr(account, "created_by_name", None) or ""),
+            "owner_username": "",
         }
     )
 
 
-async def build_portal_response(db: AsyncSession, account: PortalAccount) -> PortalAccountResponse:
-    names = await _owner_name_map(db, {effective_owner_user_id(account)})
-    return _to_portal_response(account, names)
+async def build_portal_response(
+    db: AsyncSession,
+    account: PortalAccount,
+) -> PortalAccountResponse:
+    _ = db
+    return _to_portal_response(account)
 
 
 def _owner_candidates_from_people(
@@ -148,12 +145,26 @@ async def list_owner_candidates(
     return _owner_candidates_from_people(people, user)
 
 
+def _person_from_owner(
+    people: list[dict[str, str]],
+    user: UserCache,
+    owner_user_id: str,
+) -> dict[str, str]:
+    for item in people:
+        if item.get("user_id") == owner_user_id:
+            return item
+    if owner_user_id == user.user_id:
+        return {"user_id": user.user_id, "name": user.name or "", "username": ""}
+    return {"user_id": owner_user_id, "name": "", "username": ""}
+
+
 async def _assert_owner_candidate(
     db: AsyncSession,
     user: UserCache,
     owner_user_id: str,
     token: str | None = None,
-) -> None:
+) -> dict[str, str]:
+    _ = db
     fetched = None
     if token:
         fetched = await fetch_subordinates(token, user.user_id)
@@ -165,14 +176,13 @@ async def _assert_owner_candidate(
                 message="不能把门户转给该用户",
                 message_key="errors.autotask.portal_owner_not_allowed",
             )
-        return
-    if is_scope_admin(user):
-        return
-    if owner_user_id != user.user_id:
-        raise ForbiddenError(
-            message="不能把门户转给该用户",
-            message_key="errors.autotask.portal_owner_not_allowed",
-        )
+        return _person_from_owner(fetched, user, owner_user_id)
+    if is_scope_admin(user) or owner_user_id == user.user_id:
+        return _person_from_owner([], user, owner_user_id)
+    raise ForbiddenError(
+        message="不能把门户转给该用户",
+        message_key="errors.autotask.portal_owner_not_allowed",
+    )
 
 
 async def list_portal_accounts(
@@ -220,12 +230,8 @@ async def list_portal_accounts(
         .limit(size)
     )
     accounts = list(result.scalars().all())
-    names = await _owner_name_map(
-        db,
-        {effective_owner_user_id(account) for account in accounts},
-    )
     return PortalListPageResponse(
-        items=[_to_portal_response(account, names) for account in accounts],
+        items=[_to_portal_response(account) for account in accounts],
         total=total,
         page=current_page,
         page_size=size,
@@ -252,6 +258,7 @@ async def create_portal_account(
     tenant_id: str,
     user: UserCache,
     body: PortalAccountCreate,
+    token: str | None = None,
 ) -> PortalAccount:
     entity_type = body.entity_type.value if hasattr(body.entity_type, "value") else body.entity_type
     status = body.status.value if hasattr(body.status, "value") else body.status
@@ -267,6 +274,14 @@ async def create_portal_account(
 
     account_id = str(uuid.uuid4())
     client_session_partition = body.client_session_partition.strip() or f"persist:portal-{account_id}"
+
+    owner_id = str(body.owner_user_id or "").strip() or user.user_id
+    if owner_id != user.user_id:
+        await _assert_owner_candidate(db, user, owner_id, token)
+    owner_name = str(body.owner_user_name or "").strip()
+    if not owner_name and owner_id == user.user_id:
+        owner_name = _actor_display_name(user)
+    created_name = str(body.created_by_name or "").strip() or _actor_display_name(user)
 
     account = PortalAccount(
         id=account_id,
@@ -285,8 +300,10 @@ async def create_portal_account(
         rpa_profile_id=body.rpa_profile_id,
         status=status,
         owner_dept_id=body.owner_dept_id,
-        owner_user_id=user.user_id,
+        owner_user_id=owner_id,
+        owner_user_name=owner_name,
         created_by=user.user_id,
+        created_by_name=created_name,
     )
 
     db.add(account)
@@ -336,6 +353,13 @@ async def update_portal_account(
         else:
             updates["owner_user_id"] = next_owner
             await _assert_owner_candidate(db, actor, next_owner, token)
+    if "owner_user_name" in updates:
+        next_name = str(updates.get("owner_user_name") or "").strip()
+        if next_name:
+            updates["owner_user_name"] = next_name
+        else:
+            updates.pop("owner_user_name")
+    updates.pop("created_by_name", None)
     if "credential_ref" in updates and not str(updates.get("credential_ref") or "").strip():
         updates.pop("credential_ref")
     for key in ("business_entity", "ou"):

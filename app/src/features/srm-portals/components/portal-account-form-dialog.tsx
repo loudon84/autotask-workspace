@@ -24,6 +24,7 @@ import {
 } from "@/features/srm-portals/api/use-portal-account-mutations";
 import { useOwnerCandidates } from "@/features/srm-portals/api/use-owner-candidates";
 import { OwnerPicker } from "@/features/srm-portals/components/owner-picker";
+import { formatOwnerLabel, resolveOwnerDisplayName } from "@/features/srm-portals/owner-label";
 import { useAuth } from "@/modules/auth/AutoTaskAuthProvider";
 import type {
   CreatePortalAccountInput,
@@ -127,7 +128,11 @@ function parseFieldErrors(body: unknown): FieldErrors {
   return errors;
 }
 
-function buildCreateInput(form: FormState): CreatePortalAccountInput {
+function buildCreateInput(
+  form: FormState,
+  ownerName: string,
+  createdByName: string
+): CreatePortalAccountInput {
   const sessionPartition =
     form.clientSessionPartition.trim() ||
     `persist:portal-${form.erpEntityCode.toLowerCase()}`;
@@ -145,6 +150,9 @@ function buildCreateInput(form: FormState): CreatePortalAccountInput {
     clientOpenMode: form.clientOpenMode,
     clientSessionPartition: sessionPartition,
     status: form.status,
+    ownerUserId: form.ownerUserId,
+    ownerName,
+    createdByName,
   };
 }
 
@@ -193,16 +201,27 @@ export function PortalAccountFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const ownerUserId = form.ownerUserId || currentUserId;
+    const ownerName = resolveOwnerDisplayName(ownerUserId, ownerCandidates, {
+      userId: currentUserId,
+      name: currentUserName,
+      username: currentUsername,
+      storedName: portal?.ownerName,
+    });
+    const createdByName = formatOwnerLabel(currentUserName, currentUsername);
 
     if (mode === "create") {
-      createMutation.mutate(buildCreateInput(form), {
-        onSuccess: () => onOpenChange(false),
-        onError: (err) => {
-          if (err instanceof ApiClientError && err.status === 422) {
-            setFieldErrors(parseFieldErrors(err.body));
-          }
-        },
-      });
+      createMutation.mutate(
+        buildCreateInput({ ...form, ownerUserId }, ownerName, createdByName),
+        {
+          onSuccess: () => onOpenChange(false),
+          onError: (err) => {
+            if (err instanceof ApiClientError && err.status === 422) {
+              setFieldErrors(parseFieldErrors(err.body));
+            }
+          },
+        }
+      );
       return;
     }
 
@@ -230,7 +249,8 @@ export function PortalAccountFormDialog({
             form.clientSessionPartition.trim() ||
             `persist:portal-${form.erpEntityCode.toLowerCase()}`,
           status: form.status,
-          ownerUserId: form.ownerUserId || currentUserId,
+          ownerUserId,
+          ownerName,
         },
       },
       {

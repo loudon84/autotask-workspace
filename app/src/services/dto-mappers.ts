@@ -141,8 +141,8 @@ export function mapPortalAccount(raw: unknown): PortalAccount {
     status: normalizePortalStatus(data.status),
     ownerUserId: String(data.ownerUserId ?? data.createdBy ?? ""),
     ownerName: String(data.ownerName ?? ""),
-    ownerUsername: String(data.ownerUsername ?? ""),
     createdBy: String(data.createdBy ?? "system"),
+    createdByName: String(data.createdByName ?? ""),
     createdAt: String(data.createdAt ?? ""),
     updatedAt: String(data.updatedAt ?? ""),
   };

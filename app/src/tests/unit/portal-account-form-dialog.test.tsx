@@ -56,6 +56,7 @@ const portal: PortalAccount = {
   ownerUserId: "admin",
   ownerName: "admin",
   createdBy: "admin",
+  createdByName: "admin",
   createdAt: "2026-07-31T00:00:00Z",
   updatedAt: "2026-07-31T00:00:00Z",
 };

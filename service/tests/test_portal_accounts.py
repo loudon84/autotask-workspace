@@ -64,7 +64,9 @@ def _portal_account(**overrides):
         "client_session_partition": "persist:portal-001",
         "status": PortalAccountStatus.ENABLED.value,
         "owner_user_id": "user-001",
+        "owner_user_name": "测试用户",
         "created_by": "user-001",
+        "created_by_name": "测试用户",
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
     }
@@ -491,3 +493,17 @@ async def test_assert_owner_candidate_uses_live_list_even_for_admin(monkeypatch)
             AsyncMock(), user, "user-3", "token"
         )
     assert exc_info.value.message_key == "errors.autotask.portal_owner_not_allowed"
+
+
+def test_portal_response_uses_stored_owner_and_creator_names():
+    payload = portal_account_service._to_portal_response(
+        _portal_account(
+            owner_user_id="user-2",
+            owner_user_name="张站（smc-sz-hr15563）",
+            created_by="user-001",
+            created_by_name="测试用户",
+        )
+    )
+    assert payload.owner_user_id == "user-2"
+    assert payload.owner_name == "张站（smc-sz-hr15563）"
+    assert payload.created_by_name == "测试用户"

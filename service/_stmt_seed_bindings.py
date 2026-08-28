@@ -36,7 +36,7 @@ CONFIG = dumps_json(
 TEMPLATES = [
     {
         "code": "srm_stmt_query_receipts",
-        "name": "天地伟业·收货列表查询",
+        "name": "天地伟业-收货列表查询",
         "flow": "rpa_flow_srm_stmt_query_receipts",
         "input": [
             {"name": "dateStart", "label": "入库确认开始日期", "type": "string", "required": True},
@@ -49,7 +49,7 @@ TEMPLATES = [
     },
     {
         "code": "srm_stmt_generate",
-        "name": "天地伟业·生成对账单",
+        "name": "天地伟业-生成对账单",
         "flow": "rpa_flow_srm_stmt_generate",
         "input": [
             {"name": "lines", "label": "勾选行", "type": "array", "required": True},
@@ -61,7 +61,7 @@ TEMPLATES = [
     },
     {
         "code": "srm_stmt_upload_invoice",
-        "name": "天地伟业·上传对账发票",
+        "name": "天地伟业-上传对账发票",
         "flow": "rpa_flow_srm_stmt_upload_invoice",
         "input": [
             {"name": "checkDate", "label": "对账日期", "type": "string", "required": True},
@@ -74,7 +74,7 @@ TEMPLATES = [
     },
     {
         "code": "srm_stmt_submit_review",
-        "name": "天地伟业·提交对账审核",
+        "name": "天地伟业-提交对账审核",
         "flow": "rpa_flow_srm_stmt_submit_review",
         "input": [
             {"name": "checkDate", "label": "对账日期", "type": "string", "required": True},

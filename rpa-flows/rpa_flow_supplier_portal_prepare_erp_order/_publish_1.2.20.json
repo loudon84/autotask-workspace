@@ -1,7 +1,7 @@
 {
   "rpaFlowId": "rpa_flow_supplier_portal_prepare_erp_order",
   "rpaFlowVersion": "1.2.20",
-  "rpaFlowVersionId": "60e0e876-6c49-40ac-a45b-2d952a937250",
+  "rpaFlowVersionId": "d1ebfec8-247b-4e6b-9f7b-475f4409ceef",
   "packageChecksum": "sha256:c99e83eb9cdd06f8c830e34b61392fabdb93a079f9baf70b63ca787f8e51912f",
   "status": "PUBLISHED",
   "workflowCode": "srm_prepare_erp_order"

@@ -438,9 +438,10 @@ export const mockApi = {
       id: `portal_${Date.now()}`,
       tenantId: "mock-tenant",
       clientSessionPartition: sessionPartition,
-      ownerUserId: "mock-user",
-      ownerName: "Mock 用户",
+      ownerUserId: input.ownerUserId || "mock-user",
+      ownerName: input.ownerName || "Mock 用户",
       createdBy: "mock-user",
+      createdByName: input.createdByName || "Mock 用户",
       createdAt: timestamp,
       updatedAt: timestamp,
     };

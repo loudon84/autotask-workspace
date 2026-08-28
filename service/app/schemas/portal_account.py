@@ -44,6 +44,9 @@ class PortalAccountCreate(CamelModel):
     rpa_profile_id: str | None = Field(None, alias="rpaProfileId")
     status: PortalAccountStatus = PortalAccountStatus.ENABLED
     owner_dept_id: str | None = Field(None, alias="ownerDeptId")
+    owner_user_id: str | None = Field(None, alias="ownerUserId")
+    owner_user_name: str = Field("", alias="ownerName")
+    created_by_name: str = Field("", alias="createdByName")
 
     @field_validator("portal_url")
     @classmethod
@@ -85,6 +88,7 @@ class PortalAccountUpdate(CamelModel):
     status: PortalAccountStatus | None = None
     owner_dept_id: str | None = Field(None, alias="ownerDeptId")
     owner_user_id: str | None = Field(None, alias="ownerUserId")
+    owner_user_name: str | None = Field(None, alias="ownerName")
 
     @field_validator("portal_url")
     @classmethod
@@ -125,6 +129,7 @@ class PortalAccountResponse(CamelModel):
     owner_name: str = Field("", serialization_alias="ownerName")
     owner_username: str = Field("", serialization_alias="ownerUsername")
     created_by: str = Field(serialization_alias="createdBy")
+    created_by_name: str = Field("", serialization_alias="createdByName")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 

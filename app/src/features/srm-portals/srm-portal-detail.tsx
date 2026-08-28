@@ -99,11 +99,15 @@ export function SrmPortalDetailPage({ portalId }: { portalId: string }) {
           <Field label="门户地址" value={portal.portalUrl} />
           <Field label="登录账号" value={portal.loginAccount || "-"} />
           <Field
+            label="创建人"
+            value={
+              formatOwnerLabel(portal.createdByName) || portal.createdBy || "—"
+            }
+          />
+          <Field
             label="归属人"
             value={
-              formatOwnerLabel(portal.ownerName, portal.ownerUsername) ||
-              portal.ownerUserId ||
-              "—"
+              formatOwnerLabel(portal.ownerName) || portal.ownerUserId || "—"
             }
           />
           <Field

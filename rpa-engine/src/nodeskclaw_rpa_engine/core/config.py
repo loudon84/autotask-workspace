@@ -263,10 +263,9 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "DATABASE_URL must use the postgresql+asyncpg driver"
                 )
-            if parsed_database_url.path.rstrip("/") != "/nodeskclaw_task":
-                raise ValueError(
-                    "DATABASE_URL must target the nodeskclaw_task database"
-                )
+            database_name = parsed_database_url.path.rstrip("/").lstrip("/")
+            if not database_name:
+                raise ValueError("DATABASE_URL must include a database name")
         if self.minio_enabled:
             required: dict[str, object | None] = {
                 "MINIO_ENDPOINT_URL": self.minio_endpoint_url,

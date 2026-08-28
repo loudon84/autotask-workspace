@@ -162,15 +162,25 @@ function buildColumns(
       ),
     },
     {
+      accessorKey: "createdByName",
+      header: "创建人",
+      cell: ({ row }) => (
+        <TruncatedCell
+          className="max-w-[8rem]"
+          value={
+            formatOwnerLabel(row.original.createdByName) ||
+            row.original.createdBy
+          }
+        />
+      ),
+    },
+    {
       accessorKey: "ownerName",
       header: "归属人",
       cell: ({ row }) => (
         <TruncatedCell
           className="max-w-[8rem]"
-          value={formatOwnerLabel(
-            row.original.ownerName,
-            row.original.ownerUsername
-          ) || row.original.ownerUserId}
+          value={formatOwnerLabel(row.original.ownerName) || row.original.ownerUserId}
         />
       ),
     },

@@ -19,15 +19,15 @@ export interface PortalAccount {
   status: PortalStatus;
   ownerUserId: string;
   ownerName: string;
-  ownerUsername?: string;
   createdBy: string;
+  createdByName: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export type CreatePortalAccountInput = Omit<
   PortalAccount,
-  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt" | "ownerUserId" | "ownerName"
+  "id" | "tenantId" | "createdBy" | "createdAt" | "updatedAt"
 > & {
   credentialRef?: string;
 };
@@ -53,6 +53,7 @@ export type UpdatePortalAccountInput = Partial<
     | "businessEntity"
     | "ou"
     | "ownerUserId"
+    | "ownerName"
   >
 > & {
   credentialRef?: string;

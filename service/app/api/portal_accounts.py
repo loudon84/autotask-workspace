@@ -57,10 +57,14 @@ async def create_portal_account(
     body: PortalAccountCreate,
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     require_portal_manage_access(user)
     tenant_id = require_tenant_access(user)
-    account = await portal_account_service.create_portal_account(db, tenant_id, user, body)
+    token = credentials.credentials if credentials else None
+    account = await portal_account_service.create_portal_account(
+        db, tenant_id, user, body, token
+    )
     return ApiResponse(data=await portal_account_service.build_portal_response(db, account))
 
 
