@@ -240,6 +240,8 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-08-31
 
+- **安装包登录一直转圈**：是 Client 启动顺序问题，不是 247 服务。handler 加载时就要已有主窗口，不能先 `setupORPC`。正确顺序：先建窗口并写入 context，立刻注册登录 IPC，再加载页面；正式包不再装 React DevTools；去掉每次启动清登录态的调试代码。需重新 `npm start` / 打安装包验证。未改 Auth/Task/Engine。
+
 - **打包默认 Endpoint**：登录页改过的地址在 `%APPDATA%\\AutoTask Studio\\autotask-endpoint-config.json`。要恢复包内 `.env.production` 默认值，由用户自己删这个文件。代码不再忽略该文件。
 
 ### 2026-08-28

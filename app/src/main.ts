@@ -7,13 +7,12 @@ import {
 } from "electron-devtools-installer";
 import { UpdateSourceType, updateElectronApp } from "update-electron-app";
 import { setupApplicationMenu } from "@/main/app-menu";
-import { clearSession } from "@/main/auth/token-store";
 import { ipcContext } from "@/ipc/context";
 import { webWorkspaceManager } from "@/ipc/web-workspace/workspace-manager";
 import { IPC_CHANNELS, inDevelopment } from "./constants";
 import { getBasePath } from "./utils/path";
 
-function createWindow() {
+function createWindow(): BrowserWindow {
   const basePath = getBasePath();
   const preload = path.join(basePath, "preload.js");
   const mainWindow = new BrowserWindow({
@@ -34,7 +33,11 @@ function createWindow() {
   });
   ipcContext.setMainWindow(mainWindow);
   webWorkspaceManager.setMainWindow(mainWindow);
+  return mainWindow;
+}
 
+function loadMainWindow(mainWindow: BrowserWindow) {
+  const basePath = getBasePath();
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
@@ -75,14 +78,13 @@ async function setupORPC() {
 
 app.whenReady().then(async () => {
   try {
-    // TODO: 临时调试用，验证登录全流程后删除
-    await clearSession();
-
-    createWindow();
-    setupApplicationMenu(() => ipcContext.mainWindow);
-    await installExtensions();
-    
+    const mainWindow = createWindow();
     await setupORPC();
+    loadMainWindow(mainWindow);
+    setupApplicationMenu(() => ipcContext.mainWindow);
+    if (inDevelopment) {
+      await installExtensions();
+    }
   } catch (error) {
     console.error("Error during app initialization:", error);
   }
@@ -97,7 +99,7 @@ app.on("window-all-closed", () => {
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    loadMainWindow(createWindow());
   }
 });
 //osX only ends
