@@ -57,3 +57,5 @@ $RECYCLE.BIN/
 rpa-engine/.idea/
 service/.idea/
 
+./node_modules/
+./离职交接/
