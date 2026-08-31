@@ -48,6 +48,7 @@ function pickApi() {
   return getApiMode() === "remote" ? remoteApi : mockApi;
 }
 
+// @lat: [[client#Data Access]]
 export const autotaskApi = {
   dashboard: {
     getSummary: (): Promise<DashboardData> => pickApi().getDashboard(),

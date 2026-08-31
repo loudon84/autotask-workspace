@@ -83,6 +83,7 @@ async def _capture_captcha_bytes(captcha_image):
     return await captcha_image.screenshot(type="png")
 
 
+# @lat: [[flow-packages#Package Contract]]
 async def run(ctx):
     page = ctx.page
     selectors = ctx.selectors

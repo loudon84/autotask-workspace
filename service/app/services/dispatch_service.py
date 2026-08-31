@@ -322,6 +322,7 @@ async def _load_binding_context(
 _MAX_LEASE_CANDIDATES = 32
 
 
+# @lat: [[task-service#Orchestration]]
 async def lease_task(db: AsyncSession, body: WorkerLeaseRequest) -> WorkerLeaseResponse | None:
     await _expire_stale_leases(db)
     worker = await get_worker(db, body.worker_id)

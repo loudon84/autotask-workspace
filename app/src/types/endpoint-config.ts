@@ -58,6 +58,7 @@ export function normalizeAutoTaskEndpointConfig(
 
 export type ApiMode = "mock" | "remote";
 
+// @lat: [[design-decisions#Client Remote-By-Default With Main-Side HTTP]]
 export function getApiMode(): ApiMode {
   const mode = import.meta.env.VITE_AUTOTASK_API_MODE ?? "remote";
   return mode === "mock" ? "mock" : "remote";
@@ -73,6 +74,7 @@ export function buildAuthUrl(
   return `${base}${prefix}${normalizedPath}`;
 }
 
+// @lat: [[integration#Client ↔ Task]]
 export function buildTaskUrl(
   config: AutoTaskEndpointConfig,
   path: string
@@ -83,6 +85,7 @@ export function buildTaskUrl(
   return `${base}${prefix}${normalizedPath}`;
 }
 
+// @lat: [[integration#Client ↔ Engine]]
 export function buildRpaEngineUrl(
   config: AutoTaskEndpointConfig,
   path: string

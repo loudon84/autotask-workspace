@@ -4,6 +4,7 @@ from app.core.exceptions import BadRequestError
 from app.models.automation_task import AutomationTask
 from app.models.enums import TaskStatus
 
+# @lat: [[domain#AutomationTask]]
 TRANSITIONS: dict[str, set[str]] = {
     TaskStatus.DRAFT: {TaskStatus.READY, TaskStatus.CANCELLED},
     TaskStatus.READY: {TaskStatus.QUEUED, TaskStatus.DRAFT, TaskStatus.CANCELLED},
