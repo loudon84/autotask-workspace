@@ -238,7 +238,17 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-08-31
+
+- **打包默认 Endpoint**：登录页改过的地址在 `%APPDATA%\\AutoTask Studio\\autotask-endpoint-config.json`。要恢复包内 `.env.production` 默认值，由用户自己删这个文件。代码不再忽略该文件。
+
 ### 2026-08-28
+
+- **阶段 B Binding 用户已改（调度仍关）**：门户「天地伟业-芯云」。扫单 `searches` 只留待签章；生成/提交已去掉 `dryRun`。建单/下合同/收货/扫描发票未动。填交期/签章仍未绑。扫单/回签 `schedule.enabled` 仍 false。此后点生成/提交会真写正式 SRM。
+
+- **Client「网络异常」**：登录走正式 Auth `192.168.102.247:4510` 成功，随后 `POST /session/sync` 被本机 Task 打成 500。Task 当时仍按启动时的 Auth 地址去连本机 `127.0.0.1:4510`（未开），`httpx.ConnectError` 被泛化成 `errors.system.internal_error`。Client 登录页已指向正式 Auth + 本机 Task `127.0.0.1:4520`。已把本机 Task `PUBLIC_BASE_URL` 改成本机 4520，并重启本机 4520（pid 58016）。请重新登录 Client。未关 Binding 闸，未动 247 上的 Task/Engine。
+
+- **Task `.env` 外部基址已切正式主机**（SMC/SDMS 网页/ERP/OA/文档，已去掉 `qywx`、`192.168.99.*`、`uat`）。**需重启唯一 Task 4520** 后租约才带新基址。Engine `.env` 不用改这些。Binding 仍是阶段 A 闸（样例扫单、生成/提交 dryRun），未授权阶段 B 关闸前不要对着正式 SRM 点生成/提交。
 
 - **门户创建人/归属人改存姓名字段**：不再为列表显示调下属接口。`portal_accounts` 增加 `created_by_name`、`owner_user_name`；保存时把下拉里的姓名写进本表。迁库 `c1d8e4f90a62` 已执行。已有门户若缓存里有这个人会回填；选了别人且对方没登录过的，编辑保存一次即可。**需重启唯一 Task 4520** 并刷新 Client。
 
