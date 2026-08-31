@@ -57,5 +57,9 @@ $RECYCLE.BIN/
 rpa-engine/.idea/
 service/.idea/
 
-./node_modules/
-./离职交接/
+node_modules/
+离职交接/
+
+# lat.md embedding / init cache
+lat.md/.cache/
+rpa-engine/lat.md/.cache/
