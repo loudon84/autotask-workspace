@@ -193,8 +193,10 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 4520
 
 ```powershell
 cd rpa-engine
-.\.venv\Scripts\python.exe -m nodeskclaw_rpa_engine
+.\scripts\restart_engine_4610.ps1
 ```
+
+`python -m nodeskclaw_rpa_engine` 只负责启动，不会停掉已占用 4610 的旧进程。重启必须用上面的脚本。
 
 Engine 启动后会注册 Worker、发送心跳并轮询 lease。不要同时启动两个使用相同
 `WORKER_ID` 的 Engine 实例。启动 lease 前先确认 Task 中没有无关的 `QUEUED` Run。

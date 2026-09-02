@@ -347,8 +347,53 @@ stop_existing_services() {
   echo "    已全部停止"
 }
 
+# curl 探测用：0.0.0.0 / :: 不能作为客户端地址。
+probe_host() {
+  local host="$1"
+  case "$host" in
+    ""|"0.0.0.0"|"::"|"*") printf '%s' "127.0.0.1" ;;
+    *) printf '%s' "$host" ;;
+  esac
+}
+
+url_origin() {
+  local url="$1"
+  printf '%s' "$url" | sed -E 's#^(https?://[^/]+).*#\1#'
+}
+
+http_ok() {
+  local url="$1"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS --max-time 2 "$url" >/dev/null 2>&1
+    return
+  fi
+  python3 - "$url" >/dev/null 2>&1 <<'PY'
+import sys, urllib.request
+try:
+    urllib.request.urlopen(sys.argv[1], timeout=2)
+except Exception:
+    raise SystemExit(1)
+PY
+}
+
+# Engine 在 WORKER_ENABLED=true 时，lifespan 会同步向 Task 注册 Worker；
+# Task 尚未监听就会立刻退出，随后 wait -n 把 Task 一并停掉。
+wait_http_ok() {
+  local url="$1" timeout="$2" name="$3"
+  local deadline=$((SECONDS + timeout))
+  echo "==> 等待 ${name} 就绪: ${url}  (最多 ${timeout}s)"
+  while (( SECONDS < deadline )); do
+    if http_ok "$url"; then
+      echo "    ${name} 已就绪"
+      return 0
+    fi
+    sleep 0.3
+  done
+  die "${name} 在 ${timeout}s 内未就绪: ${url}。请查看日志后重试。"
+}
+
 start_service() {
-  local host port
+  local host port probe
   host="$(env_get "${SERVICE_DIR}/.env" HOST 0.0.0.0)"
   port="$(env_get "${SERVICE_DIR}/.env" PORT 4520)"
   [[ -x "${SERVICE_DIR}/.venv/bin/uvicorn" ]] || die "service 未安装 uvicorn，请检查 uv sync 是否成功"
@@ -362,10 +407,12 @@ start_service() {
       --port "$port"
   ) >>"$SERVICE_LOG" 2>&1 &
   PIDS+=("$!")
-  echo "    pid=${PIDS[-1]}  log=${SERVICE_LOG}  http://${host}:${port}/health"
+  probe="http://$(probe_host "$host"):${port}/health"
+  echo "    pid=${PIDS[-1]}  log=${SERVICE_LOG}  ${probe}"
 }
 
 start_engine() {
+  local host port probe
   echo "==> 启动 rpa-engine: .venv/bin/python -m nodeskclaw_rpa_engine"
   echo "    PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH}"
   (
@@ -374,10 +421,34 @@ start_engine() {
     exec .venv/bin/python -m nodeskclaw_rpa_engine
   ) >>"$ENGINE_LOG" 2>&1 &
   PIDS+=("$!")
+  host="$(env_get "${ENGINE_DIR}/.env" APP_HOST 127.0.0.1)"
+  port="$(env_get "${ENGINE_DIR}/.env" APP_PORT 4610)"
+  probe="http://$(probe_host "$host"):${port}/health/live"
+  echo "    pid=${PIDS[-1]}  log=${ENGINE_LOG}  ${probe}"
+}
+
+wait_service_ready() {
+  local host port local_health task_api task_origin task_health
+  host="$(env_get "${SERVICE_DIR}/.env" HOST 0.0.0.0)"
+  port="$(env_get "${SERVICE_DIR}/.env" PORT 4520)"
+  local_health="http://$(probe_host "$host"):${port}/health"
+  wait_http_ok "$local_health" 60 "service (nodeskclaw-task)"
+
+  task_api="$(env_get "${ENGINE_DIR}/.env" TASK_API_BASE_URL "http://127.0.0.1:4520/api/v1/autotask")"
+  task_origin="$(url_origin "$task_api")"
+  [[ -n "$task_origin" ]] || die "无法解析 rpa-engine .env 的 TASK_API_BASE_URL"
+  task_health="${task_origin}/health"
+  echo "    Engine 将连接 ${task_api}"
+  if [[ "$task_health" != "$local_health" ]]; then
+    wait_http_ok "$task_health" 30 "Engine TASK_API_BASE_URL (${task_origin})"
+  fi
+}
+
+wait_engine_ready() {
   local host port
   host="$(env_get "${ENGINE_DIR}/.env" APP_HOST 127.0.0.1)"
   port="$(env_get "${ENGINE_DIR}/.env" APP_PORT 4610)"
-  echo "    pid=${PIDS[-1]}  log=${ENGINE_LOG}  http://${host}:${port}/health/live"
+  wait_http_ok "http://$(probe_host "$host"):${port}/health/live" 60 "rpa-engine"
 }
 
 cleanup() {
@@ -420,7 +491,9 @@ main() {
 
   trap cleanup EXIT INT TERM
   start_service
+  wait_service_ready
   start_engine
+  wait_engine_ready
 
   echo
   echo "两个服务已启动。日志: ${LOG_DIR}/"

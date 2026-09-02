@@ -1,6 +1,10 @@
 # AutoTask 开发总控
 
+<<<<<<< HEAD
 最后更新：2026-09-01
+=======
+最后更新：2026-09-02
+>>>>>>> master
 
 ## 1. 用途
 
@@ -90,6 +94,7 @@
 13. 测试环境 Task 仍需确认并修正 Artifact `public/download base URL`，确保返回的下载地址可由实际 Client 所在网络访问；本地 `127.0.0.1` 闭环已验证。
 14. 任务 2 Flow `1.2.0` 已切换精确 Binding 并完成一次受控八行验证。Flow 只点击一次签章并在刷新后发现订单仍为“待签章”、八行日期为空，Trace 的 51 条网络记录全部为 GET、写请求为 0，因此安全进入 `ORDER_SIGN_STATUS_UNCONFIRMED`。需由演示门户实现可持久化且可回读的签章接口/模拟契约；修复前不得重试该订单或放宽 Flow 的最终状态验证。
 15. Task `.env` 中的 `SKIP_AUTO_MIGRATE=1` 当前不会被启动逻辑读取，因为 `app.main` 只检查进程环境变量；本次重启仍调用了 `alembic upgrade head`。当前数据库已在 head 且本次未新增迁移，后续重启前应修正配置读取或显式注入该进程变量。
+16. **本地扫单/收货「有数据却死循环」**：不是 Flow 业务 while。xlsx 已上传后 Run 未 finish；Worker 未续租；Task `WORKER_LEASE_TTL_SECONDS=60` 到期把仍 RUNNING 的任务打回 QUEUED，同一 Run 从头再跑。收货 Run `d80afcbd` 10 次领取；扫单 `e2bf3514`/`829a79c0` 各 3–4 次。未改代码。
 
 ## 6. 后续行动
 
@@ -240,6 +245,12 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-09-02
+
+- **正式 SRM 登录勾选**：主路径 `.el-checkbox__inner` 改为 `force=True`，失败再 DOM click（与探测脚本一致）。正式站无 √ 时 OCR 不会执行。改完需 `restart_engine_4610.ps1`。未部署生产 4610。
+
+- **扫单/对账单查询收货死循环（未改代码）**：证据是同一 Run 每约 70 秒再 `任务已被 Worker 领取` 并再导一份同样大小的 xlsx。业务 Flow 会 return，不是列表页死循环。根因：租约 60 秒到期且没有 renew，`_expire_stale_leases` 把 RUNNING 打回 QUEUED 后重派。导表走 Artifact HTTP 已成功，finish/事件 outbox 滞后（测试库 `rpa_engine.rpa_execution_attempts` 今日无新 attempt）。扫单还并行了两条任务。取消任务后浏览器仍可能继续跑（zombie）。本地 4610 实际被 8 月 28 日旧 Engine 占用；`python -m nodeskclaw_rpa_engine` 不能重启。已加 `rpa-engine/scripts/restart_engine_4610.ps1`（先杀 4610 再起）。
+
 ### 2026-09-01
 
 - **BOE v2.2 显示名定稿**：节点名改为客服视角——匹配交货计划、读 WMS 装箱单、RPA 补全项目信息行、保存 SRM 草稿单、客服核验、提交 SRM 单据、已完成。失败/作废沿用天地伟业旁路。状态码层保留 `BOE_PACK_*` 稳定层。设计已按 v2.2 改完。未写代码、未迁库。
@@ -255,6 +266,9 @@ D:\AutoTask-Workspace\project-docs\designs\
 - **BOE 设计按样例/问题清单修订**：用户补充样例表单，并指出箱单是一张瞬态表单（头+行+附件），不能按天地伟业「一阶段一次 RPA」（每次 Run 都要邮箱验证码）。设计改为 Client 备单（待创建/待配行/待传附件）+ **一次提交 RPA**。查询采购凭证 = 按采购订单号在 DOM 弹窗导入项目行，发生在提交 Run 内。附件用 Playwright 喂文件，不用 pyautogui。文档已改；未写代码。
 
 - **BOE 发票箱单设计草案**：需求细节未定，先写操作台骨架。文档 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。沿用天地伟业 SOP（阶段列表/进度条/卡点/子任务树）；建议 `process_code=srm_boe_invoice_packing`，v1.0 不新建头表、不取 SDMS。影刀只交 `selectorsV2.xml`（已在 `prd/boe/`）。未写代码、未发 Flow、未迁库。密码不进设计文档。
+
+
+
 
 ### 2026-08-31
 
