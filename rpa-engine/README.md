@@ -41,6 +41,12 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m nodeskclaw_rpa_engine
 ```
 
+That command only starts a new process. If 4610 is already taken it exits with WinError 10048 and leaves the old Engine running. To restart:
+
+```powershell
+.\scripts\restart_engine_4610.ps1
+```
+
 Or with uvicorn (ASGI target must be the Python package, not `app.main`):
 
 ```powershell

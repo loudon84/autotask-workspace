@@ -145,7 +145,18 @@ async def _ensure_agreement(page: Any, selector: Callable[..., str]) -> None:
             return
         inner = box.locator(".el-checkbox__inner").first
         target = inner if await _locator_count(inner) > 0 else box
-        await target.click(timeout=3000)
+        # Official SRM: the inner box can fail Playwright actionability (3s timeout,
+        # no √, captcha never filled). Probe uses a DOM click; fallback path already
+        # uses force=True.
+        try:
+            await target.click(force=True, timeout=3000)
+        except Exception:
+            await box.evaluate(
+                """el => {
+                    const clickable = el.querySelector('.el-checkbox__inner') || el;
+                    clickable.click();
+                }"""
+            )
         return
 
     loc = page.locator(selector("agreement")).first

@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-08-28
+最后更新：2026-09-02
 
 ## 1. 用途
 
@@ -89,6 +89,7 @@
 13. 测试环境 Task 仍需确认并修正 Artifact `public/download base URL`，确保返回的下载地址可由实际 Client 所在网络访问；本地 `127.0.0.1` 闭环已验证。
 14. 任务 2 Flow `1.2.0` 已切换精确 Binding 并完成一次受控八行验证。Flow 只点击一次签章并在刷新后发现订单仍为“待签章”、八行日期为空，Trace 的 51 条网络记录全部为 GET、写请求为 0，因此安全进入 `ORDER_SIGN_STATUS_UNCONFIRMED`。需由演示门户实现可持久化且可回读的签章接口/模拟契约；修复前不得重试该订单或放宽 Flow 的最终状态验证。
 15. Task `.env` 中的 `SKIP_AUTO_MIGRATE=1` 当前不会被启动逻辑读取，因为 `app.main` 只检查进程环境变量；本次重启仍调用了 `alembic upgrade head`。当前数据库已在 head 且本次未新增迁移，后续重启前应修正配置读取或显式注入该进程变量。
+16. **本地扫单/收货「有数据却死循环」**：不是 Flow 业务 while。xlsx 已上传后 Run 未 finish；Worker 未续租；Task `WORKER_LEASE_TTL_SECONDS=60` 到期把仍 RUNNING 的任务打回 QUEUED，同一 Run 从头再跑。收货 Run `d80afcbd` 10 次领取；扫单 `e2bf3514`/`829a79c0` 各 3–4 次。未改代码。
 
 ## 6. 后续行动
 
@@ -237,6 +238,12 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-09-02
+
+- **正式 SRM 登录勾选**：主路径 `.el-checkbox__inner` 改为 `force=True`，失败再 DOM click（与探测脚本一致）。正式站无 √ 时 OCR 不会执行。改完需 `restart_engine_4610.ps1`。未部署生产 4610。
+
+- **扫单/对账单查询收货死循环（未改代码）**：证据是同一 Run 每约 70 秒再 `任务已被 Worker 领取` 并再导一份同样大小的 xlsx。业务 Flow 会 return，不是列表页死循环。根因：租约 60 秒到期且没有 renew，`_expire_stale_leases` 把 RUNNING 打回 QUEUED 后重派。导表走 Artifact HTTP 已成功，finish/事件 outbox 滞后（测试库 `rpa_engine.rpa_execution_attempts` 今日无新 attempt）。扫单还并行了两条任务。取消任务后浏览器仍可能继续跑（zombie）。本地 4610 实际被 8 月 28 日旧 Engine 占用；`python -m nodeskclaw_rpa_engine` 不能重启。已加 `rpa-engine/scripts/restart_engine_4610.ps1`（先杀 4610 再起）。
 
 ### 2026-08-31
 

@@ -49,6 +49,12 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m nodeskclaw_rpa_engine
 ```
 
+端口空闲时用上面这条启动即可。**重启不要再敲一遍**，否则旧进程仍占 4610，新进程会 WinError 10048 退出。重启用：
+
+```powershell
+.\scripts\restart_engine_4610.ps1
+```
+
 或用 uvicorn（ASGI 入口必须是 Python 包路径，不要写成 `app.main:app`）：
 
 ```powershell
