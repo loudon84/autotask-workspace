@@ -64,6 +64,17 @@ NoDeskClaw backend with a TTL user cache.
 No local password store in Task. Portal ACL uses ownership and managed-user
 scope rather than treating grants as the primary filter.
 
+## BOE SOP Reuses Process Instances
+
+BOE packing reuses `process_instances`. v2.1 splits scan, WMS, enrich, save-draft,
+and submit so each failed node retries alone; v2.2 keeps `BOE_PACK_*` codes but
+renames displays from the CS point of view.
+
+Unlike 天地伟业, the unsaved create form is still transient. Match creates the
+instance; WMS/enrich/save are later tasks. Entering CS review freezes
+`reviewBaseline` JSON. Cookie cache skips the login page; email OTP is
+account-day on the SRM backend. See [[domain#BoeInvoicePacking]].
+
 ## Formal Drill Shares Production Flow
 
 Official portal drill and real go-live share the same Flow package; demo vs

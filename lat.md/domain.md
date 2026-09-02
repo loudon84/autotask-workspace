@@ -71,6 +71,18 @@ stages: generate, invoice upload, submit review).
 Like process instances, statement stages are driven by Task APIs and subordinate
 AutomationTasks rather than by the Engine.
 
+## BoeInvoicePacking
+
+A BOE packing list is one process instance: match delivery plan, read WMS
+packing list, RPA-enrich line items, save SRM draft, CS review, then submit as
+a change-order vs JSON baseline.
+
+v2.2 names stages from the CS point of view while keeping `BOE_PACK_*` status
+codes stable. v2.1 split retryable nodes so WMS/enrich/save failures do not
+re-scan or recreate the bill. Email OTP is per SRM account per day, not
+cookies. Cookie cache still skips the login page. PO query uses customer PO +
+item number. Draft: `project-docs/prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`.
+
 ## SchedulerJob
 
 A SchedulerJob is one cron schedule per Binding; Task’s JobScheduler fires tasks

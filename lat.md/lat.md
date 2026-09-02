@@ -12,7 +12,7 @@ Managed by [lat.md](https://www.npmjs.com/package/lat.md). Anchor source with
 Index of workspace-level documentation.
 
 - [[architecture]] — Five code roots, runtime topology, local Ubuntu bring-up, and execution path.
-- [[domain]] — Shared product domain: portals, bindings, tasks, runs, processes, statements.
+- [[domain]] — Shared product domain: portals, bindings, tasks, runs, processes, statements, BOE packing.
 - [[design-decisions]] — Cross-cutting ownership and integration decisions.
 - [[client]] — Electron Client (`app/`): Main/Renderer, IPC, and remote API facade.
 - [[task-service]] — Task business API (`service/`): orchestration, lease, schedulers.
