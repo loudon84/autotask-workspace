@@ -155,6 +155,7 @@ describe("remote DTO 映射", () => {
         erpEntityName: "客户一",
         businessEntity: "深圳市芯云信息科技有限公司",
         ou: "104",
+        category: "TIANDI",
         portalName: "供应商门户",
         portalUrl: "https://supplier.example.com",
         loginAccount: "demo",
@@ -162,12 +163,16 @@ describe("remote DTO 映射", () => {
         clientOpenMode: "webcontents",
         clientSessionPartition: "persist:srm:demo",
         status: "enabled",
+        ownerUserId: "admin",
+        ownerName: "admin",
+        createdByName: "admin",
       })
     ).toMatchObject({
       entityType: "CUSTOMER",
       erpEntityCode: "C001",
       businessEntity: "深圳市芯云信息科技有限公司",
       ou: "104",
+      category: "TIANDI",
       credentialRef: "credential-demo",
       status: "ENABLED",
     });

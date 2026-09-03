@@ -192,6 +192,63 @@ export const autotaskApi = {
     },
   },
 
+  portalCategories: {
+    list: () => {
+      const api = pickApi();
+      if (
+        "listPortalCategories" in api &&
+        typeof api.listPortalCategories === "function"
+      ) {
+        return api.listPortalCategories();
+      }
+      return Promise.resolve([]);
+    },
+    listDocuments: (category: string) => {
+      const api = pickApi();
+      if (
+        "listCategoryDocuments" in api &&
+        typeof api.listCategoryDocuments === "function"
+      ) {
+        return api.listCategoryDocuments(category);
+      }
+      return Promise.resolve([]);
+    },
+    upload: (category: string, filePaths: string[]) => {
+      const api = pickApi();
+      if (
+        "uploadCategoryDocuments" in api &&
+        typeof api.uploadCategoryDocuments === "function"
+      ) {
+        return api.uploadCategoryDocuments({ category, filePaths });
+      }
+      throw new Error("当前模式不支持上传分类文档");
+    },
+    download: (input: {
+      category: string;
+      documentId: string;
+      fileName: string;
+    }) => {
+      const api = pickApi();
+      if (
+        "downloadCategoryDocument" in api &&
+        typeof api.downloadCategoryDocument === "function"
+      ) {
+        return api.downloadCategoryDocument(input);
+      }
+      throw new Error("当前模式不支持下载分类文档");
+    },
+    delete: (category: string, documentId: string) => {
+      const api = pickApi();
+      if (
+        "deleteCategoryDocument" in api &&
+        typeof api.deleteCategoryDocument === "function"
+      ) {
+        return api.deleteCategoryDocument(category, documentId);
+      }
+      throw new Error("当前模式不支持删除分类文档");
+    },
+  },
+
   workflowTemplates: {
     list: (): Promise<WorkflowTemplate[]> => pickApi().getWorkflowTemplates(),
     get: (id: string): Promise<WorkflowTemplate | undefined> =>

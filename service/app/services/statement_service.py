@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.domain.portal_category import PortalCategory
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
 from app.models.enums import (
@@ -668,6 +669,11 @@ async def list_bills(
         .where(
             StatementBill.tenant_id == tenant_id,
             not_deleted(StatementBill),
+        )
+        .join(PortalAccount, PortalAccount.id == StatementBill.portal_account_id)
+        .where(
+            PortalAccount.category == PortalCategory.TIANDI.value,
+            not_deleted(PortalAccount),
         )
     )
     if check_status:

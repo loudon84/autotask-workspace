@@ -8,6 +8,7 @@ import tasksData from "@/mock/tasks.json";
 import workersData from "@/mock/workers.json";
 import workflowTemplatesData from "@/mock/workflow-templates.json";
 import { mapPortalAccount } from "@/services/dto-mappers";
+import { PORTAL_CATEGORY_OPTIONS } from "@/features/srm-portals/portal-category";
 import {
   getHumanActionById,
   getHumanActionByTaskId,
@@ -32,6 +33,10 @@ import type {
   PortalAccount,
   UpdatePortalAccountInput,
 } from "@/types/portal-account";
+import type {
+  CategoryDocument,
+  CategorySummary,
+} from "@/types/category-document";
 import type { RpaComponent } from "@/types/rpa-component";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
@@ -119,6 +124,8 @@ function getPortals(): PortalAccount[] {
 const mockPortalStore: PortalAccount[] = (
   srmPortalsData as unknown as Record<string, unknown>[]
 ).map((item) => mapPortalAccount(item));
+
+const mockCategoryDocuments: CategoryDocument[] = [];
 
 function findPortalById(portalId: string): PortalAccount | undefined {
   return getPortals().find((p) => p.id === portalId);
@@ -419,6 +426,33 @@ export const mockApi = {
   getWorkers: async (): Promise<Worker[]> => delay(workersData as Worker[]),
 
   getSrmPortals: async (): Promise<PortalAccount[]> => delay(getPortals()),
+
+  listPortalCategories: async (): Promise<CategorySummary[]> =>
+    delay(
+      PORTAL_CATEGORY_OPTIONS.map((option) => ({
+        code: option.value,
+        label: option.label,
+        documentCount: mockCategoryDocuments.filter(
+          (row) => row.category === option.value
+        ).length,
+      }))
+    ),
+
+  listCategoryDocuments: async (category: string): Promise<CategoryDocument[]> =>
+    delay(mockCategoryDocuments.filter((row) => row.category === category)),
+
+  deleteCategoryDocument: async (
+    category: string,
+    documentId: string
+  ): Promise<void> => {
+    const index = mockCategoryDocuments.findIndex(
+      (row) => row.category === category && row.id === documentId
+    );
+    if (index >= 0) {
+      mockCategoryDocuments.splice(index, 1);
+    }
+    return delay(undefined);
+  },
 
   getSrmPortalById: async (id: string): Promise<PortalAccount | undefined> =>
     delay(findPortalById(id)),

@@ -25,6 +25,7 @@ import {
 import { usePortalAccounts } from "@/features/srm-portals/api/use-portal-accounts";
 import { PortalAccountFormDialog } from "@/features/srm-portals/components/portal-account-form-dialog";
 import { formatOwnerLabel } from "@/features/srm-portals/owner-label";
+import { portalCategoryLabel } from "@/features/srm-portals/portal-category";
 import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-portal-write-permission";
 import type { PortalAccount, PortalStatus } from "@/types/portal-account";
 import type { ClientOpenMode } from "@/types/web-tab";
@@ -120,6 +121,13 @@ function buildColumns(
           className="max-w-[9rem]"
           value={row.original.erpEntityName}
         />
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: "分类",
+      cell: ({ row }) => (
+        <TruncatedCell value={portalCategoryLabel(row.original.category)} />
       ),
     },
     {

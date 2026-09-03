@@ -8,11 +8,22 @@ attempts. Flows implement portal steps only through `ctx`.
 
 ## PortalAccount
 
-A PortalAccount stores SRM/portal login metadata, ownership, and ERP entity
-hints used when leasing work.
+A PortalAccount stores SRM/portal login metadata, ownership, ERP entity
+hints, and a hardcoded customer category code used when leasing work.
 
 Credentials are injected into the worker lease (and typically `ctx.credentials`).
 ACL is ownership / managed-user / task-admin scoped on the Task service.
+Category (`TIANDI` / `BOE`) is picked on the portal row; process menus bind to
+that code. See [[design-decisions#Portal Category Is Hardcoded]].
+
+## CategoryDocument
+
+A CategoryDocument is a file (handbook, SOP note) owned by a hardcoded
+category code, not by a single portal row.
+
+Multiple 天地伟业 portals share one TIANDI document list. Files are stored on
+the Task host under `ARTIFACT_LOCAL_DIR/category-docs`. See
+[[design-decisions#Portal Category Is Hardcoded]].
 
 ## WorkflowTemplate
 

@@ -1,5 +1,6 @@
 import type {
   PortalAccount,
+  PortalCategory,
   PortalEntityType,
   PortalStatus,
 } from "@/types/portal-account";
@@ -120,6 +121,13 @@ function normalizeEntityType(type: unknown): PortalEntityType {
   return "CUSTOMER";
 }
 
+function normalizePortalCategory(value: unknown): PortalCategory {
+  if (value === "BOE" || value === "TIANDI") {
+    return value;
+  }
+  return "TIANDI";
+}
+
 export function mapPortalAccount(raw: unknown): PortalAccount {
   const data = mapKeysToCamel<Record<string, unknown>>(raw);
 
@@ -133,6 +141,7 @@ export function mapPortalAccount(raw: unknown): PortalAccount {
     erpEntityName: String(data.erpEntityName ?? data.customerName ?? ""),
     businessEntity: String(data.businessEntity ?? ""),
     ou: String(data.ou ?? ""),
+    category: normalizePortalCategory(data.category),
     portalName: String(data.portalName ?? data.name ?? ""),
     portalUrl: String(data.portalUrl ?? data.url ?? ""),
     loginAccount: String(data.loginAccount ?? ""),

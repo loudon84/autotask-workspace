@@ -9,6 +9,7 @@ from app.api import (
     integration,
     mcp,
     portal_accounts,
+    portal_categories,
     process_instances,
     rpa_dispatch,
     rpa_runs,
@@ -36,6 +37,7 @@ api_router.include_router(dashboard.router, tags=["Dashboard"])
 api_router.include_router(session.router, tags=["Session"])
 api_router.include_router(integration.router, tags=["Integration"])
 api_router.include_router(portal_accounts.router, prefix="/portal-accounts", tags=["Portal Account"])
+api_router.include_router(portal_categories.router, prefix="/portal-categories", tags=["Portal Category"])
 api_router.include_router(workflow_templates.router, prefix="/workflow-templates", tags=["Workflow Template"])
 api_router.include_router(workflow_bindings.router, prefix="/workflow-bindings", tags=["Workflow Binding"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["Automation Task"])

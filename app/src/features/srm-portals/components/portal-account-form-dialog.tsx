@@ -25,10 +25,15 @@ import {
 import { useOwnerCandidates } from "@/features/srm-portals/api/use-owner-candidates";
 import { OwnerPicker } from "@/features/srm-portals/components/owner-picker";
 import { formatOwnerLabel, resolveOwnerDisplayName } from "@/features/srm-portals/owner-label";
+import {
+  DEFAULT_PORTAL_CATEGORY,
+  PORTAL_CATEGORY_OPTIONS,
+} from "@/features/srm-portals/portal-category";
 import { useAuth } from "@/modules/auth/AutoTaskAuthProvider";
 import type {
   CreatePortalAccountInput,
   PortalAccount,
+  PortalCategory,
   PortalEntityType,
   PortalStatus,
 } from "@/types/portal-account";
@@ -47,6 +52,7 @@ type FormState = {
   erpEntityName: string;
   businessEntity: string;
   ou: string;
+  category: PortalCategory;
   portalName: string;
   portalUrl: string;
   loginAccount: string;
@@ -65,6 +71,7 @@ const defaultFormState: FormState = {
   erpEntityName: "",
   businessEntity: "",
   ou: "",
+  category: DEFAULT_PORTAL_CATEGORY,
   portalName: "",
   portalUrl: "",
   loginAccount: "",
@@ -82,6 +89,7 @@ function portalToFormState(portal: PortalAccount): FormState {
     erpEntityName: portal.erpEntityName,
     businessEntity: portal.businessEntity ?? "",
     ou: portal.ou ?? "",
+    category: portal.category ?? DEFAULT_PORTAL_CATEGORY,
     portalName: portal.portalName,
     portalUrl: portal.portalUrl,
     loginAccount: portal.loginAccount,
@@ -143,6 +151,7 @@ function buildCreateInput(
     erpEntityName: form.erpEntityName.trim(),
     businessEntity: form.businessEntity.trim(),
     ou: form.ou.trim(),
+    category: form.category,
     portalName: form.portalName.trim(),
     portalUrl: form.portalUrl.trim(),
     loginAccount: form.loginAccount.trim(),
@@ -238,6 +247,7 @@ export function PortalAccountFormDialog({
           erpEntityName: form.erpEntityName.trim(),
           businessEntity: form.businessEntity.trim(),
           ou: form.ou.trim(),
+          category: form.category,
           portalName: form.portalName.trim(),
           portalUrl: form.portalUrl.trim(),
           loginAccount: form.loginAccount.trim(),
@@ -292,6 +302,27 @@ export function PortalAccountFormDialog({
               <SelectContent>
                 <SelectItem value="CUSTOMER">客户</SelectItem>
                 <SelectItem value="SUPPLIER">供应商</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>分类 *</Label>
+            <Select
+              onValueChange={(value) =>
+                updateField("category", value as PortalCategory)
+              }
+              value={form.category}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择客户分类" />
+              </SelectTrigger>
+              <SelectContent>
+                {PORTAL_CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -26,6 +26,10 @@ def _scalars_result(values):
     return result
 
 
+def _compiled_sql(stmt) -> str:
+    return str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+
 def _instance(**overrides) -> ProcessInstance:
     defaults = {
         "id": "inst-1",
@@ -820,6 +824,8 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
 
             return _S()
 
+    captured_sql: list[str] = []
+
     class _Session:
         async def __aenter__(self):
             return self
@@ -827,7 +833,8 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
         async def __aexit__(self, *_args):
             return None
 
-        async def execute(self, _stmt):
+        async def execute(self, stmt):
+            captured_sql.append(_compiled_sql(stmt))
             return _Result()
 
         async def rollback(self):
@@ -853,6 +860,7 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
     count = await scheduler.process_once()
     assert count == 1
     assert captured_portal_ids == ["portal-bound"]
+    assert any("TIANDI" in sql for sql in captured_sql)
 
 
 @pytest.mark.asyncio
@@ -949,4 +957,34 @@ def test_localize_unhandled_does_not_keep_english_flow_failed():
     )
     assert "Flow execution failed" not in (message or "")
     assert "接口调用" in (message or "")
+
+
+@pytest.mark.asyncio
+async def test_list_instances_filters_tiandi_portals() -> None:
+    captured: dict[str, str] = {}
+    db = MagicMock()
+
+    async def execute(stmt):  # noqa: ANN001
+        captured["sql"] = _compiled_sql(stmt)
+        return _scalars_result([])
+
+    db.execute = execute
+    rows = await svc.list_instances(db, "tenant-1")
+    assert rows == []
+    sql = captured["sql"]
+    assert "portal_accounts" in sql.lower()
+    assert "TIANDI" in sql
+
+
+@pytest.mark.asyncio
+async def test_create_scan_task_rejects_non_tiandi_portal() -> None:
+    portal = MagicMock()
+    portal.status = "ENABLED"
+    portal.category = "BOE"
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=_scalar_result(portal))
+    with pytest.raises(BadRequestError) as exc_info:
+        await svc.create_scan_task(db, "tenant-1", "portal-boe", actor="user-1")
+    assert exc_info.value.message_key == "errors.autotask.process.scan_category_unsupported"
+    assert "不支持" in (exc_info.value.message or "")
 

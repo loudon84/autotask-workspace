@@ -45,6 +45,7 @@ vi.mock("@/services/autotask-api", () => ({
           portalName: "天地伟业技术有限公司",
           businessEntity: "深圳市芯云信息科技有限公司",
           status: "ENABLED",
+          category: "TIANDI",
         },
       ]),
     },
@@ -200,7 +201,7 @@ describe("ProcessesListPage", () => {
     await waitFor(() =>
       expect(screen.getByText("POJS2607130002")).toBeInTheDocument()
     );
-    expect(screen.getByText("客户订单流程实例")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "客户订单" })).toBeInTheDocument();
     expect(screen.getByText("天地伟业技术有限公司")).toBeInTheDocument();
     expect(
       screen.getAllByText("待填写交期").length

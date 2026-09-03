@@ -1,6 +1,8 @@
 import {
   requestAutotaskApi,
+  uploadCategoryDocuments as ipcUploadCategoryDocuments,
   uploadStatementInvoiceFiles,
+  downloadCategoryDocument as ipcDownloadCategoryDocument,
 } from "@/actions/autotask-api";
 import type { Artifact } from "@/types/artifact";
 import type { AuditLog } from "@/types/audit-log";
@@ -49,6 +51,11 @@ import {
   testOpenPortalAccount as remoteTestOpenPortalAccount,
   updatePortalAccount as remoteUpdatePortalAccount,
 } from "./autotask-api/portal-accounts";
+import {
+  deleteCategoryDocument as remoteDeleteCategoryDocument,
+  listCategoryDocuments as remoteListCategoryDocuments,
+  listPortalCategories as remoteListPortalCategories,
+} from "./autotask-api/portal-categories";
 import { mapItemResponse, mapListResponse } from "./dto-mappers";
 import {
   mapRemoteArtifact,
@@ -477,6 +484,25 @@ export const remoteApi = {
 
   deletePortalAccount: async (id: string): Promise<void> =>
     remoteDeletePortalAccount(id),
+
+  listPortalCategories: async () => remoteListPortalCategories(),
+
+  listCategoryDocuments: async (category: string) =>
+    remoteListCategoryDocuments(category),
+
+  deleteCategoryDocument: async (category: string, documentId: string) =>
+    remoteDeleteCategoryDocument(category, documentId),
+
+  uploadCategoryDocuments: async (input: {
+    category: string;
+    filePaths: string[];
+  }) => ipcUploadCategoryDocuments(input),
+
+  downloadCategoryDocument: async (input: {
+    category: string;
+    documentId: string;
+    fileName: string;
+  }) => ipcDownloadCategoryDocument(input),
 
   testOpenPortalAccount: async (
     id: string

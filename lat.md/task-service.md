@@ -53,3 +53,8 @@ PostgreSQL via SQLAlchemy 2 async + asyncpg; soft delete via `deleted_at`.
 Artifacts may be local disk or S3. Integration call logs support ops diagnosis.
 Task does not store Engine Registry rows; it stores Binding pins and run
 metadata only.
+
+`portal_accounts.category` stores a hardcoded code (`TIANDI` / `BOE`). Customer-order
+and statement lists join portals and keep `TIANDI` only; scan jobs reject other
+codes. Category handbooks use the same code on `category_documents` and live on
+Task disk. See [[design-decisions#Portal Category Is Hardcoded]].

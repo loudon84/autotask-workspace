@@ -493,6 +493,7 @@ export function toRemotePortalCreate(
     erpEntityName: input.erpEntityName,
     businessEntity: input.businessEntity ?? "",
     ou: input.ou ?? "",
+    category: input.category ?? "TIANDI",
     portalName: input.portalName,
     portalUrl: input.portalUrl,
     loginAccount: input.loginAccount,
@@ -518,6 +519,7 @@ export function toRemotePortalUpdate(
       ? {}
       : { businessEntity: input.businessEntity }),
     ...(input.ou === undefined ? {} : { ou: input.ou }),
+    ...(input.category === undefined ? {} : { category: input.category }),
     ...(input.portalName === undefined ? {} : { portalName: input.portalName }),
     ...(input.portalUrl === undefined ? {} : { portalUrl: input.portalUrl }),
     ...(input.loginAccount === undefined

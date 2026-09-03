@@ -63,6 +63,7 @@ def _portal_account(**overrides):
         "client_open_mode": ClientOpenMode.WEBCONTENTS.value,
         "client_session_partition": "persist:portal-001",
         "status": PortalAccountStatus.ENABLED.value,
+        "category": "TIANDI",
         "owner_user_id": "user-001",
         "owner_user_name": "测试用户",
         "created_by": "user-001",
@@ -128,6 +129,7 @@ def test_portal_account_create_requires_password():
     assert payload["items"][0]["tenantId"] == "tenant-001"
     assert payload["items"][0]["businessEntity"] == ""
     assert payload["items"][0]["ou"] == ""
+    assert payload["items"][0]["category"] == "TIANDI"
     assert "credentialRef" not in payload["items"][0]
 
 
@@ -146,6 +148,50 @@ def test_portal_account_create_accepts_business_entity_and_ou():
     )
     assert body.business_entity == "深圳市芯云信息科技有限公司"
     assert body.ou == "104"
+
+
+def test_portal_account_create_defaults_category_to_tiandi():
+    body = PortalAccountCreate(
+        entityType="CUSTOMER",
+        erpEntityCode="CUST-001",
+        erpEntityName="示例客户 A",
+        portalName="客户 SRM 门户",
+        portalUrl="https://portal.example.com/srm",
+        loginAccount="buyer@example.com",
+        credentialRef="secret",
+        clientOpenMode="webcontents",
+    )
+    assert body.category == "TIANDI"
+
+
+def test_portal_account_create_accepts_boe_category():
+    body = PortalAccountCreate(
+        entityType="CUSTOMER",
+        erpEntityCode="CUST-001",
+        erpEntityName="示例客户 A",
+        category="BOE",
+        portalName="客户 SRM 门户",
+        portalUrl="https://portal.example.com/srm",
+        loginAccount="buyer@example.com",
+        credentialRef="secret",
+        clientOpenMode="webcontents",
+    )
+    assert body.category == "BOE"
+
+
+def test_portal_account_create_rejects_unknown_category():
+    with pytest.raises((ValidationError, BadRequestError)):
+        PortalAccountCreate(
+            entityType="CUSTOMER",
+            erpEntityCode="CUST-001",
+            erpEntityName="示例客户 A",
+            category="ACME",
+            portalName="客户 SRM 门户",
+            portalUrl="https://portal.example.com/srm",
+            loginAccount="buyer@example.com",
+            credentialRef="secret",
+            clientOpenMode="webcontents",
+        )
 
 
 def test_portal_test_open_response_matches_prd():
@@ -212,6 +258,7 @@ async def test_create_portal_account_uses_explicit_id_for_grant_and_partition():
         )
 
     assert account.id is not None
+    assert account.category == "TIANDI"
     assert account.client_session_partition == f"persist:portal-{account.id}"
     grant = next(item for item in added if item.__class__.__name__ == "PortalAccessGrant")
     assert grant.portal_account_id == account.id

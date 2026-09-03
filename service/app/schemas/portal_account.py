@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
+from app.domain.portal_category import DEFAULT_PORTAL_CATEGORY, parse_portal_category
 from app.models.enums import ClientOpenMode, EntityType, PortalAccountStatus
 from app.schemas.common import CamelModel
 
@@ -32,6 +33,7 @@ class PortalAccountCreate(CamelModel):
     erp_entity_name: str = Field(alias="erpEntityName")
     business_entity: str = Field("", alias="businessEntity")
     ou: str = Field("", alias="ou")
+    category: str = Field(DEFAULT_PORTAL_CATEGORY.value, alias="category")
     portal_name: str = Field(alias="portalName")
     portal_url: str = Field(alias="portalUrl")
     login_account: str = Field(alias="loginAccount")
@@ -52,6 +54,11 @@ class PortalAccountCreate(CamelModel):
     @classmethod
     def validate_portal_url(cls, value: str) -> str:
         return _validate_http_url(value)
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        return parse_portal_category(value).value
 
     @field_validator(
         "erp_entity_code",
@@ -78,6 +85,7 @@ class PortalAccountUpdate(CamelModel):
     erp_entity_name: str | None = Field(None, alias="erpEntityName")
     business_entity: str | None = Field(None, alias="businessEntity")
     ou: str | None = Field(None, alias="ou")
+    category: str | None = Field(None, alias="category")
     portal_name: str | None = Field(None, alias="portalName")
     portal_url: str | None = Field(None, alias="portalUrl")
     login_account: str | None = Field(None, alias="loginAccount")
@@ -96,6 +104,13 @@ class PortalAccountUpdate(CamelModel):
         if value is None:
             return value
         return _validate_http_url(value)
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return parse_portal_category(value, default_when_missing=False).value
 
     @field_validator("erp_entity_code", "erp_entity_name", "portal_name", "login_account")
     @classmethod
@@ -119,6 +134,7 @@ class PortalAccountResponse(CamelModel):
     erp_entity_name: str = Field(serialization_alias="erpEntityName")
     business_entity: str = Field("", serialization_alias="businessEntity")
     ou: str = Field("", serialization_alias="ou")
+    category: str = Field(serialization_alias="category")
     portal_name: str = Field(serialization_alias="portalName")
     portal_url: str = Field(serialization_alias="portalUrl")
     login_account: str = Field(serialization_alias="loginAccount")
