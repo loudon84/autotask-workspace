@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePortalAccounts } from "@/features/srm-portals/api/use-portal-accounts";
+import { isTiandiCategory } from "@/features/srm-portals/portal-category";
 import {
   RECEIPT_LINE_FIELD_COLUMNS,
   formatAmount,
@@ -38,7 +39,9 @@ function rowKey(row: StatementReceiptLine): string {
 export function StatementGeneratePage() {
   const navigate = useNavigate();
   const { data: portals = [] } = usePortalAccounts();
-  const enabledPortals = portals.filter((portal) => portal.status === "ENABLED");
+  const enabledPortals = portals.filter(
+    (portal) => portal.status === "ENABLED" && isTiandiCategory(portal.category)
+  );
   const [portalAccountId, setPortalAccountId] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
@@ -53,9 +56,7 @@ export function StatementGeneratePage() {
     if (portalAccountId || enabledPortals.length === 0) {
       return;
     }
-    const preferred =
-      enabledPortals.find((portal) => portal.portalName.includes("天地伟业")) ??
-      enabledPortals[0];
+    const preferred = enabledPortals[0];
     setPortalAccountId(preferred.id);
   }, [enabledPortals, portalAccountId]);
 

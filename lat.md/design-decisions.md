@@ -64,6 +64,7 @@ NoDeskClaw backend with a TTL user cache.
 No local password store in Task. Portal ACL uses ownership and managed-user
 scope rather than treating grants as the primary filter.
 
+
 ## BOE SOP Reuses Process Instances
 
 BOE packing reuses `process_instances`. v2.1 splits scan, WMS, enrich, save-draft,
@@ -74,6 +75,18 @@ Unlike 天地伟业, the unsaved create form is still transient. Match creates t
 instance; WMS/enrich/save are later tasks. Entering CS review freezes
 `reviewBaseline` JSON. Cookie cache skips the login page; email OTP is
 account-day on the SRM backend. See [[domain#BoeInvoicePacking]].
+
+## Portal Category Is Hardcoded
+
+Portal category codes (`TIANDI`, `BOE`) are hardcoded. Users only pick a
+category on each portal; process menus and SOPs bind to that code.
+
+Do not add a user-maintained parent-portal or process-catalog table: SOP UI and
+Flows are written per customer. Live 天地伟业 portals backfill to `TIANDI`
+without changing instance keys or routes. Category handbooks also bind to that
+code (`category_documents.category`) and files live on the Task server disk.
+See `project-docs/prd/tiandy/AutoTask v5.5 门户和流程实例优化.md`.
+
 
 ## Formal Drill Shares Production Flow
 

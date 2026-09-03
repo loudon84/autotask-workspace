@@ -291,6 +291,7 @@ async def create_portal_account(
         erp_entity_name=body.erp_entity_name,
         business_entity=(body.business_entity or "").strip(),
         ou=(body.ou or "").strip(),
+        category=body.category,
         portal_name=body.portal_name,
         portal_url=body.portal_url,
         login_account=body.login_account,

@@ -100,6 +100,7 @@ describe("autotaskApi facade", () => {
     expect(autotaskApi.portalAccounts.update).toBeTypeOf("function");
     expect(autotaskApi.portalAccounts.delete).toBeTypeOf("function");
     expect(autotaskApi.portalAccounts.testOpen).toBeTypeOf("function");
+    expect(autotaskApi.portalCategories.list).toBeTypeOf("function");
     expect(autotaskApi.workflowTemplates.delete).toBeTypeOf("function");
     expect(autotaskApi.search).toBeTypeOf("function");
   });

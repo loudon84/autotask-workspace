@@ -882,3 +882,22 @@ async def test_on_submit_finished_dry_run_keeps_unchecked() -> None:
     assert instance.status == "ACTIVE"
     change_stage.assert_not_called()
     upload.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_list_bills_filters_tiandi_portals() -> None:
+    captured: dict[str, str] = {}
+    db = MagicMock()
+
+    async def execute(stmt):  # noqa: ANN001
+        captured["sql"] = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        result = MagicMock()
+        result.all.return_value = []
+        return result
+
+    db.execute = execute
+    rows = await svc.list_bills(db, "tenant-1")
+    assert rows == []
+    sql = captured["sql"]
+    assert "portal_accounts" in sql.lower()
+    assert "TIANDI" in sql

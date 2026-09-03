@@ -13,6 +13,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.domain.portal_category import (
+    PortalCategory,
+    SCAN_CATEGORY_UNSUPPORTED_MESSAGE_KEY,
+    category_allows_scan,
+)
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
 from app.models.enums import (
@@ -144,6 +149,13 @@ async def get_instance(db: AsyncSession, tenant_id: str, instance_id: str) -> Pr
     return instance
 
 
+def _filter_tiandi_portals(query, portal_id_column):
+    return query.join(PortalAccount, PortalAccount.id == portal_id_column).where(
+        PortalAccount.category == PortalCategory.TIANDI.value,
+        not_deleted(PortalAccount),
+    )
+
+
 async def list_instances(
     db: AsyncSession,
     tenant_id: str,
@@ -158,6 +170,7 @@ async def list_instances(
         ProcessInstance.process_code == PROCESS_CODE_SRM_CUSTOMER_ORDER,
         not_deleted(ProcessInstance),
     )
+    query = _filter_tiandi_portals(query, ProcessInstance.portal_account_id)
     if stage:
         query = query.where(ProcessInstance.stage == stage)
     if status:
@@ -1163,6 +1176,11 @@ async def create_scan_task(
         raise BadRequestError(
             message="门户账号未启用",
             message_key="errors.autotask.portal_disabled",
+        )
+    if not category_allows_scan(getattr(portal, "category", None)):
+        raise BadRequestError(
+            message="该门户分类不支持客户订单扫单",
+            message_key=SCAN_CATEGORY_UNSUPPORTED_MESSAGE_KEY,
         )
     binding = await _find_binding(db, tenant_id, portal_account_id, SCAN_TASK_TYPE)
     task = AutomationTask(

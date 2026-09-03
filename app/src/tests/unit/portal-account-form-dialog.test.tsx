@@ -52,6 +52,7 @@ const portal: PortalAccount = {
   loginAccount: "portal-user",
   clientOpenMode: "webcontents",
   clientSessionPartition: "persist:portal-c001",
+  category: "TIANDI",
   status: "ENABLED",
   ownerUserId: "admin",
   ownerName: "admin",
@@ -66,6 +67,11 @@ describe("PortalAccountFormDialog credentialRef", () => {
     createMutateMock.mockReset();
     updateMutateMock.mockReset();
     Element.prototype.scrollIntoView = vi.fn();
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
   });
 
   it("创建 Portal 时提交门户密码", async () => {
@@ -93,6 +99,7 @@ describe("PortalAccountFormDialog credentialRef", () => {
         entityType: "CUSTOMER",
         credentialRef: "credential-demo",
         loginAccount: "portal-user",
+        category: "TIANDI",
       }),
       expect.any(Object)
     );

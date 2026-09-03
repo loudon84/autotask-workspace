@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-02
+最后更新：2026-09-03
 
 
 ## 1. 用途
@@ -39,7 +39,7 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行（当前 head）。**
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行（当前 head）。**
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -73,6 +73,9 @@
 | 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
 | 正式上线（空库） | **两段**：先克隆正式演练，确认后再切真上线 | `prd/AutoTask 正式上线操作清单.md`。拷测试 `.env` 改新库；阶段 A 测 SDMS/ERP + 样例扫单 + dryRun；阶段 B 再关闸/切生产/开调度。填交期/签章正式包仍未绑 |
 | 京东方发票箱单（BOE） | **v2.2 操作流程已定**；未开工 | 匹配交货计划 → 读 WMS 装箱单 → RPA 补全项目信息行 → 保存 SRM 草稿单 → 客服核验 → 提交 SRM 单据。显示名 v2.2 定稿；状态码保留 `BOE_PACK_*`。设计 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`；需求 `prd/boe/AutoTask-BOE初始草稿业务需求整理.md` |
+
+| 门户和流程实例优化（v5.5） | **测试库已到 head；正式库待授权** | 测库已执行 `d2e9f1a70b83` + `a1c3e5f70824`。正式晚上换正式 `.env` 后 `upgrade head` 连续两步。不删正式门户。见 PRD §5.4 / §8。 |
+
 
 ## 5. 未决问题
 
@@ -119,7 +122,11 @@
 22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
 23. **正式上线操作清单**：新空库先按正式演练克隆（测 SDMS/ERP、样例扫单、写步骤 dryRun），确认后再切真上线。见 `prd/AutoTask 正式上线操作清单.md`。迁库与阶段 B 关闸须口头授权。
 24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
+<<<<<<< HEAD
 25. **BOE v2.2**：操作流程已定、未开工。显示名定稿：匹配交货计划 → 读 WMS 装箱单 → RPA 补全项目信息行 → 保存 SRM 草稿单 → 客服核验 → 提交 SRM 单据；状态码保留 `BOE_PACK_*`。下一步补交货计划/WMS/附件接口契约。DDL 仍待授权。
+=======
+25. **v5.5 门户分类 + 分类文档**：测试库已到 head（`d2e9f1a70b83` + `a1c3e5f70824`）。**需重启测库 4520** 后 Client「门户分类」才能用。正式库待授权，晚上 `upgrade head` 一次加上列+表。正式库不删门户。见 PRD §8。
+>>>>>>> develop/v2.0
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -241,6 +248,18 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-09-03
+
+- **v5.5 测试库文档表已迁（用户授权）**：`d2e9f1a70b83` → `a1c3e5f70824`。`category_documents` 已建、0 行。**需重启测库 4520**。正式库未迁。
+
+- **v5.5 分类文档并入今晚发布**：手册挂分类 code，不挂门户。表 `category_documents`（`a1c3e5f70824`），文件在 Task `category-docs/`。管理中心「门户分类」。测库已迁该表；正式晚上 `upgrade head` 会连 `d2e9f1a70b83` 一起上。
+
+- **v5.5 正式库窗口已写入 PRD §8**：晚上换成正式 Task `.env` 后助手迁到 head（含 `d2e9f1a70b83` 与 `a1c3e5f70824`，不删正式门户），再发/重启正式 Task，最后发 Client。
+
+- **v5.5 迁库已执行（用户授权，测试库）**：`alembic upgrade head`（`c1d8e4f90a62` → `d2e9f1a70b83`）。`portal_accounts.category` 已建，19 行全为 `TIANDI`。同时软删其余启用门户，仅留「天地伟业-芯云-正式演练」（`fbf07b4e-…`，8 条 ENABLED Binding 未动）。种子门户 portal-001/002/003 已软删。未重启 4520。
+
+- **v5.5 门户分类一期代码完成**：Task/Client 分类注册表写死；门户下拉必选；侧栏 流程实例→天地伟业→客户订单/对账单；列表/扫单按 TIANDI 过滤。旧 Client 不传分类默认 TIANDI。未写京东方菜单。单测与 `lat check` 已过。
 
 ### 2026-09-02
 

@@ -2,6 +2,7 @@ import type { ClientOpenMode } from "@/types/web-tab";
 
 export type PortalEntityType = "CUSTOMER" | "SUPPLIER";
 export type PortalStatus = "ENABLED" | "DISABLED";
+export type PortalCategory = "TIANDI" | "BOE";
 
 export interface PortalAccount {
   id: string;
@@ -11,6 +12,7 @@ export interface PortalAccount {
   erpEntityName: string;
   businessEntity: string;
   ou: string;
+  category: PortalCategory;
   portalName: string;
   portalUrl: string;
   loginAccount: string;
@@ -52,6 +54,7 @@ export type UpdatePortalAccountInput = Partial<
     | "erpEntityCode"
     | "businessEntity"
     | "ou"
+    | "category"
     | "ownerUserId"
     | "ownerName"
   >

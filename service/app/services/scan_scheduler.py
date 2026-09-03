@@ -18,6 +18,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.portal_category import PortalCategory
 from app.models.base import not_deleted
 from app.models.enums import PortalAccountStatus
 from app.models.portal_account import PortalAccount
@@ -116,6 +117,7 @@ class ScanScheduler:
                         )
                         .where(
                             PortalAccount.status == PortalAccountStatus.ENABLED.value,
+                            PortalAccount.category == PortalCategory.TIANDI.value,
                             not_deleted(PortalAccount),
                             WorkflowTemplate.code == SCAN_TASK_TYPE,
                             not_deleted(WorkflowTemplate),

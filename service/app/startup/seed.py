@@ -121,6 +121,7 @@ async def _seed_portal_accounts(db: AsyncSession) -> tuple[int, int]:
                 owner_user_name=item.get("ownerName") or item.get("ownerUserName") or "",
                 created_by=item.get("createdBy", DEFAULT_USER_ID),
                 created_by_name=item.get("createdByName") or "",
+                category=item.get("category", "TIANDI"),
             )
         )
         inserted += 1

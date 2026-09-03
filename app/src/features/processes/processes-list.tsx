@@ -26,6 +26,7 @@ import {
   usePortalNameMap,
 } from "@/features/processes/use-portal-name-map";
 import { autotaskApi } from "@/services/autotask-api";
+import { isTiandiCategory } from "@/features/srm-portals/portal-category";
 import { queryKeys } from "@/services/query-keys";
 import type { ProcessInstanceListItem } from "@/types/process-instance";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -77,7 +78,9 @@ export function ProcessesListPage() {
     setScanning(true);
     try {
       const portals = await autotaskApi.portalAccounts.list();
-      const enabled = portals.filter((portal) => portal.status === "ENABLED");
+      const enabled = portals.filter(
+        (portal) => portal.status === "ENABLED" && isTiandiCategory(portal.category)
+      );
       if (enabled.length === 0) {
         toast.error("没有已启用的客户门户");
         return;
@@ -248,7 +251,7 @@ export function ProcessesListPage() {
     <div className="space-y-4">
       <PageHeader
         description="按客户门户定制的客户订单 SOP（阶段与字段与对账单等流程不同）"
-        title="天地伟业-客户订单流程实例"
+        title="客户订单"
       >
         <Button
           disabled={polling}

@@ -13,3 +13,14 @@ export const uploadInvoiceFilesInputSchema = z.object({
   billId: z.string().min(1),
   filePaths: z.array(z.string().min(1)).min(1).max(10),
 });
+
+export const uploadCategoryDocumentsInputSchema = z.object({
+  category: z.string().min(1),
+  filePaths: z.array(z.string().min(1)).min(1).max(10),
+});
+
+export const downloadCategoryDocumentInputSchema = z.object({
+  category: z.string().min(1),
+  documentId: z.string().min(1),
+  fileName: z.string().min(1),
+});

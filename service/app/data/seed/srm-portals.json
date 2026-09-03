@@ -12,6 +12,7 @@
     "clientOpenMode": "webcontents",
     "clientSessionPartition": "persist:portal-001",
     "status": "ENABLED",
+    "category": "TIANDI",
     "createdBy": "seed-user-001"
   },
   {
@@ -27,6 +28,7 @@
     "clientOpenMode": "webcontents",
     "clientSessionPartition": "persist:portal-002",
     "status": "ENABLED",
+    "category": "TIANDI",
     "createdBy": "seed-user-001"
   },
   {
@@ -42,6 +44,7 @@
     "clientOpenMode": "system_browser",
     "clientSessionPartition": "persist:portal-003",
     "status": "ENABLED",
+    "category": "TIANDI",
     "createdBy": "seed-user-001"
   }
 ]

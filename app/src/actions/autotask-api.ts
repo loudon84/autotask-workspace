@@ -78,3 +78,27 @@ export async function uploadStatementInvoiceFiles<T>(input: {
     throw toApiClientError(err);
   }
 }
+
+export async function uploadCategoryDocuments<T>(input: {
+  category: string;
+  filePaths: string[];
+}): Promise<T> {
+  try {
+    const response = await ipc.client.autotaskApi.uploadCategoryDocuments(input);
+    return unwrapApiResponse<T>(response);
+  } catch (err) {
+    throw toApiClientError(err);
+  }
+}
+
+export async function downloadCategoryDocument(input: {
+  category: string;
+  documentId: string;
+  fileName: string;
+}): Promise<{ cancelled: boolean; path?: string }> {
+  try {
+    return await ipc.client.autotaskApi.downloadCategoryDocument(input);
+  } catch (err) {
+    throw toApiClientError(err);
+  }
+}

@@ -11,3 +11,7 @@ export function downloadFile(url: string) {
 export function selectInvoiceFiles() {
   return ipc.client.shell.selectInvoiceFiles();
 }
+
+export function selectCategoryDocumentFiles() {
+  return ipc.client.shell.selectCategoryDocumentFiles();
+}

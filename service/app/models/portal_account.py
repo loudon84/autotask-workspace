@@ -23,6 +23,7 @@ class PortalAccount(BaseModel):
     erp_entity_name: Mapped[str] = mapped_column(String(255), nullable=False)
     business_entity: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     ou: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    category: Mapped[str] = mapped_column(String(32), default="TIANDI", nullable=False)
     portal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     portal_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     login_account: Mapped[str] = mapped_column(String(255), nullable=False)

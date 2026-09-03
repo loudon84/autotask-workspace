@@ -38,6 +38,12 @@ export const queryKeys = {
     ownerCandidates: () =>
       [...queryKeys.portalAccounts.all, "owner-candidates"] as const,
   },
+  portalCategories: {
+    all: ["portal-categories"] as const,
+    list: () => [...queryKeys.portalCategories.all] as const,
+    documents: (category: string) =>
+      [...queryKeys.portalCategories.all, category, "documents"] as const,
+  },
   artifacts: {
     all: ["artifacts"] as const,
     list: () => [...queryKeys.artifacts.all] as const,

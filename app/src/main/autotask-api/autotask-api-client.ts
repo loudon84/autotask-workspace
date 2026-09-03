@@ -198,3 +198,104 @@ async function uploadInvoiceFiles(
   }
   return (await res.json()) as unknown;
 }
+
+export async function uploadCategoryDocumentFiles(
+  input: { category: string; filePaths: string[] },
+  retried = false
+): Promise<unknown> {
+  const session = await getValidSession();
+  if (!session) {
+    throw new AutotaskApiError("未登录", 401);
+  }
+
+  const config = getEndpointConfig();
+  const url = buildUrl(
+    config,
+    `/portal-categories/${encodeURIComponent(input.category)}/documents`
+  );
+  const headers = { ...buildAuthHeaders(session) };
+  delete headers["Content-Type"];
+
+  const form = new FormData();
+  for (const filePath of input.filePaths) {
+    const bytes = await fs.readFile(filePath);
+    form.append("files", new Blob([new Uint8Array(bytes)]), path.basename(filePath));
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  if (res.status === 401 && !retried) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      setMemorySession(refreshed);
+      return uploadCategoryDocumentFiles(input, true);
+    }
+    throw new AutotaskApiError("登录已过期", 401);
+  }
+  if (res.status === 403) {
+    throw new AutotaskApiError("用户无权限!", 403);
+  }
+  if (!res.ok) {
+    let message = `API request failed: ${res.status}`;
+    let body: unknown;
+    try {
+      body = await res.json();
+      message = formatApiErrorMessage(body, message);
+    } catch {
+      // ignore
+    }
+    throw new AutotaskApiError(message, res.status, body);
+  }
+  return (await res.json()) as unknown;
+}
+
+export async function fetchCategoryDocumentBytes(
+  input: { category: string; documentId: string },
+  retried = false
+): Promise<Uint8Array> {
+  const session = await getValidSession();
+  if (!session) {
+    throw new AutotaskApiError("未登录", 401);
+  }
+
+  const config = getEndpointConfig();
+  const url = buildUrl(
+    config,
+    `/portal-categories/${encodeURIComponent(input.category)}/documents/${encodeURIComponent(input.documentId)}/file`
+  );
+  const headers = { ...buildAuthHeaders(session) };
+  delete headers["Content-Type"];
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers,
+  });
+
+  if (res.status === 401 && !retried) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      setMemorySession(refreshed);
+      return fetchCategoryDocumentBytes(input, true);
+    }
+    throw new AutotaskApiError("登录已过期", 401);
+  }
+  if (res.status === 403) {
+    throw new AutotaskApiError("用户无权限!", 403);
+  }
+  if (!res.ok) {
+    let message = `API request failed: ${res.status}`;
+    let body: unknown;
+    try {
+      body = await res.json();
+      message = formatApiErrorMessage(body, message);
+    } catch {
+      // ignore
+    }
+    throw new AutotaskApiError(message, res.status, body);
+  }
+  return new Uint8Array(await res.arrayBuffer());
+}
