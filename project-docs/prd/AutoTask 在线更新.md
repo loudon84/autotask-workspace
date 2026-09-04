@@ -71,12 +71,22 @@ nginx 按整个根目录服务，加 `autotask/` 目录**不需要改 nginx 配�
 
 ## 5. 发版流程（以后每次发版）
 
-1. 改 `app/package.json` 版本号（如 0.1.1 → 0.1.2）。
-2. `npm run make` 打出 NSIS 安装包，同时产出 `latest.yml` 和 `.blockmap`。
-3. 跑发布脚本：校验产物 → SCP 到 `autotask/staging/` → 服务器 promote（移入 `releases/<版本>` 并切 `stable` 软链）→ 验证 `latest.yml` 可访问且版本正确。
-4. 完。客户端下一轮检查（最迟 6 小时）就会看到新版。
+SSH 不通，走**手动搬运**：
 
-发布脚本照抄 smc 的 `publish-work-release.ps1` + 服务器侧 `promote-work-release.sh` 改路径。
+1. 改 `app/package.json` 版本号（如 0.1.1 → 0.1.2）。
+2. `npm run release:build`：打出 NSIS 安装包 + `latest.yml` + `.blockmap`，校验后暂存到 `app\release\autotask\<版本>\`。
+3. 把整个版本文件夹**手动拷到服务器**（远程桌面 / 共享盘 / U 盘均可）：
+   放到 `/data/smc-release/autotask/staging/<版本>-manual/`。
+4. 服务器上执行一条命令（移入 releases、校验 sha256、原子切 stable 软链）：
+
+   ```bash
+   bash /data/smc-release/autotask/promote-autotask-release.sh <版本> <版本>-manual
+   ```
+
+5. 验证：`https://release.superic.com/autotask/stable/latest.yml` 里的版本号正确。
+6. 完。客户端下一轮检查（最迟 6 小时，重启则 15 秒）就会看到新版。
+
+（若以后开通了 SSH 免密，`npm run release:publish` 可自动完成 3-5 步。）
 
 ---
 

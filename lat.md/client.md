@@ -34,9 +34,10 @@ via electron-updater (generic provider, no auth).
   `AUTOTASK_UPDATE_URL`. Installer artifact name carries the version.
 - Renderer dialogs live in `src/features/app-update/` (available → downloading
   → downloaded); state pushes over `APP_UPDATE_STATE_CHANGED` via preload.
-- Release flow: `npm run release:build` (make + verify + stage) then
-  `npm run release:publish` (scp → server promote script swaps the `stable`
-  symlink). Server-side scripts under `app/scripts/server/`.
+- Release flow: `npm run release:build` (make + verify + stage), then the
+  version folder is copied to the server by hand and promoted with
+  `promote-autotask-release.sh` (no SSH from the build machine). Server-side
+  scripts under `app/scripts/server/`.
 
 ## Data Access
 
