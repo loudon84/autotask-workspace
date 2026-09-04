@@ -38,8 +38,8 @@ keys in `services/query-keys.ts`.
 
 UI is feature-first under `src/features/` with thin TanStack file routes.
 
-Primary domains: tasks, processes, statements, workflows/bindings, SRM portals,
-runs/artifacts, schedulers, web-workspace, and auth/endpoint configuration.
+Primary domains: tasks, processes, statements, BOE invoice packing, workflows/bindings, SRM portals,
+runs/artifacts, schedulers (Binding jobs plus tenant BOE match timer), web-workspace, and auth/endpoint configuration.
 Shared business components live under `components/business/`; do not edit
 generated `components/ui/`.
 

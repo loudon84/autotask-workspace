@@ -4,6 +4,7 @@ import {
   uploadStatementInvoiceFiles,
   downloadCategoryDocument as ipcDownloadCategoryDocument,
 } from "@/actions/autotask-api";
+import type { RegionCodeMap } from "@/types/region-map";
 import type { Artifact } from "@/types/artifact";
 import type { AuditLog } from "@/types/audit-log";
 import type {
@@ -20,6 +21,11 @@ import type {
   PortalAccount,
   UpdatePortalAccountInput,
 } from "@/types/portal-account";
+import type {
+  BoeMatchResult,
+  BoePackDetail,
+  BoePackListItem,
+} from "@/types/boe-packing";
 import type {
   ProcessInstanceDetail,
   ProcessInstanceListItem,
@@ -607,6 +613,103 @@ export const remoteApi = {
       path: "/process-instances/sign-poll/run-once",
     });
     return mapItemResponse<ProcessSignPollRunResult>(data);
+  },
+
+  listBoePacking: async (params?: {
+    stage?: string;
+    keyword?: string;
+  }): Promise<BoePackListItem[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/boe-packing",
+      query: params,
+    });
+    return mapListResponse<BoePackListItem>(data);
+  },
+
+  getBoePacking: async (id: string): Promise<BoePackDetail | undefined> => {
+    try {
+      const data = await requestAutotaskApi<unknown>({
+        method: "GET",
+        path: `/boe-packing/${id}`,
+      });
+      return mapItemResponse<BoePackDetail>(data);
+    } catch {
+      return;
+    }
+  },
+
+  matchBoePacking: async (): Promise<BoeMatchResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/boe-packing/match",
+    });
+    return mapItemResponse<BoeMatchResult>(data);
+  },
+
+  patchBoePacking: async (
+    id: string,
+    body: { header?: Record<string, unknown>; lines?: unknown[] }
+  ): Promise<BoePackDetail> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "PATCH",
+      path: `/boe-packing/${id}`,
+      body,
+    });
+    return mapItemResponse<BoePackDetail>(data);
+  },
+
+  retryBoePacking: async (id: string): Promise<BoePackDetail> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/boe-packing/${id}/retry`,
+    });
+    return mapItemResponse<BoePackDetail>(data);
+  },
+
+  cancelBoePacking: async (id: string): Promise<BoePackDetail> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/boe-packing/${id}/cancel`,
+    });
+    return mapItemResponse<BoePackDetail>(data);
+  },
+
+  submitBoePacking: async (id: string): Promise<BoePackDetail> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/boe-packing/${id}/submit`,
+    });
+    return mapItemResponse<BoePackDetail>(data);
+  },
+
+  listRegionMaps: async (category: string): Promise<RegionCodeMap[]> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "GET",
+      path: "/region-maps",
+      query: { category },
+    });
+    return mapListResponse<RegionCodeMap>(data);
+  },
+
+  upsertRegionMap: async (body: {
+    category: string;
+    regionCode: string;
+    srmDisplayName: string;
+  }): Promise<RegionCodeMap> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: "/region-maps",
+      body,
+    });
+    return mapItemResponse<RegionCodeMap>(data);
+  },
+
+  deleteRegionMap: async (mapId: string): Promise<void> => {
+    await requestAutotaskApi<unknown>({
+      method: "DELETE",
+      path: `/region-maps/${mapId}`,
+    });
   },
 
   listStatements: async (params?: {

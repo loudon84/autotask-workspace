@@ -1,4 +1,4 @@
-"""调度器设置 API：读写 autotask_settings 中的扫单/回签轮询 cron 配置。
+"""调度器设置 API：读写 autotask_settings 中的扫单/回签轮询/京东方匹配 cron 配置。
 
 修改后由调度器在下一个 tick 读取（最长约 30 秒生效），无需重启服务。
 """
@@ -39,6 +39,7 @@ def _to_response(config: config_svc.SchedulerConfig) -> SchedulerSettingsRespons
     next_run: dict[str, str | None] = {
         "sign_poll": _next_run_iso(config.sign_poll_enabled, config.sign_poll_cron),
         "scan": _next_run_iso(config.scan_enabled, config.scan_cron),
+        "boe_pack": _next_run_iso(config.boe_pack_enabled, config.boe_pack_cron),
     }
     return SchedulerSettingsResponse(
         sign_poll={
@@ -48,6 +49,10 @@ def _to_response(config: config_svc.SchedulerConfig) -> SchedulerSettingsRespons
         scan={
             "enabled": config.scan_enabled,
             "cron": config.scan_cron,
+        },
+        boe_pack={
+            "enabled": config.boe_pack_enabled,
+            "cron": config.boe_pack_cron,
         },
         next_run_at=next_run,
     )
@@ -89,6 +94,14 @@ async def update_scheduler_settings(
             if body.scan is not None
             else {}
         ),
+        **(
+            {
+                "boe_pack_enabled": body.boe_pack.enabled,
+                "boe_pack_cron": body.boe_pack.cron,
+            }
+            if body.boe_pack is not None
+            else {}
+        ),
     )
     await config_svc.update_scheduler_config(db, target)
     await audit_service.write_audit_log(
@@ -106,6 +119,10 @@ async def update_scheduler_settings(
             "scan": {
                 "enabled": target.scan_enabled,
                 "cron": target.scan_cron,
+            },
+            "boe_pack": {
+                "enabled": target.boe_pack_enabled,
+                "cron": target.boe_pack_cron,
             },
         },
     )

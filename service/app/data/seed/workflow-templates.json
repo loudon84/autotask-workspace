@@ -102,5 +102,65 @@
       {"id": "srm.submit_review", "name": "提交审核"}
     ],
     "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-boe-pack-enrich",
+    "tenantId": "seed-tenant-001",
+    "name": "京东方-RPA补全项目信息行",
+    "code": "srm_boe_pack_enrich",
+    "description": "按 PO+料号查询采购凭证并回写行字段",
+    "entityType": "CUSTOMER",
+    "category": "boe-packing",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "instanceId", "label": "流程实例", "type": "string", "required": true},
+      {"name": "docNo", "label": "交货计划单号", "type": "string", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.enrich_lines", "name": "补全项目信息行"}
+    ],
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-boe-pack-save-draft",
+    "tenantId": "seed-tenant-001",
+    "name": "京东方-保存SRM草稿单",
+    "code": "srm_boe_pack_save_draft",
+    "description": "按 Client 单据重建发票箱单并保存 SRM 草稿",
+    "entityType": "CUSTOMER",
+    "category": "boe-packing",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "instanceId", "label": "流程实例", "type": "string", "required": true},
+      {"name": "docNo", "label": "交货计划单号", "type": "string", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.save_draft", "name": "保存草稿"}
+    ],
+    "createdBy": "seed-user-001"
+  },
+  {
+    "id": "wf-template-boe-pack-submit",
+    "tenantId": "seed-tenant-001",
+    "name": "京东方-提交SRM单据",
+    "code": "srm_boe_pack_submit",
+    "description": "打开已有 SRM 草稿做变更单提交",
+    "entityType": "CUSTOMER",
+    "category": "boe-packing",
+    "status": "ENABLED",
+    "version": "1.0.0",
+    "inputSchema": [
+      {"name": "instanceId", "label": "流程实例", "type": "string", "required": true},
+      {"name": "docNo", "label": "交货计划单号", "type": "string", "required": true}
+    ],
+    "businessSteps": [
+      {"id": "login", "name": "登录门户"},
+      {"id": "srm.submit", "name": "提交单据"}
+    ],
+    "createdBy": "seed-user-001"
   }
 ]

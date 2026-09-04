@@ -98,14 +98,25 @@ into an `ErrorDecision`.
 safe code `FLOW_UNHANDLED_ERROR`. Filesystem errors use `FLOW_CACHE_*` and
 `RUNTIME_WORKDIR_*` codes and never leak absolute paths.
 
+## BOE SRM login
+
+京东方发票箱单 Flow 用账号密码登录 `supply.boe.com`，一期不处理邮箱验证码。
+
+[[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]] fills username/password
+and [[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#open_invoice_packing]] clicks 送货管理
+then 发票箱单. If an OTP dialog is visible, the Flow fails with `BOE_OTP_REQUIRED`
+so CS can log in on SRM first. Cookie cache is still keyed by portal URL + username.
+
 ## Dry-run write guard
 
 [[src/nodeskclaw_rpa_engine/runtime/dry_run.py#install_write_guard]] aborts
-`POST`/`PUT`/`PATCH`/`DELETE` while a Flow is in `dryRun`. Login/captcha URLs are
-allowed. When `allow_upload=True`, invoice scan uploads are allowed if the URL contains
+mutating HTTP while a Flow is in `dryRun`.
+
+It blocks `POST`/`PUT`/`PATCH`/`DELETE`. Login/captcha URLs are allowed. When
+`allow_upload=True`, invoice scan uploads are allowed if the URL contains
 `/upload` `/scan` `/invoice` `/attach`, or the request is `multipart/form-data`.
-Official portal OSS URLs often have none of those path markers; blocking them makes the
-upload-confirm click hang and then fail.
+Official portal OSS URLs often have none of those path markers; blocking them
+makes the upload-confirm click hang and then fail.
 
 ## Structured Output
 

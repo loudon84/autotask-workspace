@@ -22,6 +22,27 @@ vi.mock("@/services/autotask-api", () => ({
   },
 }));
 
+const { mockMutateSchedulerSettings } = vi.hoisted(() => ({
+  mockMutateSchedulerSettings: vi.fn(),
+}));
+
+vi.mock("@/features/settings/api/use-scheduler-settings", () => ({
+  useSchedulerSettings: () => ({
+    data: {
+      signPoll: { enabled: false, cron: "*/30 * * * *" },
+      scan: { enabled: false, cron: "0 8 * * *" },
+      boePack: { enabled: false, cron: "0 7 * * *" },
+      nextRunAt: { signPoll: null, scan: null, boePack: null },
+    },
+    isLoading: false,
+    isError: false,
+  }),
+  useUpdateSchedulerSettings: () => ({
+    mutate: mockMutateSchedulerSettings,
+    isPending: false,
+  }),
+}));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -74,6 +95,7 @@ beforeEach(() => {
   mockGet.mockReset();
   mockPatch.mockReset();
   mockListTasks.mockReset();
+  mockMutateSchedulerSettings.mockReset();
   mockList.mockResolvedValue([enabledJob, disabledJob]);
   mockGet.mockResolvedValue(enabledJob);
   mockPatch.mockResolvedValue({ ...enabledJob, cron: "0 9 * * *" });
@@ -94,6 +116,25 @@ describe("调度中心列表", () => {
     renderWithClient(<SchedulersListPage />);
     await screen.findByText("天地伟业-客户订单-扫单");
     expect(screen.queryByRole("button", { name: /新建/ })).not.toBeInTheDocument();
+  });
+
+  it("显示京东方匹配交货计划租户级定时器", async () => {
+    renderWithClient(<SchedulersListPage />);
+    expect(await screen.findByText("京东方匹配交货计划")).toBeInTheDocument();
+    expect(screen.getByLabelText("启用")).toBeInTheDocument();
+    expect(screen.getByLabelText("cron")).toBeInTheDocument();
+  });
+
+  it("保存京东方定时器只提交 boePack", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithClient(<SchedulersListPage />);
+    await screen.findByText("京东方匹配交货计划");
+    await user.click(screen.getByLabelText("启用"));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(mockMutateSchedulerSettings).toHaveBeenCalledWith(
+      { boePack: { enabled: true, cron: "0 7 * * *" } },
+      expect.any(Object)
+    );
   });
 
   it("筛选启用只请求 enabled=true", async () => {

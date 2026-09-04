@@ -170,6 +170,8 @@ async def test_config_defaults_from_env(monkeypatch: pytest.MonkeyPatch):
     assert config.sign_poll_enabled is False
     assert config.sign_poll_cron == "*/30 * * * *"
     assert config.scan_cron == "30 8 * * *"
+    assert config.boe_pack_enabled is False
+    assert config.boe_pack_cron == "0 7 * * *"
 
 
 @pytest.mark.asyncio
@@ -181,12 +183,16 @@ async def test_config_reads_stored_cron(monkeypatch: pytest.MonkeyPatch):
             _row(config_svc.KEY_SIGN_POLL_CRON, "*/10 * * * *"),
             _row(config_svc.KEY_SCAN_ENABLED, True),
             _row(config_svc.KEY_SCAN_CRON, "0 8 * * 1-5"),
+            _row(config_svc.KEY_BOE_PACK_ENABLED, True),
+            _row(config_svc.KEY_BOE_PACK_CRON, "15 6 * * *"),
         ]
     )
     config = await config_svc.get_scheduler_config(session)
     assert config.sign_poll_enabled is False
     assert config.sign_poll_cron == "*/10 * * * *"
     assert config.scan_cron == "0 8 * * 1-5"
+    assert config.boe_pack_enabled is True
+    assert config.boe_pack_cron == "15 6 * * *"
 
 
 @pytest.mark.asyncio
@@ -215,6 +221,8 @@ async def test_config_update_upserts_and_validates(monkeypatch: pytest.MonkeyPat
         sign_poll_cron="*/15 * * * *",
         scan_enabled=True,
         scan_cron="0 9 * * 1-5",
+        boe_pack_enabled=True,
+        boe_pack_cron="0 7 * * *",
     )
     result = await config_svc.update_scheduler_config(session, target)
     assert result == target
@@ -224,6 +232,8 @@ async def test_config_update_upserts_and_validates(monkeypatch: pytest.MonkeyPat
         config_svc.KEY_SIGN_POLL_ENABLED,
         config_svc.KEY_SIGN_POLL_CRON,
         config_svc.KEY_SCAN_ENABLED,
+        config_svc.KEY_BOE_PACK_ENABLED,
+        config_svc.KEY_BOE_PACK_CRON,
     }
     # 非法 cron 拒绝写入
     bad = config_svc.SchedulerConfig(
@@ -231,6 +241,8 @@ async def test_config_update_upserts_and_validates(monkeypatch: pytest.MonkeyPat
         sign_poll_cron="bad",
         scan_enabled=True,
         scan_cron="0 9 * * *",
+        boe_pack_enabled=False,
+        boe_pack_cron="0 7 * * *",
     )
     with pytest.raises(CronParseError):
         await config_svc.update_scheduler_config(_Session(), bad)
@@ -240,12 +252,15 @@ async def test_config_update_upserts_and_validates(monkeypatch: pytest.MonkeyPat
 
 
 def _config(sign_poll_enabled=True, sign_poll_cron="*/30 * * * *",
-            scan_enabled=True, scan_cron="0 8 * * *"):
+            scan_enabled=True, scan_cron="0 8 * * *",
+            boe_pack_enabled=False, boe_pack_cron="0 7 * * *"):
     return config_svc.SchedulerConfig(
         sign_poll_enabled=sign_poll_enabled,
         sign_poll_cron=sign_poll_cron,
         scan_enabled=scan_enabled,
         scan_cron=scan_cron,
+        boe_pack_enabled=boe_pack_enabled,
+        boe_pack_cron=boe_pack_cron,
     )
 
 
@@ -369,3 +384,47 @@ def test_scan_apply_cron_does_not_catch_up_previous_slot(monkeypatch: pytest.Mon
     scheduler = ScanScheduler(_Session)
     scheduler._apply_cron("*/5 * * * *")
     assert scheduler._next_fire == datetime(2026, 8, 24, 15, 5, 0)
+
+
+@pytest.mark.asyncio
+async def test_boe_pack_scheduler_skips_when_disabled(monkeypatch: pytest.MonkeyPatch):
+    from app.services.boe_match_scheduler import BoeMatchScheduler
+
+    monkeypatch.setattr(
+        config_svc,
+        "get_scheduler_config",
+        AsyncMock(return_value=_config(boe_pack_enabled=False)),
+    )
+    forbidden = AsyncMock(side_effect=AssertionError("不应执行匹配"))
+    scheduler = BoeMatchScheduler(_Session)
+    monkeypatch.setattr(scheduler, "process_once", forbidden)
+
+    await scheduler.start()
+    await asyncio.sleep(0.1)
+    await scheduler.stop()
+    forbidden.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_boe_pack_scheduler_hot_reloads_cron(monkeypatch: pytest.MonkeyPatch):
+    import app.services.boe_match_scheduler as boe_mod
+    from app.services.boe_match_scheduler import BoeMatchScheduler
+
+    monkeypatch.setattr(boe_mod, "_TICK_SECONDS", 0.05)
+    current = {"cfg": _config(boe_pack_enabled=True, boe_pack_cron="0 7 * * *")}
+    monkeypatch.setattr(
+        config_svc,
+        "get_scheduler_config",
+        AsyncMock(side_effect=lambda db, tenant_id=None: current["cfg"]),
+    )
+    process_once = AsyncMock(return_value=0)
+    scheduler = BoeMatchScheduler(_Session)
+    monkeypatch.setattr(scheduler, "process_once", process_once)
+
+    await scheduler.start()
+    await asyncio.sleep(0.1)
+    assert scheduler._cron_text == "0 7 * * *"
+    current["cfg"] = _config(boe_pack_enabled=True, boe_pack_cron="15 6 * * *")
+    await asyncio.sleep(0.1)
+    await scheduler.stop()
+    assert scheduler._cron_text == "15 6 * * *"

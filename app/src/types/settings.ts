@@ -13,13 +13,21 @@ export interface ScanSchedulerSettings {
   cron: string;
 }
 
+export interface BoePackSchedulerSettings {
+  enabled: boolean;
+  /** 5 段 cron（分 时 日 月 周，本地时间），例：0 7 星 星 星 表示每天 7 点 */
+  cron: string;
+}
+
 export interface SchedulerSettings {
   signPoll: SignPollSchedulerSettings;
   scan: ScanSchedulerSettings;
+  boePack: BoePackSchedulerSettings;
   /** 各调度器下次触发时刻（ISO 本地时间）；未启用为 null */
   nextRunAt: {
     signPoll: string | null;
     scan: string | null;
+    boePack: string | null;
   };
 }
 

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSchedulerJobs } from "@/features/schedulers/api/use-scheduler-jobs";
+import { TenantSchedulerCard } from "@/features/schedulers/tenant-scheduler-card";
 import type { SchedulerJob } from "@/features/schedulers/types";
 import { formatBeijingDateTime } from "@/utils/date-time";
 
@@ -66,9 +67,10 @@ export function SchedulersListPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        description="由 Binding 保存时自动生成，运维只改开关与 cron"
+        description="Binding 任务改开关与 cron；京东方匹配交货计划是租户级定时器，在本页上方维护"
         title="调度中心"
       />
+      <TenantSchedulerCard />
       <Select
         onValueChange={(value) =>
           setEnabledFilter(value as "all" | "true" | "false")

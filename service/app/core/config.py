@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     SIGN_POLL_JOB_ENABLED: bool = False
     SIGN_POLL_INTERVAL_SECONDS: float = Field(default=1800.0, gt=0, le=86400)
 
+    BOE_PACK_MATCH_JOB_ENABLED: bool = False
+    BOE_PACK_MATCH_JOB_HOUR: int = Field(default=7, ge=0, le=23)
+    BOE_PACK_MATCH_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
+    BOE_DELIVERY_PLAN_PATH: str = "/aiats/ebs_sjh_header_boe"
+    BOE_WMS_PATH: str = "/test_demo/boe"
+
     SEED_DATA_ENABLED: bool = True
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"

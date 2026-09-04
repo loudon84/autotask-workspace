@@ -49,6 +49,10 @@ REQUIRED_LEASE_FIELDS = {
 }
 
 
+def test_lease_module_has_worker_ttl_settings() -> None:
+    assert dispatch_service.settings.WORKER_LEASE_TTL_SECONDS >= 1
+
+
 def test_worker_lease_request_accepts_snake_case():
     body = WorkerLeaseRequest.model_validate(
         {"worker_id": "server-worker-001", "capabilities": ["PLAYWRIGHT_CDP"], "limit": 1}

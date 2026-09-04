@@ -30,12 +30,15 @@ import { Route as SchedulersJobIdRouteImport } from './routes/schedulers/$jobId'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as ProcessesInstanceIdRouteImport } from './routes/processes/$instanceId'
 import { Route as ProcessInstancesStatementsRouteImport } from './routes/process-instances/statements'
+import { Route as ProcessInstancesInvoicePackingRouteImport } from './routes/process-instances/invoice-packing'
 import { Route as PortalCategoriesCategoryRouteImport } from './routes/portal-categories/$category'
 import { Route as ProcessesInstanceIdIndexRouteImport } from './routes/processes/$instanceId/index'
 import { Route as ProcessInstancesStatementsIndexRouteImport } from './routes/process-instances/statements/index'
+import { Route as ProcessInstancesInvoicePackingIndexRouteImport } from './routes/process-instances/invoice-packing/index'
 import { Route as ProcessesInstanceIdDatesRouteImport } from './routes/processes/$instanceId/dates'
 import { Route as ProcessInstancesStatementsGenerateRouteImport } from './routes/process-instances/statements/generate'
 import { Route as ProcessInstancesStatementsBillIdRouteImport } from './routes/process-instances/statements/$billId'
+import { Route as ProcessInstancesInvoicePackingInstanceIdRouteImport } from './routes/process-instances/invoice-packing/$instanceId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -143,6 +146,12 @@ const ProcessInstancesStatementsRoute =
     path: '/process-instances/statements',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ProcessInstancesInvoicePackingRoute =
+  ProcessInstancesInvoicePackingRouteImport.update({
+    id: '/process-instances/invoice-packing',
+    path: '/process-instances/invoice-packing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PortalCategoriesCategoryRoute =
   PortalCategoriesCategoryRouteImport.update({
     id: '/portal-categories/$category',
@@ -160,6 +169,12 @@ const ProcessInstancesStatementsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => ProcessInstancesStatementsRoute,
+  } as any)
+const ProcessInstancesInvoicePackingIndexRoute =
+  ProcessInstancesInvoicePackingIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ProcessInstancesInvoicePackingRoute,
   } as any)
 const ProcessesInstanceIdDatesRoute =
   ProcessesInstanceIdDatesRouteImport.update({
@@ -179,6 +194,12 @@ const ProcessInstancesStatementsBillIdRoute =
     path: '/$billId',
     getParentRoute: () => ProcessInstancesStatementsRoute,
   } as any)
+const ProcessInstancesInvoicePackingInstanceIdRoute =
+  ProcessInstancesInvoicePackingInstanceIdRouteImport.update({
+    id: '/$instanceId',
+    path: '/$instanceId',
+    getParentRoute: () => ProcessInstancesInvoicePackingRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
   '/portal-categories/$category': typeof PortalCategoriesCategoryRoute
+  '/process-instances/invoice-packing': typeof ProcessInstancesInvoicePackingRouteWithChildren
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
@@ -203,9 +225,11 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/process-instances/invoice-packing/$instanceId': typeof ProcessInstancesInvoicePackingInstanceIdRoute
   '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
   '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/invoice-packing/': typeof ProcessInstancesInvoicePackingIndexRoute
   '/process-instances/statements/': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId/': typeof ProcessesInstanceIdIndexRoute
 }
@@ -230,9 +254,11 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksIndexRoute
   '/web-workspace': typeof WebWorkspaceIndexRoute
   '/workflows': typeof WorkflowsIndexRoute
+  '/process-instances/invoice-packing/$instanceId': typeof ProcessInstancesInvoicePackingInstanceIdRoute
   '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
   '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/invoice-packing': typeof ProcessInstancesInvoicePackingIndexRoute
   '/process-instances/statements': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId': typeof ProcessesInstanceIdIndexRoute
 }
@@ -244,6 +270,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
   '/portal-categories/$category': typeof PortalCategoriesCategoryRoute
+  '/process-instances/invoice-packing': typeof ProcessInstancesInvoicePackingRouteWithChildren
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
   '/processes/$instanceId': typeof ProcessesInstanceIdRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRoute
@@ -260,9 +287,11 @@ export interface FileRoutesById {
   '/tasks/': typeof TasksIndexRoute
   '/web-workspace/': typeof WebWorkspaceIndexRoute
   '/workflows/': typeof WorkflowsIndexRoute
+  '/process-instances/invoice-packing/$instanceId': typeof ProcessInstancesInvoicePackingInstanceIdRoute
   '/process-instances/statements/$billId': typeof ProcessInstancesStatementsBillIdRoute
   '/process-instances/statements/generate': typeof ProcessInstancesStatementsGenerateRoute
   '/processes/$instanceId/dates': typeof ProcessesInstanceIdDatesRoute
+  '/process-instances/invoice-packing/': typeof ProcessInstancesInvoicePackingIndexRoute
   '/process-instances/statements/': typeof ProcessInstancesStatementsIndexRoute
   '/processes/$instanceId/': typeof ProcessesInstanceIdIndexRoute
 }
@@ -275,6 +304,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/portal-categories/$category'
+    | '/process-instances/invoice-packing'
     | '/process-instances/statements'
     | '/processes/$instanceId'
     | '/runs/$runId'
@@ -291,9 +321,11 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/web-workspace/'
     | '/workflows/'
+    | '/process-instances/invoice-packing/$instanceId'
     | '/process-instances/statements/$billId'
     | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/invoice-packing/'
     | '/process-instances/statements/'
     | '/processes/$instanceId/'
   fileRoutesByTo: FileRoutesByTo
@@ -318,9 +350,11 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/web-workspace'
     | '/workflows'
+    | '/process-instances/invoice-packing/$instanceId'
     | '/process-instances/statements/$billId'
     | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/invoice-packing'
     | '/process-instances/statements'
     | '/processes/$instanceId'
   id:
@@ -331,6 +365,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/portal-categories/$category'
+    | '/process-instances/invoice-packing'
     | '/process-instances/statements'
     | '/processes/$instanceId'
     | '/runs/$runId'
@@ -347,9 +382,11 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/web-workspace/'
     | '/workflows/'
+    | '/process-instances/invoice-packing/$instanceId'
     | '/process-instances/statements/$billId'
     | '/process-instances/statements/generate'
     | '/processes/$instanceId/dates'
+    | '/process-instances/invoice-packing/'
     | '/process-instances/statements/'
     | '/processes/$instanceId/'
   fileRoutesById: FileRoutesById
@@ -361,6 +398,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   SettingsRoute: typeof SettingsRoute
   PortalCategoriesCategoryRoute: typeof PortalCategoriesCategoryRoute
+  ProcessInstancesInvoicePackingRoute: typeof ProcessInstancesInvoicePackingRouteWithChildren
   ProcessInstancesStatementsRoute: typeof ProcessInstancesStatementsRouteWithChildren
   ProcessesInstanceIdRoute: typeof ProcessesInstanceIdRouteWithChildren
   RunsRunIdRoute: typeof RunsRunIdRoute
@@ -528,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessInstancesStatementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/process-instances/invoice-packing': {
+      id: '/process-instances/invoice-packing'
+      path: '/process-instances/invoice-packing'
+      fullPath: '/process-instances/invoice-packing'
+      preLoaderRoute: typeof ProcessInstancesInvoicePackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal-categories/$category': {
       id: '/portal-categories/$category'
       path: '/portal-categories/$category'
@@ -548,6 +593,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/process-instances/statements/'
       preLoaderRoute: typeof ProcessInstancesStatementsIndexRouteImport
       parentRoute: typeof ProcessInstancesStatementsRoute
+    }
+    '/process-instances/invoice-packing/': {
+      id: '/process-instances/invoice-packing/'
+      path: '/'
+      fullPath: '/process-instances/invoice-packing/'
+      preLoaderRoute: typeof ProcessInstancesInvoicePackingIndexRouteImport
+      parentRoute: typeof ProcessInstancesInvoicePackingRoute
     }
     '/processes/$instanceId/dates': {
       id: '/processes/$instanceId/dates'
@@ -570,8 +622,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessInstancesStatementsBillIdRouteImport
       parentRoute: typeof ProcessInstancesStatementsRoute
     }
+    '/process-instances/invoice-packing/$instanceId': {
+      id: '/process-instances/invoice-packing/$instanceId'
+      path: '/$instanceId'
+      fullPath: '/process-instances/invoice-packing/$instanceId'
+      preLoaderRoute: typeof ProcessInstancesInvoicePackingInstanceIdRouteImport
+      parentRoute: typeof ProcessInstancesInvoicePackingRoute
+    }
   }
 }
+
+interface ProcessInstancesInvoicePackingRouteChildren {
+  ProcessInstancesInvoicePackingInstanceIdRoute: typeof ProcessInstancesInvoicePackingInstanceIdRoute
+  ProcessInstancesInvoicePackingIndexRoute: typeof ProcessInstancesInvoicePackingIndexRoute
+}
+
+const ProcessInstancesInvoicePackingRouteChildren: ProcessInstancesInvoicePackingRouteChildren =
+  {
+    ProcessInstancesInvoicePackingInstanceIdRoute:
+      ProcessInstancesInvoicePackingInstanceIdRoute,
+    ProcessInstancesInvoicePackingIndexRoute:
+      ProcessInstancesInvoicePackingIndexRoute,
+  }
+
+const ProcessInstancesInvoicePackingRouteWithChildren =
+  ProcessInstancesInvoicePackingRoute._addFileChildren(
+    ProcessInstancesInvoicePackingRouteChildren,
+  )
 
 interface ProcessInstancesStatementsRouteChildren {
   ProcessInstancesStatementsBillIdRoute: typeof ProcessInstancesStatementsBillIdRoute
@@ -613,6 +690,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   SettingsRoute: SettingsRoute,
   PortalCategoriesCategoryRoute: PortalCategoriesCategoryRoute,
+  ProcessInstancesInvoicePackingRoute:
+    ProcessInstancesInvoicePackingRouteWithChildren,
   ProcessInstancesStatementsRoute: ProcessInstancesStatementsRouteWithChildren,
   ProcessesInstanceIdRoute: ProcessesInstanceIdRouteWithChildren,
   RunsRunIdRoute: RunsRunIdRoute,

@@ -20,11 +20,12 @@ describe("portal-category registry", () => {
     expect(isTiandiCategory(PORTAL_CATEGORY.BOE)).toBe(false);
   });
 
-  it("builds 流程实例 → 天地伟业 menu without 京东方", () => {
+  it("builds 流程实例 menus for 天地伟业 and 京东方", () => {
     const nav = processInstanceNavItem();
     expect(nav.title).toBe("流程实例");
     expect("items" in nav && nav.items?.map((item) => item.title)).toEqual([
       "天地伟业",
+      "京东方",
     ]);
     const tiandi = "items" in nav ? nav.items?.[0] : undefined;
     expect(
@@ -32,6 +33,10 @@ describe("portal-category registry", () => {
         ? tiandi.items?.map((item) => item.title)
         : []
     ).toEqual(["客户订单", "对账单"]);
+    const boe = "items" in nav ? nav.items?.[1] : undefined;
+    expect(
+      boe && "items" in boe ? boe.items?.map((item) => item.title) : []
+    ).toEqual(["发票箱单"]);
   });
 
   it("exposes both categories for shared documents", () => {

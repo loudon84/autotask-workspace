@@ -32,6 +32,14 @@ Build and local run helpers import Engine validators/runtime from sibling
 - `scripts/build_flow_package.py` — ZIP with Engine upload limits
 - `tools/local_flow_runner.py` — validate by default; `--run` executes via Runtime
 
-Flows may import `nodeskclaw_rpa_engine.runtime` helpers (errors, shared login).
+Flows may import `nodeskclaw_rpa_engine.runtime` helpers (errors, shared login,
+`login_boe_srm`).
 They must not open browsers or access Task/Engine databases directly. See
 [[design-decisions#Flow Sandbox Contract]].
+
+## BOE packing Flows
+
+Three packages enrich lines, save an SRM draft, and submit a change-order.
+
+They live under `rpa-flows/rpa_flow_srm_boe_pack_*`. Navigation clicks 送货管理
+then 发票箱单. Flows never `goto` ticket URLs and never wait on email OTP.

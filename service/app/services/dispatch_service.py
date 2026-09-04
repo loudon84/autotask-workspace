@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.boe_packing import BUSY_LEASE_STATUSES, RPA_TEMPLATE_CODES
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.models.automation_task import AutomationTask
@@ -280,6 +281,29 @@ async def _expire_stale_leases(db: AsyncSession) -> None:
         await db.flush()
 
 
+async def _boe_rpa_login_busy(
+    db: AsyncSession, *, login_account: str, except_task_id: str
+) -> bool:
+    if not login_account:
+        return False
+    busy = (
+        await db.execute(
+            select(AutomationTask.id)
+            .join(PortalAccount, PortalAccount.id == AutomationTask.portal_account_id)
+            .where(
+                AutomationTask.id != except_task_id,
+                AutomationTask.task_type.in_(tuple(RPA_TEMPLATE_CODES)),
+                AutomationTask.status.in_(tuple(BUSY_LEASE_STATUSES)),
+                PortalAccount.login_account == login_account,
+                not_deleted(AutomationTask),
+                not_deleted(PortalAccount),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return busy is not None
+
+
 async def _load_binding_context(
     db: AsyncSession, task: AutomationTask
 ) -> tuple[WorkflowBinding, WorkflowTemplate, PortalAccount]:
@@ -327,16 +351,18 @@ async def lease_task(db: AsyncSession, body: WorkerLeaseRequest) -> WorkerLeaseR
     await _expire_stale_leases(db)
     worker = await get_worker(db, body.worker_id)
     skipped = False
+    skip_ids: list[str] = []
 
     for _ in range(_MAX_LEASE_CANDIDATES):
+        query = select(AutomationTask).where(
+            AutomationTask.status == TaskStatus.QUEUED,
+            not_deleted(AutomationTask),
+        )
+        if skip_ids:
+            query = query.where(AutomationTask.id.notin_(skip_ids))
         task = (
             await db.execute(
-                select(AutomationTask)
-                .where(
-                    AutomationTask.status == TaskStatus.QUEUED,
-                    not_deleted(AutomationTask),
-                )
-                .order_by(AutomationTask.created_at.asc())
+                query.order_by(AutomationTask.created_at.asc())
                 .with_for_update(skip_locked=True)
                 .limit(1)
             )
@@ -365,6 +391,13 @@ async def lease_task(db: AsyncSession, body: WorkerLeaseRequest) -> WorkerLeaseR
                     run.ended_at = datetime.now(UTC)
             skipped = True
             await db.flush()
+            continue
+
+        if task.task_type in RPA_TEMPLATE_CODES and await _boe_rpa_login_busy(
+            db, login_account=portal.login_account, except_task_id=task.id
+        ):
+            skip_ids.append(task.id)
+            skipped = True
             continue
 
         existing_run = (

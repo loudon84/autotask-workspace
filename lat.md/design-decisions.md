@@ -71,10 +71,18 @@ BOE packing reuses `process_instances`. v2.1 splits scan, WMS, enrich, save-draf
 and submit so each failed node retries alone; v2.2 keeps `BOE_PACK_*` codes but
 renames displays from the CS point of view.
 
-Unlike 天地伟业, the unsaved create form is still transient. Match creates the
-instance; WMS/enrich/save are later tasks. Entering CS review freezes
-`reviewBaseline` JSON. Cookie cache skips the login page; email OTP is
-account-day on the SRM backend. See [[domain#BoeInvoicePacking]].
+Unlike 天地伟业, matching is tenant-level HTTP (delivery plan already has
+subcode and factory), not a per-portal SRM scan. Cookie is shared per SRM
+username. Qty mismatch is shown through save-draft but only hard-blocks CS
+submit. Client header shows key fields only (portal customer fields read-only;
+volume unit fixed 立方米). Phase 1 skips attachments and AutoTask OTP. See
+[[domain#BoeInvoicePacking]].
+
+Phase 1 is implemented: `/boe-packing` + tenant match timer on 调度中心
+(default off, hot-reload cron), three templates/Flows, Client list/detail with
+review diff, region-map API. WMS lines use `cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`; header
+volume is sum(`cubic`). Do not run Alembic `b2d4f6a81935` until authorized;
+tonight's official v5.5 migrate must stop at `a1c3e5f70824`, not `head`.
 
 ## Portal Category Is Hardcoded
 

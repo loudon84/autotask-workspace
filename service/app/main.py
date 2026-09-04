@@ -107,10 +107,21 @@ async def lifespan(app: FastAPI):
     logger.info("Binding 调度器已启动（scheduler_jobs 热更新）")
     app.state.job_scheduler = job_scheduler
 
+    # 京东方匹配常驻启动；开关与 cron 在 autotask_settings，每个 tick 热加载。
+    boe_match_scheduler = None
+    from app.services.boe_match_scheduler import BoeMatchScheduler
+
+    boe_match_scheduler = BoeMatchScheduler(async_session_factory)
+    await boe_match_scheduler.start()
+    logger.info("京东方匹配交货计划调度器已启动（autotask_settings 热更新）")
+    app.state.boe_match_scheduler = boe_match_scheduler
+
     try:
         yield
     finally:
         await job_scheduler.stop()
+        if boe_match_scheduler is not None:
+            await boe_match_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()
         await engine.dispose()

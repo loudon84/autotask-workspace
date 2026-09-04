@@ -127,6 +127,8 @@ const mockPortalStore: PortalAccount[] = (
 
 const mockCategoryDocuments: CategoryDocument[] = [];
 
+const mockRegionMaps: import("@/types/region-map").RegionCodeMap[] = [];
+
 function findPortalById(portalId: string): PortalAccount | undefined {
   return getPortals().find((p) => p.id === portalId);
 }
@@ -450,6 +452,41 @@ export const mockApi = {
     );
     if (index >= 0) {
       mockCategoryDocuments.splice(index, 1);
+    }
+    return delay(undefined);
+  },
+
+  listRegionMaps: async (category: string) =>
+    delay(mockRegionMaps.filter((row) => row.category === category)),
+
+  upsertRegionMap: async (body: {
+    category: string;
+    regionCode: string;
+    srmDisplayName: string;
+  }) => {
+    const existing = mockRegionMaps.find(
+      (row) =>
+        row.category === body.category && row.regionCode === body.regionCode
+    );
+    if (existing) {
+      existing.srmDisplayName = body.srmDisplayName;
+      return delay({ ...existing });
+    }
+    const created = {
+      id: newId("region"),
+      category: body.category,
+      regionCode: body.regionCode,
+      srmDisplayName: body.srmDisplayName,
+      updatedByName: "Mock 用户",
+    };
+    mockRegionMaps.push(created);
+    return delay(created);
+  },
+
+  deleteRegionMap: async (mapId: string): Promise<void> => {
+    const index = mockRegionMaps.findIndex((row) => row.id === mapId);
+    if (index >= 0) {
+      mockRegionMaps.splice(index, 1);
     }
     return delay(undefined);
   },

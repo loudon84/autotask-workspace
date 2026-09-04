@@ -1,4 +1,4 @@
-import { FileSpreadsheet, ShoppingCart, Workflow } from "lucide-react";
+import { FileSpreadsheet, Package, ShoppingCart, Workflow } from "lucide-react";
 import type { NavItem } from "@/components/layout/types";
 
 export const PORTAL_CATEGORY = {
@@ -21,7 +21,7 @@ export const PORTAL_CATEGORY_OPTIONS: ReadonlyArray<{
 
 type ProcessMenuItem = {
   title: string;
-  url: "/processes" | "/process-instances/statements";
+  url: "/processes" | "/process-instances/statements" | "/process-instances/invoice-packing";
   icon: typeof ShoppingCart;
 };
 
@@ -34,7 +34,13 @@ const PROCESS_MENU_BY_CATEGORY: Record<PortalCategory, ProcessMenuItem[]> = {
       icon: FileSpreadsheet,
     },
   ],
-  BOE: [],
+  BOE: [
+    {
+      title: "发票箱单",
+      url: "/process-instances/invoice-packing",
+      icon: Package,
+    },
+  ],
 };
 
 export function portalCategoryLabel(code: string | undefined): string {

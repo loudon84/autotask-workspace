@@ -41,10 +41,12 @@ follow-on bindings after SUCCESS.
 
 ## Schedulers
 
-Background work includes always-on Binding JobScheduler plus gated jobs.
+Background work includes always-on Binding JobScheduler plus tenant-level jobs.
 
 - Binding cron: `scheduler_jobs` hot-reload each tick
-- Optional successor processor, scan, and sign-poll (env-gated for safe local use)
+- Tenant cron (BOE match, plus scan/sign-poll config): `autotask_settings` via
+  `/settings/schedulers`; loops always start and idle when disabled
+- Optional successor processor remains env-gated (`SUCCESSOR_JOB_*`)
 
 ## Persistence
 

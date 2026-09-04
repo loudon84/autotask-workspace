@@ -42,6 +42,9 @@ from app.services.json_utils import dumps_json, loads_json
 from app.services.process_error_messages import localize_process_error
 from app.services.user_sync import username_from_user_cache
 
+from app.domain.boe_packing import PROCESS_CODE as PROCESS_CODE_SRM_BOE_INVOICE_PACKING
+from app.domain.boe_packing import STAGE_DEFINITIONS as BOE_PACK_STAGE_DEFINITIONS
+
 PROCESS_CODE_SRM_CUSTOMER_ORDER = "srm_customer_order"
 PROCESS_CODE_SRM_TIANDI_STATEMENT = "srm_tiandi_statement"
 
@@ -118,6 +121,7 @@ STAGE_DEFINITIONS: dict[str, list[dict]] = {
         {"id": ProcessStage.STMT_SUBMITTED.value, "name": "已完成", "button": None},
         {"id": ProcessStage.STMT_CANCELLED.value, "name": "已作废", "button": None},
     ],
+    PROCESS_CODE_SRM_BOE_INVOICE_PACKING: BOE_PACK_STAGE_DEFINITIONS,
 }
 
 
@@ -904,6 +908,10 @@ async def on_sub_task_finished(db: AsyncSession, task: AutomationTask, run: RpaR
     from app.services import statement_service
 
     if await statement_service.dispatch_statement_finished(db, task, run):
+        return
+    from app.services import boe_packing_service
+
+    if await boe_packing_service.dispatch_finished(db, task, run):
         return
     if task.task_type == SCAN_TASK_TYPE:
         if run.status == RunStatus.SUCCESS.value:

@@ -44,6 +44,19 @@ export const queryKeys = {
     documents: (category: string) =>
       [...queryKeys.portalCategories.all, category, "documents"] as const,
   },
+  regionMaps: {
+    all: ["region-maps"] as const,
+    list: (category: string) =>
+      [...queryKeys.regionMaps.all, category] as const,
+  },
+  boePacking: {
+    all: ["boe-packing"] as const,
+    list: (params?: Record<string, unknown>) =>
+      params
+        ? ([...queryKeys.boePacking.all, params] as const)
+        : ([...queryKeys.boePacking.all] as const),
+    detail: (id: string) => [...queryKeys.boePacking.all, id] as const,
+  },
   artifacts: {
     all: ["artifacts"] as const,
     list: () => [...queryKeys.artifacts.all] as const,

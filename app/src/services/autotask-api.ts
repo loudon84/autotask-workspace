@@ -618,6 +618,106 @@ export const autotaskApi = {
     },
   },
 
+  regionMaps: {
+    list: (category: string): Promise<import("@/types/region-map").RegionCodeMap[]> => {
+      const api = pickApi();
+      if ("listRegionMaps" in api && typeof api.listRegionMaps === "function") {
+        return api.listRegionMaps(category);
+      }
+      return Promise.resolve([]);
+    },
+    upsert: (body: {
+      category: string;
+      regionCode: string;
+      srmDisplayName: string;
+    }): Promise<import("@/types/region-map").RegionCodeMap> => {
+      const api = pickApi();
+      if ("upsertRegionMap" in api && typeof api.upsertRegionMap === "function") {
+        return api.upsertRegionMap(body);
+      }
+      throw new Error("当前模式不支持维护地区对照");
+    },
+    delete: (mapId: string): Promise<void> => {
+      const api = pickApi();
+      if ("deleteRegionMap" in api && typeof api.deleteRegionMap === "function") {
+        return api.deleteRegionMap(mapId);
+      }
+      throw new Error("当前模式不支持删除地区对照");
+    },
+  },
+
+  boePacking: {
+    list: (params?: {
+      stage?: string;
+      keyword?: string;
+    }): Promise<import("@/types/boe-packing").BoePackListItem[]> => {
+      const api = pickApi();
+      if ("listBoePacking" in api && typeof api.listBoePacking === "function") {
+        return api.listBoePacking(params);
+      }
+      return Promise.resolve([]);
+    },
+    get: (
+      id: string
+    ): Promise<import("@/types/boe-packing").BoePackDetail | undefined> => {
+      const api = pickApi();
+      if ("getBoePacking" in api && typeof api.getBoePacking === "function") {
+        return api.getBoePacking(id);
+      }
+      return Promise.resolve(undefined);
+    },
+    match: (): Promise<import("@/types/boe-packing").BoeMatchResult> => {
+      const api = pickApi();
+      if ("matchBoePacking" in api && typeof api.matchBoePacking === "function") {
+        return api.matchBoePacking();
+      }
+      throw new Error("当前模式不支持匹配交货计划");
+    },
+    patch: (
+      id: string,
+      body: { header?: Record<string, unknown>; lines?: unknown[] }
+    ): Promise<import("@/types/boe-packing").BoePackDetail> => {
+      const api = pickApi();
+      if ("patchBoePacking" in api && typeof api.patchBoePacking === "function") {
+        return api.patchBoePacking(id, body);
+      }
+      throw new Error("当前模式不支持保存发票箱单");
+    },
+    retry: (
+      id: string
+    ): Promise<import("@/types/boe-packing").BoePackDetail> => {
+      const api = pickApi();
+      if ("retryBoePacking" in api && typeof api.retryBoePacking === "function") {
+        return api.retryBoePacking(id);
+      }
+      throw new Error("当前模式不支持重试");
+    },
+    cancel: (
+      id: string
+    ): Promise<import("@/types/boe-packing").BoePackDetail> => {
+      const api = pickApi();
+      if (
+        "cancelBoePacking" in api &&
+        typeof api.cancelBoePacking === "function"
+      ) {
+        return api.cancelBoePacking(id);
+      }
+      throw new Error("当前模式不支持作废");
+    },
+    submit: (
+      id: string
+    ): Promise<import("@/types/boe-packing").BoePackDetail> => {
+      const api = pickApi();
+      if (
+        "submitBoePacking" in api &&
+        typeof api.submitBoePacking === "function"
+      ) {
+        return api.submitBoePacking(id);
+      }
+      throw new Error("当前模式不支持提交");
+    },
+  },
+
   auditLogs: {
     list: (taskId?: string): Promise<AuditLog[]> =>
       pickApi().getAuditLogs(taskId),

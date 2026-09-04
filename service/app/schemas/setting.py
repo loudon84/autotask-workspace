@@ -35,9 +35,20 @@ class ScanSettings(BaseModel):
         return _validate_cron(value)
 
 
+class BoePackSettings(BaseModel):
+    enabled: bool
+    cron: str
+
+    @field_validator("cron")
+    @classmethod
+    def _cron_valid(cls, value: str) -> str:
+        return _validate_cron(value)
+
+
 class SchedulerSettingsResponse(BaseModel):
     sign_poll: SignPollSettings
     scan: ScanSettings
+    boe_pack: BoePackSettings
     next_run_at: dict[str, str | None] = Field(
         default_factory=dict,
         description="各调度器下次触发时刻（ISO 本地时间）；未启用为 null",
@@ -47,3 +58,4 @@ class SchedulerSettingsResponse(BaseModel):
 class SchedulerSettingsUpdate(BaseModel):
     sign_poll: SignPollSettings | None = None
     scan: ScanSettings | None = None
+    boe_pack: BoePackSettings | None = None

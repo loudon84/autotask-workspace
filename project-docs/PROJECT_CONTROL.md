@@ -39,7 +39,7 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行（当前 head）。**
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行（测试库）。测库随后到 `a1c3e5f70824`（分类文档）。BOE 地区表 `b2d4f6a81935` **已写未执行**；文件会使 Alembic `head` 前移，**今晚正式库禁止 `upgrade head`**，只升到 `a1c3e5f70824`。**
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -72,9 +72,9 @@
 | 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
 | 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
 | 正式上线（空库） | **两段**：先克隆正式演练，确认后再切真上线 | `prd/AutoTask 正式上线操作清单.md`。拷测试 `.env` 改新库；阶段 A 测 SDMS/ERP + 样例扫单 + dryRun；阶段 B 再关闸/切生产/开调度。填交期/签章正式包仍未绑 |
-| 京东方发票箱单（BOE） | **v2.2 操作流程已定**；未开工 | 匹配交货计划 → 读 WMS 装箱单 → RPA 补全项目信息行 → 保存 SRM 草稿单 → 客服核验 → 提交 SRM 单据。显示名 v2.2 定稿；状态码保留 `BOE_PACK_*`。设计 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`；需求 `prd/boe/AutoTask-BOE初始草稿业务需求整理.md` |
+| 京东方发票箱单（BOE） | **一期代码已落地（2026-09-03）** | 租户级匹配 + 读 WMS + Client 列表详情；匹配定时器在调度中心维护（默认关，热加载）；三次 Flow 源码已写未发布 Registry；地区表 Alembic 已写未迁。不并入今晚 v5.5 正式迁库。设计 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md` |
 
-| 门户和流程实例优化（v5.5） | **测试库已到 head；正式库待授权** | 测库已执行 `d2e9f1a70b83` + `a1c3e5f70824`。正式晚上换正式 `.env` 后 `upgrade head` 连续两步。不删正式门户。见 PRD §5.4 / §8。 |
+| 门户和流程实例优化（v5.5） | **测试库已到 `a1c3e5f70824`；正式库待授权** | 测库已执行 `d2e9f1a70b83` + `a1c3e5f70824`。正式晚上换成正式 `.env` 后只升到 `a1c3e5f70824`，**禁止 `upgrade head`**（BOE 地区表 `b2d4f6a81935` 未授权）。不删正式门户。见 PRD §5.4 / §8。 |
 
 
 ## 5. 未决问题
@@ -122,11 +122,8 @@
 22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
 23. **正式上线操作清单**：新空库先按正式演练克隆（测 SDMS/ERP、样例扫单、写步骤 dryRun），确认后再切真上线。见 `prd/AutoTask 正式上线操作清单.md`。迁库与阶段 B 关闸须口头授权。
 24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
-<<<<<<< HEAD
-25. **BOE v2.2**：操作流程已定、未开工。显示名定稿：匹配交货计划 → 读 WMS 装箱单 → RPA 补全项目信息行 → 保存 SRM 草稿单 → 客服核验 → 提交 SRM 单据；状态码保留 `BOE_PACK_*`。下一步补交货计划/WMS/附件接口契约。DDL 仍待授权。
-=======
-25. **v5.5 门户分类 + 分类文档**：测试库已到 head（`d2e9f1a70b83` + `a1c3e5f70824`）。**需重启测库 4520** 后 Client「门户分类」才能用。正式库待授权，晚上 `upgrade head` 一次加上列+表。正式库不删门户。见 PRD §8。
->>>>>>> develop/v2.0
+25. **v5.5 门户分类 + 分类文档**：测试库已到 `a1c3e5f70824`。**需重启测库 4520**。正式库待授权，晚上只升到 `a1c3e5f70824`（列+分类文档表），**不要 `upgrade head`**（head 已含未授权的 BOE 地区表 `b2d4f6a81935`）。正式库不删门户。见 PRD §8。
+26. **BOE 一期（2026-09-03）**：代码已落地。测库配 1～2 个 BOE 门户（`erp_entity_code`=子代码）后可手动匹配；要定时匹配时在 **调度中心** 打开「京东方匹配交货计划」（不要改 `.env`、不要挂 Binding）。每个 BOE 门户绑三条 ENABLED Binding（enrich/save_draft/submit）并发布 Flow。地区表 DDL `b2d4f6a81935` 待口头授权。一期无附件、无 OTP。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -250,6 +247,16 @@ D:\AutoTask-Workspace\project-docs\designs\
 ## 8. 每日开发日志
 
 ### 2026-09-03
+
+- **BOE 匹配定时器改到调度中心维护**：租户级开关+cron 写入 `autotask_settings`（`/settings/schedulers` 的 `boePack`），调度循环常驻、每个 tick 热加载。Client 调度中心顶部卡片可改。不要挂 Binding（会按门户重复匹配），不要靠改 `.env` 重启。默认关、默认 `0 7 * * *`。需重启本机 4520 后新循环才会起来。
+
+- **领取 500 导致任务一直排队**：`dispatch_service.lease_task` 丢了 `settings` import，Worker 打 `/tasks/lease` 报 `NameError`。已补回。需重启本机 4520 后排队任务才会被领。
+
+- **BOE WMS 字段已切新契约**：`data` 为行数组。`cuspo`/`cusitem`/`qty`/`netweight`/`coo` 落入 Client 行；头表总体积 = 各行 `cubic` 之和。地区对照键改为接口 `coo`（如 `TAIWAN,CHINA`）。URL/参数仍是 `/test_demo/boe` + `doc_no`。
+
+- **BOE 发票箱单一期代码已落地**：Task `/boe-packing`（租户级匹配交货计划、读 WMS、数量提醒、提交硬闸、同账号 RPA 串行）、Client 侧栏京东方→发票箱单、管理中心地区对照维护、三个 Flow 包 `rpa_flow_srm_boe_pack_*`、Engine `login_boe_srm`（遇邮箱码失败、不 WAITING_HUMAN）。地区表 Alembic `b2d4f6a81935` 已写**未迁**。`BOE_PACK_MATCH_JOB_ENABLED` 默认 false。**今晚正式库不要 `upgrade head`**，只升到 v5.5 的 `a1c3e5f70824`。单测与 `lat check` 见本会话验证。未发布 Flow 到 Registry、未绑门户 Binding。
+
+- **BOE 09-03 拍板已写入设计**：匹配交货计划=租户级 HTTP（不按门户扫）；门户按子代码；登录 Cookie 按 AA/AD；一期不做附件、不做 AutoTask 验证码。数量对不上系统阶段只显示、提交才硬拦；`boe_factory` 原样写入；Client 头表只显示关键字段。SOP / 草稿映射 / 样例表单警示 / lat.md 已改。未写代码。
 
 - **v5.5 测试库文档表已迁（用户授权）**：`d2e9f1a70b83` → `a1c3e5f70824`。`category_documents` 已建、0 行。**需重启测库 4520**。正式库未迁。
 

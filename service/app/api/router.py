@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api import (
     artifacts,
+    boe_packing,
     dashboard,
     human_actions,
     integration,
@@ -11,6 +12,7 @@ from app.api import (
     portal_accounts,
     portal_categories,
     process_instances,
+    region_maps,
     rpa_dispatch,
     rpa_runs,
     rpa_workers,
@@ -38,10 +40,12 @@ api_router.include_router(session.router, tags=["Session"])
 api_router.include_router(integration.router, tags=["Integration"])
 api_router.include_router(portal_accounts.router, prefix="/portal-accounts", tags=["Portal Account"])
 api_router.include_router(portal_categories.router, prefix="/portal-categories", tags=["Portal Category"])
+api_router.include_router(region_maps.router, prefix="/region-maps", tags=["Region Map"])
 api_router.include_router(workflow_templates.router, prefix="/workflow-templates", tags=["Workflow Template"])
 api_router.include_router(workflow_bindings.router, prefix="/workflow-bindings", tags=["Workflow Binding"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["Automation Task"])
 api_router.include_router(process_instances.router, prefix="/process-instances", tags=["Process Instance"])
+api_router.include_router(boe_packing.router, prefix="/boe-packing", tags=["BOE Packing"])
 api_router.include_router(statements.router, prefix="/statements", tags=["Statement"])
 api_router.include_router(rpa_runs.router, prefix="/runs", tags=["RPA Run"])
 api_router.include_router(human_actions.router, prefix="/human-actions", tags=["Human Action"])

@@ -59,7 +59,7 @@ async def _shutdown_component(
         )
 
 
-# @lat: [[rpa-engine]]
+# @lat: [[architecture#App Assembly]]
 def create_app(
     settings: Settings | None = None,
     *,

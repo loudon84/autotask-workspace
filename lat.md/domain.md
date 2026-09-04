@@ -89,10 +89,20 @@ packing list, RPA-enrich line items, save SRM draft, CS review, then submit as
 a change-order vs JSON baseline.
 
 v2.2 names stages from the CS point of view while keeping `BOE_PACK_*` status
-codes stable. v2.1 split retryable nodes so WMS/enrich/save failures do not
-re-scan or recreate the bill. Email OTP is per SRM account per day, not
-cookies. Cookie cache still skips the login page. PO query uses customer PO +
-item number. Draft: `project-docs/prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`.
+codes stable. Matching is a tenant-level HTTP job (not a per-portal SRM scan);
+leaf portals stay one-per-subcode. Cookie is keyed by SRM username (two logins
+cover nine sites). Qty mismatch is shown through save-draft but hard-blocks
+only CS submit. Client header is a key-field subset, not the full SRM sample.
+Phase 1 skips attachments and AutoTask email OTP. Draft:
+`project-docs/prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`.
+
+Phase 1 code lives in Task [[service/app/domain/boe_packing.py#PROCESS_CODE]], Client
+route `/process-instances/invoice-packing`, and Flows `rpa_flow_srm_boe_pack_*`.
+WMS `data` is a line array (`cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`);
+header volume is the sum of line `cubic`. Region maps Alembic `b2d4f6a81935` is
+written but not migrated; same-login BOE RPA is serialized when leasing. The
+match timer is maintained on 调度中心 (enable + cron in `autotask_settings`);
+`.env` is fallback only and stays off until an operator enables it.
 
 ## SchedulerJob
 
@@ -100,6 +110,9 @@ A SchedulerJob is one cron schedule per Binding; Task’s JobScheduler fires tas
 when due.
 
 Jobs are hot-reloaded; editing cron does not require a Task process restart.
+Tenant-level jobs that are not per-portal (BOE match delivery plan) live in
+`autotask_settings` via `/settings/schedulers`, not on `scheduler_jobs`. The
+调度中心 page shows Binding rows in the table and tenant timers as cards above.
 
 ## Flow Package
 
