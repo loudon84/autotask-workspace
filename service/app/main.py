@@ -107,6 +107,7 @@ async def lifespan(app: FastAPI):
     logger.info("Binding 调度器已启动（scheduler_jobs 热更新）")
     app.state.job_scheduler = job_scheduler
 
+
     # 京东方匹配常驻启动；开关与 cron 在 autotask_settings，每个 tick 热加载。
     boe_match_scheduler = None
     from app.services.boe_match_scheduler import BoeMatchScheduler
@@ -115,10 +116,39 @@ async def lifespan(app: FastAPI):
     await boe_match_scheduler.start()
     logger.info("京东方匹配交货计划调度器已启动（autotask_settings 热更新）")
     app.state.boe_match_scheduler = boe_match_scheduler
+    from app.services.timer_scheduler import TimerScheduler
+    from app.services import timer_registry
+    from app.services import timer_service as timer_svc
+    from app.services.demo_timer import DEMO_PRINT_NOW_TARGET, print_current_time
+    from app.services.tiandy_timers import (
+        TIANDI_SCAN_TARGET,
+        TIANDI_SIGN_POLL_TARGET,
+        scan_pending_due,
+        sign_poll_due,
+    )
+
+    timer_registry.register(DEMO_PRINT_NOW_TARGET, print_current_time)
+    timer_registry.register(TIANDI_SCAN_TARGET, scan_pending_due)
+    timer_registry.register(TIANDI_SIGN_POLL_TARGET, sign_poll_due)
+
+    timer_scheduler = None
+    try:
+        async with async_session_factory() as db:
+            await timer_svc.ensure_catalog_rows(db)
+            await db.commit()
+    except Exception:
+        logger.warning("定时器登记跳过（表可能尚未迁移）", exc_info=True)
+
+    timer_scheduler = TimerScheduler(async_session_factory)
+    await timer_scheduler.start()
+    logger.info("独立定时器调度器已启动")
+    app.state.timer_scheduler = timer_scheduler
 
     try:
         yield
     finally:
+        if timer_scheduler is not None:
+            await timer_scheduler.stop()
         await job_scheduler.stop()
         if boe_match_scheduler is not None:
             await boe_match_scheduler.stop()

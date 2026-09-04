@@ -16,10 +16,28 @@ Node or `ipcRenderer`.
 - Preload bridges MessagePort / tab events.
 - Renderer boots via `src/renderer.ts` → `src/app.tsx` with TanStack Query.
 - IPC surface is [[app/src/ipc/router.ts#router]] (`theme`, `window`, `app`,
-  `shell`, `webWorkspace`, `auth`, `autotaskApi`, `rpaEngine`).
+  `appUpdate`, `shell`, `webWorkspace`, `auth`, `autotaskApi`, `rpaEngine`).
 
 Native embedded browsing uses WebContentsView (`web-workspace`) for portal
 HumanAction work.
+
+## Online Updates
+
+Packaged Windows builds self-update from `https://release.superic.com/autotask/stable/`
+via electron-updater (generic provider, no auth).
+
+- Main-side state machine: [[app/src/main/app-updater.ts#AppUpdater]] — check
+  15s after boot then every 6h; `autoDownload=false`, user confirms download
+  and install. Dev / unpackaged / non-Windows never check.
+- The feed URL is baked at build time by the NSIS maker's `publish` config
+  ([[app/forge/maker-nsis-install-dir.ts#MakerNsisInstallDir]]); override with
+  `AUTOTASK_UPDATE_URL`. Installer artifact name carries the version.
+- Renderer dialogs live in `src/features/app-update/` (available → downloading
+  → downloaded); state pushes over `APP_UPDATE_STATE_CHANGED` via preload.
+- Release flow: `npm run release:build` (make + verify + stage), then the
+  version folder is copied to the server by hand and promoted with
+  `promote-autotask-release.sh` (no SSH from the build machine). Server-side
+  scripts under `app/scripts/server/`.
 
 ## Data Access
 
@@ -38,8 +56,15 @@ keys in `services/query-keys.ts`.
 
 UI is feature-first under `src/features/` with thin TanStack file routes.
 
+
 Primary domains: tasks, processes, statements, BOE invoice packing, workflows/bindings, SRM portals,
 runs/artifacts, schedulers (Binding jobs plus tenant BOE match timer), web-workspace, and auth/endpoint configuration.
+
+Primary domains: tasks, processes, statements, workflows/bindings, SRM portals,
+runs/artifacts, schedulers (independent timers: name/cron/enabled; see
+[[app/src/features/schedulers/schedulers-list.tsx#SchedulersListPage]]),
+web-workspace, and auth/endpoint configuration.
+
 Shared business components live under `components/business/`; do not edit
 generated `components/ui/`.
 

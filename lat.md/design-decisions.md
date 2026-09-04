@@ -104,6 +104,16 @@ official portals may still use different packages.
 Drill knobs (`treatAsPending`, `dryRun`, sample PO) belong in Binding config, not
 forked Flow trees. See product SOP under `project-docs/prd/`.
 
+## Independent Timers
+
+Independent timers are archives with name, enabled, cron, and an opaque target;
+due ticks only notify a registry.
+
+The 调度中心 UI never shows target, portal, or Binding. Empty
+[[service/app/services/timer_catalog.py#REGISTRATIONS]] is valid until a task
+registers. Binding JobScheduler may run in parallel until old jobs are moved.
+See [[domain#SchedulerJob]].
+
 ## Database Hold Point
 
 DDL and designs may be prepared; executing create/migrate/seed requires explicit

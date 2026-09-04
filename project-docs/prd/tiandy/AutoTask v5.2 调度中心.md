@@ -3,9 +3,9 @@
 | 项 | 内容 |
 | --- | --- |
 | 版本 | **v5.2**（本文件替换 2026-08-24 先前「两个全局 cron」方案） |
-| 状态 | **2026-08-24 需求重定**；尚未按本方案改代码 |
-| 实施计划 | [`.cursor/plans/v5.2_调度中心_binding任务.plan.md`](../../.cursor/plans/v5.2_调度中心_binding任务.plan.md) |
-| 原则 | 定时器挂在 Binding 上，不挂 Flow、不挂全局设置页。用户不创建定时器；开发在 Binding config 里声明一次默认 cron。调度中心只改变量（开关、cron）并看执行任务日志。 |
+| 状态 | **已作废（2026-09-04）**。定时器挂 Binding 的模型推倒。现行需求与设计见 [AutoTask 调度中心](../AutoTask%20调度中心.md) |
+| 实施计划 | [`.cursor/plans/v5.2_调度中心_binding任务.plan.md`](../../.cursor/plans/v5.2_调度中心_binding任务.plan.md)（随 Binding 方案一并作废，勿按此实施） |
+| 原则 | ~~定时器挂在 Binding 上~~ **作废**。下文仅作历史，不要按此开发。 |
 
 ---
 

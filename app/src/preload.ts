@@ -15,3 +15,10 @@ ipcRenderer.on(IPC_CHANNELS.WEB_WORKSPACE_TAB_UPDATED, (_event, tab) => {
     "*"
   );
 });
+
+ipcRenderer.on(IPC_CHANNELS.APP_UPDATE_STATE_CHANGED, (_event, state) => {
+  window.postMessage(
+    { channel: IPC_CHANNELS.APP_UPDATE_STATE_CHANGED, state },
+    "*"
+  );
+});

@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-03
+最后更新：2026-09-04
 
 
 ## 1. 用途
@@ -39,7 +39,9 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行（测试库）。测库随后到 `a1c3e5f70824`（分类文档）。BOE 地区表 `b2d4f6a81935` **已写未执行**；文件会使 Alembic `head` 前移，**今晚正式库禁止 `upgrade head`**，只升到 `a1c3e5f70824`。**
+   
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行（当前 head）。正式库未迁。**
+
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -68,7 +70,7 @@
 | 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.20**；回签探测 **1.1.4**；下合同 **1.3.3**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。4520 / 4610 已于 2026-08-27 14:33 重启。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
 | 权限 v5.1（管人接口后补） | 登录缓存 `managed_user_ids` 只做列表/详情权限。门户选归属人现拉 `GET /members/{id}/subordinate`（Auth 按角色返回全员/自己/自己+下属），不再打 `/orgs/{org}/members`。模块管理员与超管看数仍全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
-| 调度中心 v5.2 | **Binding 任务已上**：迁移已执行，6 条 job 已回填。4520 已于 09:48 换成 JobScheduler（pid 30444）。正式演练回签 `*/5` 在跑，但门户无待回签候选所以详情任务列表为空 | 要把 `POJS2607170008` 从 `SDMS_CREATED` 推进到待回签才会产生探测任务 |
+| 调度中心 | **天地伟业定时器已登记（2026-09-04）** | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）已注册并插库，默认停用。旧 `scheduler_jobs` 六条全部停用（直接替换）。4520 已重启。正式库未迁。 |
 | 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
 | 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
 | 正式上线（空库） | **两段**：先克隆正式演练，确认后再切真上线 | `prd/AutoTask 正式上线操作清单.md`。拷测试 `.env` 改新库；阶段 A 测 SDMS/ERP + 样例扫单 + dryRun；阶段 B 再关闸/切生产/开调度。填交期/签章正式包仍未绑 |
@@ -122,8 +124,9 @@
 22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
 23. **正式上线操作清单**：新空库先按正式演练克隆（测 SDMS/ERP、样例扫单、写步骤 dryRun），确认后再切真上线。见 `prd/AutoTask 正式上线操作清单.md`。迁库与阶段 B 关闸须口头授权。
 24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
-25. **v5.5 门户分类 + 分类文档**：测试库已到 `a1c3e5f70824`。**需重启测库 4520**。正式库待授权，晚上只升到 `a1c3e5f70824`（列+分类文档表），**不要 `upgrade head`**（head 已含未授权的 BOE 地区表 `b2d4f6a81935`）。正式库不删门户。见 PRD §8。
-26. **BOE 一期（2026-09-03）**：代码已落地。测库配 1～2 个 BOE 门户（`erp_entity_code`=子代码）后可手动匹配；要定时匹配时在 **调度中心** 打开「京东方匹配交货计划」（不要改 `.env`、不要挂 Binding）。每个 BOE 门户绑三条 ENABLED Binding（enrich/save_draft/submit）并发布 Flow。地区表 DDL `b2d4f6a81935` 待口头授权。一期无附件、无 OTP。
+25. **v5.5 门户分类 + 分类文档**：测试库已到 head（`d2e9f1a70b83` + `a1c3e5f70824`）。**需重启测库 4520** 后 Client「门户分类」才能用。正式库待授权，晚上 `upgrade head` 一次加上列+表。正式库不删门户。见 PRD §8。
+26. **调度中心管理内核（2026-09-04）**：独立定时器已写。测库已执行 `c3a8f1d92e47`。catalog 登记 demo + `tiandy.scan_pending` / `tiandy.sign_poll`（默认停用）。旧 `scheduler_jobs` 六条全停，Binding 循环不再开火。正式库未迁。见 `prd/AutoTask 调度中心.md`。
+
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -245,6 +248,24 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-09-04
+
+- **在线更新客户端已落地**：`app/` 接入 electron-updater（generic，`https://release.superic.com/autotask/stable/`，可用 `AUTOTASK_UPDATE_URL` 覆盖）。主进程 `src/main/app-updater.ts`（启动 15s 首查、6h 轮询、用户确认下载/安装、仅 Windows 打包版）；弹窗在 `src/features/app-update/`；NSIS maker 加了 publish 配置、安装包名带版本号。发版脚本 `npm run release:build` / `release:publish`，服务器侧脚本在 `app/scripts/server/`。已验证 `npm run make` 产出 `AutoTask-Studio-<版本>-setup.exe` + blockmap + latest.yml。单测 101 全过、`lat check` 过。**待办：服务器 `/data/smc-release/autotask/` 目录 + promote 脚本（需 SSH 权限）；端到端更新验证。** 注意本机目前访问 release.superic.com:443 不通（内网 192.168.102.104）。
+
+- **在线更新方案已写文档**：`project-docs/prd/AutoTask 在线更新.md`。复用 release.superic.com（静态 nginx，smc-copilot 已在用 `/work/stable/`），AutoTask 加 `/autotask/stable/`；客户端 electron-updater generic + 用户确认式更新。待确认：服务器侧 SSH 权限谁配、是否现在开工。
+
+- **定时器「立即执行」已上线**：`POST /timers/{id}/run` 不看开关和 cron，点了就调入口，照常落 `timer_runs` 记录（成功/失败/无入口三种状态回给前端）。调度中心列表每行和详情页都有「立即执行」按钮，停用的任务也能点。无库变更。**需重启 4520 加载新 API。**
+
+- **定时器执行记录已迁（用户授权）**：`c3a8f1d92e47` → `d4b2f7a91e05`，`timer_runs` 已建、0 行。4520 已重启，到点开始落记录（触发/结束/状态/错误），详情页「执行记录」可看。正式库未迁。
+
+- **天地伟业任务挂上独立定时器（直接替换）**：入口 `service/app/services/tiandy_timers.py`（扫单复用 `run_scan_once`、回签复用 `run_sign_poll_once`），catalog 登记 `tiandy.scan_pending` `0 8 * * *` / `tiandy.sign_poll` `*/30 * * * *`，默认停用。旧 `scheduler_jobs` 两条启用行（国际test 扫单/回签）已停用，六条全灭，Binding `JobScheduler` 不再开火。4520 已重启注册入口。**要启用：调度中心打开开关即可，不用重启。** 247 旧代码同库，旧行已停所以也不会再开火。
+
+- **调度中心测库已迁（用户授权）**：`a1c3e5f70824` → `c3a8f1d92e47`。`timers` 已建、1 行（演示「打印当前时间」`demo.print_now`，`0 8 * * *`，默认停用）。无 binding/portal 列。本机 4520 下一轮 tick 即可读表，不必为建表再重启。正式库未迁。
+
+- **演示定时器端到端已验证**：本机 4520 重启后注册 `demo.print_now` 入口；UI 启用并改 `*/5 * * * *` 热生效，10:35:00 日志打出「演示定时器到点」。注意：`register` 在启动时执行，**新登记必须重启 4520** 才生效；改名称/开关/cron 不用重启。
+
+- **调度中心管理内核已写**：独立定时器模型/循环/`/timers`/空登记表/调度中心 UI（无门户、无 Binding 任务表）。旧 `JobScheduler` 仍并行。到期入口留给以后任务开发 `register` + catalog。
 
 ### 2026-09-03
 

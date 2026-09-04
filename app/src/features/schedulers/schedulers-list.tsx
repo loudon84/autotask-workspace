@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { DataTable } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/empty-state";
 import { MockLoading } from "@/components/common/mock-loading";
 import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,10 +15,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSchedulerJobs } from "@/features/schedulers/api/use-scheduler-jobs";
-import { TenantSchedulerCard } from "@/features/schedulers/tenant-scheduler-card";
-import type { SchedulerJob } from "@/features/schedulers/types";
+
+import {
+  useRunSchedulerJobNow,
+  useSchedulerJobs,
+} from "@/features/schedulers/api/use-scheduler-jobs";
+import type { Timer } from "@/features/schedulers/types";
+
 import { formatBeijingDateTime } from "@/utils/date-time";
+
+function RunNowButton({ job }: { job: Timer }) {
+  const runNow = useRunSchedulerJobNow();
+  return (
+    <Button
+      disabled={runNow.isPending}
+      onClick={() =>
+        runNow.mutate(job.id, {
+          onSuccess: (result) => {
+            if (result.status === "FAILED") {
+              toast.error(result.message);
+            } else {
+              toast.success(result.message);
+            }
+          },
+          onError: (error) => toast.error(`触发失败：${error.message}`),
+        })
+      }
+      size="sm"
+      variant="outline"
+    >
+      立即执行
+    </Button>
+  );
+}
 
 export function SchedulersListPage() {
   const [enabledFilter, setEnabledFilter] = useState<"all" | "true" | "false">(
@@ -26,7 +57,7 @@ export function SchedulersListPage() {
     enabledFilter === "all" ? undefined : enabledFilter === "true";
   const { data: jobs = [], isLoading } = useSchedulerJobs(enabledParam);
 
-  const columns: ColumnDef<SchedulerJob>[] = useMemo(
+  const columns: ColumnDef<Timer>[] = useMemo(
     () => [
       {
         accessorKey: "name",
@@ -41,7 +72,6 @@ export function SchedulersListPage() {
           </Link>
         ),
       },
-      { accessorKey: "portalName", header: "门户" },
       { accessorKey: "cron", header: "cron" },
       {
         accessorKey: "enabled",
@@ -60,6 +90,11 @@ export function SchedulersListPage() {
             ? formatBeijingDateTime(row.original.nextRunAt)
             : "—",
       },
+      {
+        id: "actions",
+        header: "操作",
+        cell: ({ row }) => <RunNowButton job={row.original} />,
+      },
     ],
     []
   );
@@ -67,7 +102,8 @@ export function SchedulersListPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        description="Binding 任务改开关与 cron；京东方匹配交货计划是租户级定时器，在本页上方维护"
+
+        description="维护定时器的名称、开关与 cron。到点通知已登记的入口。"
         title="调度中心"
       />
       <TenantSchedulerCard />
@@ -89,7 +125,10 @@ export function SchedulersListPage() {
       {isLoading ? (
         <MockLoading />
       ) : jobs.length === 0 ? (
-        <EmptyState description="还没有调度任务。在 Binding JSON 写入 schedule 并保存后会出现在这里。" title="暂无调度任务" />
+        <EmptyState
+          description="还没有定时器。任务登记后会出现在这里。"
+          title="暂无定时器"
+        />
       ) : (
         <DataTable columns={columns} data={jobs} />
       )}

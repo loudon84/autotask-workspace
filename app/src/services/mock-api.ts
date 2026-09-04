@@ -9,6 +9,7 @@ import workersData from "@/mock/workers.json";
 import workflowTemplatesData from "@/mock/workflow-templates.json";
 import { mapPortalAccount } from "@/services/dto-mappers";
 import { PORTAL_CATEGORY_OPTIONS } from "@/features/srm-portals/portal-category";
+import type { TimerRun } from "@/features/schedulers/types";
 import {
   getHumanActionById,
   getHumanActionByTaskId,
@@ -84,36 +85,31 @@ function newId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const mockSchedulerJobs = [
+const mockTimers = [
   {
     id: "job-scan-1",
-    bindingId: "binding-scan-1",
-    portalAccountId: "portal-1",
-    portalName: "天地伟业",
-    name: "天地伟业-客户订单-扫单",
+    name: "示例定时器",
     cron: "0 8 * * *",
     enabled: true,
     nextRunAt: "2026-08-25T00:00:00+08:00",
   },
   {
     id: "job-sign-1",
-    bindingId: "binding-sign-1",
-    portalAccountId: "portal-1",
-    portalName: "天地伟业",
-    name: "天地伟业-客户订单-回签轮询",
+    name: "另一条定时器",
     cron: "*/30 * * * *",
     enabled: false,
     nextRunAt: null,
   },
 ];
 
-const mockSchedulerJobTasks = [
+const mockTimerRuns: (TimerRun & { timerId: string })[] = [
   {
-    jobId: "job-scan-1",
-    id: "task-scan-1",
-    title: "扫单：SRM 待签章订单",
+    id: "run-1",
+    timerId: "job-scan-1",
     status: "SUCCESS",
-    createdAt: "2026-08-24T08:00:00+08:00",
+    triggeredAt: "2026-08-24T08:00:00+08:00",
+    finishedAt: "2026-08-24T08:00:03+08:00",
+    error: null,
   },
 ];
 
@@ -580,41 +576,58 @@ export const mockApi = {
     _taskId: string
   ): Promise<IntegrationCallLog[]> => delay([]),
 
-  listSchedulerJobs: async (enabled?: boolean) => {
-    const jobs = mockSchedulerJobs.filter((job) =>
+  listTimers: async (enabled?: boolean) => {
+    const jobs = mockTimers.filter((job) =>
       enabled === undefined ? true : job.enabled === enabled
     );
     return delay(jobs);
   },
 
-  getSchedulerJob: async (id: string) => {
-    const job = mockSchedulerJobs.find((item) => item.id === id);
+  getTimer: async (id: string) => {
+    const job = mockTimers.find((item) => item.id === id);
     if (!job) {
-      throw new Error("调度任务不存在");
+      throw new Error("定时器不存在");
     }
     return delay(job);
   },
 
-  patchSchedulerJob: async (
+  patchTimer: async (
     id: string,
-    patch: { enabled?: boolean; cron?: string }
+    patch: { name?: string; enabled?: boolean; cron?: string }
   ) => {
-    const index = mockSchedulerJobs.findIndex((item) => item.id === id);
+    const index = mockTimers.findIndex((item) => item.id === id);
     if (index < 0) {
-      throw new Error("调度任务不存在");
+      throw new Error("定时器不存在");
     }
-    mockSchedulerJobs[index] = { ...mockSchedulerJobs[index], ...patch };
-    return delay(mockSchedulerJobs[index]);
+    mockTimers[index] = { ...mockTimers[index], ...patch };
+    return delay(mockTimers[index]);
   },
 
-  listSchedulerJobTasks: async (id: string, page = 1) => {
-    const items = mockSchedulerJobTasks.filter((task) => task.jobId === id);
+  listTimerRuns: async (id: string, page = 1) => {
+    const items = mockTimerRuns.filter((run) => run.timerId === id);
     return delay({
       items,
       total: items.length,
       page,
       pageSize: 20,
     });
+  },
+
+  runTimerNow: async (id: string) => {
+    const timer = mockTimers.find((item) => item.id === id);
+    if (!timer) {
+      throw new Error("定时器不存在");
+    }
+    const now = new Date().toISOString();
+    mockTimerRuns.unshift({
+      id: `run-${Date.now()}`,
+      timerId: id,
+      status: "SUCCESS" as const,
+      triggeredAt: now,
+      finishedAt: now,
+      error: null,
+    });
+    return delay({ status: "SUCCESS", message: "已执行成功", error: null });
   },
 
   getSettings: async (): Promise<AppSettings> =>

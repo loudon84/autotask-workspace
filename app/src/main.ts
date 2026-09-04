@@ -5,8 +5,8 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from "electron-devtools-installer";
-import { UpdateSourceType, updateElectronApp } from "update-electron-app";
 import { setupApplicationMenu } from "@/main/app-menu";
+import { appUpdater } from "@/main/app-updater";
 import { ipcContext } from "@/ipc/context";
 import { webWorkspaceManager } from "@/ipc/web-workspace/workspace-manager";
 import { IPC_CHANNELS, inDevelopment } from "./constants";
@@ -56,15 +56,6 @@ async function installExtensions() {
   }
 }
 
-function checkForUpdates() {
-  updateElectronApp({
-    updateSource: {
-      type: UpdateSourceType.ElectronPublicUpdateService,
-      repo: "LuanRoger/electron-shadcn",
-    },
-  });
-}
-
 async function setupORPC() {
   const { rpcHandler } = await import("./ipc/handler");
 
@@ -82,6 +73,7 @@ app.whenReady().then(async () => {
     await setupORPC();
     loadMainWindow(mainWindow);
     setupApplicationMenu(() => ipcContext.mainWindow);
+    appUpdater.setup(() => ipcContext.mainWindow ?? null);
     if (inDevelopment) {
       await installExtensions();
     }
