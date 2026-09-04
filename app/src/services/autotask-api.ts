@@ -22,10 +22,7 @@ import type {
   ProcessSignPollRunResult,
 } from "@/types/process-instance";
 import type { RpaComponent } from "@/types/rpa-component";
-import type {
-  SchedulerJob,
-  SchedulerJobTaskPage,
-} from "@/features/schedulers/types";
+import type { Timer, TimerRunPage, TimerRunResult } from "@/features/schedulers/types";
 import type { AppSettings } from "@/types/settings";
 import type { TaskRun } from "@/types/task-run";
 import type { Worker } from "@/types/worker";
@@ -328,51 +325,53 @@ export const autotaskApi = {
   },
 
   schedulerJobs: {
-    list: (enabled?: boolean): Promise<SchedulerJob[]> => {
+    list: (enabled?: boolean): Promise<Timer[]> => {
       const api = pickApi();
-      if (
-        "listSchedulerJobs" in api &&
-        typeof api.listSchedulerJobs === "function"
-      ) {
-        return api.listSchedulerJobs(enabled);
+      if ("listTimers" in api && typeof api.listTimers === "function") {
+        return api.listTimers(enabled);
       }
       return Promise.resolve([]);
     },
-    get: (id: string): Promise<SchedulerJob> => {
+    get: (id: string): Promise<Timer> => {
       const api = pickApi();
-      if (
-        "getSchedulerJob" in api &&
-        typeof api.getSchedulerJob === "function"
-      ) {
-        return api.getSchedulerJob(id);
+      if ("getTimer" in api && typeof api.getTimer === "function") {
+        return api.getTimer(id);
       }
-      throw new Error("当前模式不支持读取调度任务");
+      throw new Error("当前模式不支持读取定时器");
     },
     patch: (
       id: string,
-      patch: { enabled?: boolean; cron?: string }
-    ): Promise<SchedulerJob> => {
+      patch: { name?: string; enabled?: boolean; cron?: string }
+    ): Promise<Timer> => {
       const api = pickApi();
-      if (
-        "patchSchedulerJob" in api &&
-        typeof api.patchSchedulerJob === "function"
-      ) {
-        return api.patchSchedulerJob(id, patch);
+      if ("patchTimer" in api && typeof api.patchTimer === "function") {
+        return api.patchTimer(id, patch);
       }
-      throw new Error("当前模式不支持更新调度任务");
+      throw new Error("当前模式不支持更新定时器");
     },
-    listTasks: (
+  },
+
+  timers: {
+    list: (enabled?: boolean): Promise<Timer[]> =>
+      autotaskApi.schedulerJobs.list(enabled),
+    get: (id: string): Promise<Timer> => autotaskApi.schedulerJobs.get(id),
+    patch: (
       id: string,
-      page = 1
-    ): Promise<SchedulerJobTaskPage> => {
+      patch: { name?: string; enabled?: boolean; cron?: string }
+    ): Promise<Timer> => autotaskApi.schedulerJobs.patch(id, patch),
+    listRuns: (id: string, page?: number): Promise<TimerRunPage> => {
       const api = pickApi();
-      if (
-        "listSchedulerJobTasks" in api &&
-        typeof api.listSchedulerJobTasks === "function"
-      ) {
-        return api.listSchedulerJobTasks(id, page);
+      if ("listTimerRuns" in api && typeof api.listTimerRuns === "function") {
+        return api.listTimerRuns(id, page);
       }
       return Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 });
+    },
+    runNow: (id: string): Promise<TimerRunResult> => {
+      const api = pickApi();
+      if ("runTimerNow" in api && typeof api.runTimerNow === "function") {
+        return api.runTimerNow(id);
+      }
+      return Promise.resolve({ status: "SUCCESS", message: "已触发" });
     },
   },
 

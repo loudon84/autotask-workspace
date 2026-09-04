@@ -67,6 +67,8 @@ export const queryKeys = {
         ? ([...queryKeys.schedulerJobs.all] as const)
         : ([...queryKeys.schedulerJobs.all, { enabled }] as const),
     detail: (id: string) => [...queryKeys.schedulerJobs.all, id] as const,
+    runs: (id: string) =>
+      [...queryKeys.schedulerJobs.all, id, "runs"] as const,
     tasks: (id: string) =>
       [...queryKeys.schedulerJobs.all, id, "tasks"] as const,
   },

@@ -107,9 +107,39 @@ async def lifespan(app: FastAPI):
     logger.info("Binding 调度器已启动（scheduler_jobs 热更新）")
     app.state.job_scheduler = job_scheduler
 
+    from app.services.timer_scheduler import TimerScheduler
+    from app.services import timer_registry
+    from app.services import timer_service as timer_svc
+    from app.services.demo_timer import DEMO_PRINT_NOW_TARGET, print_current_time
+    from app.services.tiandy_timers import (
+        TIANDI_SCAN_TARGET,
+        TIANDI_SIGN_POLL_TARGET,
+        scan_pending_due,
+        sign_poll_due,
+    )
+
+    timer_registry.register(DEMO_PRINT_NOW_TARGET, print_current_time)
+    timer_registry.register(TIANDI_SCAN_TARGET, scan_pending_due)
+    timer_registry.register(TIANDI_SIGN_POLL_TARGET, sign_poll_due)
+
+    timer_scheduler = None
+    try:
+        async with async_session_factory() as db:
+            await timer_svc.ensure_catalog_rows(db)
+            await db.commit()
+    except Exception:
+        logger.warning("定时器登记跳过（表可能尚未迁移）", exc_info=True)
+
+    timer_scheduler = TimerScheduler(async_session_factory)
+    await timer_scheduler.start()
+    logger.info("独立定时器调度器已启动")
+    app.state.timer_scheduler = timer_scheduler
+
     try:
         yield
     finally:
+        if timer_scheduler is not None:
+            await timer_scheduler.stop()
         await job_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()

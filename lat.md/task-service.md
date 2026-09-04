@@ -22,7 +22,7 @@ Three mounts share the same process.
 
 1. **Client API** (`/api/v1/autotask/*`) — JWT user calls for dashboard, portals,
    templates, bindings, tasks, process-instances, statements, runs, human-actions,
-   artifacts, scheduler-jobs, settings.
+   artifacts, scheduler-jobs, timers, settings.
 2. **Worker API** (`/api/v1/autotask/worker-api/*`) — register/heartbeat, lease,
    renew, run events/artifacts/integration-calls/finish.
 3. **MCP** (`/api/v1/autotask/mcp`) — thin tools over the same services.
@@ -41,10 +41,23 @@ follow-on bindings after SUCCESS.
 
 ## Schedulers
 
-Background work includes always-on Binding JobScheduler plus gated jobs.
+Background work includes Binding JobScheduler (legacy, still running) plus the
+independent TimerScheduler.
 
-- Binding cron: `scheduler_jobs` hot-reload each tick
-- Optional successor processor, scan, and sign-poll (env-gated for safe local use)
+- Independent timers: [[service/app/models/timer.py#Timer]], `/timers` API,
+  [[service/app/services/timer_registry.py#notify]]
+- Catalog upsert on boot: [[service/app/services/timer_service.py#ensure_catalog_rows]];
+  [[service/app/services/timer_catalog.py#REGISTRATIONS]] holds demo plus
+  [[service/app/services/tiandy_timers.py#scan_pending_due|tiandy scan]] /
+  [[service/app/services/tiandy_timers.py#sign_poll_due|sign-poll]] entries
+- Legacy Binding `scheduler_jobs` rows are all disabled (replaced by timers);
+  JobScheduler loop still runs but fires nothing
+- Every due fire lands in `timer_runs` (`/timers/{id}/runs`); if the table is
+  not migrated yet the tick still notifies and just skips recording
+- `POST /timers/{id}/run` fires immediately regardless of enabled/cron and
+  still records the run; the 调度中心 list and detail pages expose it as
+  「立即执行」
+- Optional successor processor remains env-gated (`SUCCESSOR_JOB_*`)
 
 ## Persistence
 

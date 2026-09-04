@@ -19,6 +19,7 @@ from app.api import (
     settings,
     statements,
     tasks,
+    timers,
     workflow_bindings,
     workflow_templates,
 )
@@ -49,6 +50,7 @@ api_router.include_router(artifacts.router, prefix="/artifacts", tags=["Artifact
 api_router.include_router(rpa_workers.router, prefix="/rpa-workers", tags=["RPA Worker"])
 api_router.include_router(settings.router, prefix="/settings", tags=["Settings"])
 api_router.include_router(scheduler_jobs.router, prefix="/scheduler-jobs", tags=["Scheduler Job"])
+api_router.include_router(timers.router, prefix="/timers", tags=["Timer"])
 
 worker_api_router.include_router(rpa_dispatch.router, tags=["RPA Worker API"])
 mcp_router.include_router(mcp.router, tags=["MCP"])

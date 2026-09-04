@@ -757,49 +757,67 @@ export const remoteApi = {
     return mapListResponse<IntegrationCallLog>(data);
   },
 
-  listSchedulerJobs: async (
+  listTimers: async (
     enabled?: boolean
-  ): Promise<import("@/features/schedulers/types").SchedulerJob[]> => {
+  ): Promise<import("@/features/schedulers/types").Timer[]> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",
-      path: "/scheduler-jobs",
+      path: "/timers",
       query: enabled === undefined ? undefined : { enabled },
     });
     return mapListResponse(data);
   },
 
-  getSchedulerJob: async (
+  getTimer: async (
     id: string
-  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+  ): Promise<import("@/features/schedulers/types").Timer> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",
-      path: `/scheduler-jobs/${id}`,
+      path: `/timers/${id}`,
     });
     return mapItemResponse(data);
   },
 
-  patchSchedulerJob: async (
+  patchTimer: async (
     id: string,
-    patch: { enabled?: boolean; cron?: string }
-  ): Promise<import("@/features/schedulers/types").SchedulerJob> => {
+    patch: { name?: string; enabled?: boolean; cron?: string }
+  ): Promise<import("@/features/schedulers/types").Timer> => {
     const data = await requestAutotaskApi<unknown>({
       method: "PATCH",
-      path: `/scheduler-jobs/${id}`,
+      path: `/timers/${id}`,
       body: patch,
     });
     return mapItemResponse(data);
   },
 
-  listSchedulerJobTasks: async (
+  listTimerRuns: async (
     id: string,
     page = 1
-  ): Promise<import("@/features/schedulers/types").SchedulerJobTaskPage> => {
+  ): Promise<import("@/features/schedulers/types").TimerRunPage> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",
-      path: `/scheduler-jobs/${id}/tasks`,
-      query: { page, pageSize: 20 },
+      path: `/timers/${id}/runs`,
+      query: { page },
     });
     return mapItemResponse(data);
+  },
+
+  runTimerNow: async (
+    id: string
+  ): Promise<import("@/features/schedulers/types").TimerRunResult> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "POST",
+      path: `/timers/${id}/run`,
+    });
+    const body = data as {
+      data?: { status?: string; error?: string | null };
+      message?: string;
+    };
+    return {
+      status: body.data?.status ?? "SUCCESS",
+      message: body.message ?? "已触发",
+      error: body.data?.error ?? null,
+    };
   },
 
   getSettings: async (): Promise<AppSettings> => {

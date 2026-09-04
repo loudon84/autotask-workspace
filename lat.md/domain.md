@@ -84,10 +84,15 @@ AutomationTasks rather than by the Engine.
 
 ## SchedulerJob
 
-A SchedulerJob is one cron schedule per Binding; Task’s JobScheduler fires tasks
-when due.
+A SchedulerJob is an independent timer: name, enabled, cron, and an opaque
+target. Task’s TimerScheduler notifies the registry when due.
 
-Jobs are hot-reloaded; editing cron does not require a Task process restart.
+The 调度中心 only maintains name/enabled/cron. What runs after notify is
+registered by task code, not by Binding or portal. Jobs are hot-reloaded.
+Each due fire is recorded in `timer_runs` (triggered/finished/status/error).
+「立即执行」(`POST /timers/{id}/run`) bypasses enabled and cron entirely.
+See [[service/app/models/timer.py#Timer]] and
+[[service/app/services/timer_scheduler.py#TimerScheduler]].
 
 ## Flow Package
 
