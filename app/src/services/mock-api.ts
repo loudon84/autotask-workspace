@@ -9,6 +9,7 @@ import workersData from "@/mock/workers.json";
 import workflowTemplatesData from "@/mock/workflow-templates.json";
 import { mapPortalAccount } from "@/services/dto-mappers";
 import { PORTAL_CATEGORY_OPTIONS } from "@/features/srm-portals/portal-category";
+import type { TimerRun } from "@/features/schedulers/types";
 import {
   getHumanActionById,
   getHumanActionByTaskId,
@@ -101,7 +102,7 @@ const mockTimers = [
   },
 ];
 
-const mockTimerRuns = [
+const mockTimerRuns: (TimerRun & { timerId: string })[] = [
   {
     id: "run-1",
     timerId: "job-scan-1",

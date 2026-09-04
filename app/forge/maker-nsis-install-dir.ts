@@ -25,7 +25,15 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
         config: {
           appId: "com.smc.autotask",
           productName: "AutoTask",
-          publish: null,
+          // 在线更新：generic 静态源。地址打包时烧进 app-update.yml 并生成 latest.yml。
+          // 可用 AUTOTASK_UPDATE_URL 覆盖（例如指向测试目录）。
+          publish: {
+            provider: "generic",
+            url:
+              process.env.AUTOTASK_UPDATE_URL ??
+              "https://release.superic.com/autotask/stable/",
+            channel: "latest",
+          },
           forceCodeSigning: false,
           directories: {
             output: outDir,
@@ -38,7 +46,7 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
               import.meta.dirname,
               "../installer/install-dir.nsh"
             ),
-            artifactName: "AutoTask-Studio.exe",
+            artifactName: `AutoTask-Studio-\${version}-setup.\${ext}`,
             shortcutName: "AutoTask",
             createDesktopShortcut: true,
             createStartMenuShortcut: true,

@@ -1,4 +1,5 @@
 import { app } from "./app";
+import { appUpdate } from "./app-update";
 import { auth } from "./auth";
 import { autotaskApi } from "./autotask-api";
 import { rpaEngine } from "./rpa-engine";
@@ -12,6 +13,7 @@ export const router = {
   theme,
   window,
   app,
+  appUpdate,
   shell,
   webWorkspace,
   auth,

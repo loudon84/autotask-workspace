@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner";
+import { AppUpdateProvider } from "@/features/app-update/app-update-provider";
 import { AutoTaskAuthProvider } from "@/modules/auth/AutoTaskAuthProvider";
 import { updateAppLanguage } from "./actions/language";
 import { syncWithLocalTheme } from "./actions/theme";
@@ -29,6 +30,7 @@ export default function App() {
       <AutoTaskAuthProvider>
         <RouterProvider router={router} />
       </AutoTaskAuthProvider>
+      <AppUpdateProvider />
       <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );

@@ -244,6 +244,10 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-09-04
 
+- **在线更新客户端已落地**：`app/` 接入 electron-updater（generic，`https://release.superic.com/autotask/stable/`，可用 `AUTOTASK_UPDATE_URL` 覆盖）。主进程 `src/main/app-updater.ts`（启动 15s 首查、6h 轮询、用户确认下载/安装、仅 Windows 打包版）；弹窗在 `src/features/app-update/`；NSIS maker 加了 publish 配置、安装包名带版本号。发版脚本 `npm run release:build` / `release:publish`，服务器侧脚本在 `app/scripts/server/`。已验证 `npm run make` 产出 `AutoTask-Studio-<版本>-setup.exe` + blockmap + latest.yml。单测 101 全过、`lat check` 过。**待办：服务器 `/data/smc-release/autotask/` 目录 + promote 脚本（需 SSH 权限）；端到端更新验证。** 注意本机目前访问 release.superic.com:443 不通（内网 192.168.102.104）。
+
+- **在线更新方案已写文档**：`project-docs/prd/AutoTask 在线更新.md`。复用 release.superic.com（静态 nginx，smc-copilot 已在用 `/work/stable/`），AutoTask 加 `/autotask/stable/`；客户端 electron-updater generic + 用户确认式更新。待确认：服务器侧 SSH 权限谁配、是否现在开工。
+
 - **定时器「立即执行」已上线**：`POST /timers/{id}/run` 不看开关和 cron，点了就调入口，照常落 `timer_runs` 记录（成功/失败/无入口三种状态回给前端）。调度中心列表每行和详情页都有「立即执行」按钮，停用的任务也能点。无库变更。**需重启 4520 加载新 API。**
 
 - **定时器执行记录已迁（用户授权）**：`c3a8f1d92e47` → `d4b2f7a91e05`，`timer_runs` 已建、0 行。4520 已重启，到点开始落记录（触发/结束/状态/错误），详情页「执行记录」可看。正式库未迁。
