@@ -15,17 +15,23 @@ import {
 import type { RegionCodeMap } from "@/types/region-map";
 import type { ColumnDef } from "@tanstack/react-table";
 
-export function RegionMapsPanel({ category }: { category: string }) {
-  const { data: rows = [], isLoading } = useRegionMaps(category);
-  const upsertMutation = useUpsertRegionMap(category);
-  const deleteMutation = useDeleteRegionMap(category);
+export function RegionMapsPanel() {
+  const { data: rows = [], isLoading } = useRegionMaps();
+  const upsertMutation = useUpsertRegionMap();
+  const deleteMutation = useDeleteRegionMap();
   const [regionCode, setRegionCode] = useState("");
-  const [srmDisplayName, setSrmDisplayName] = useState("");
+  const [defaultName, setDefaultName] = useState("");
+  const [boeName, setBoeName] = useState("");
 
   const columns: ColumnDef<RegionCodeMap>[] = useMemo(
     () => [
-      { accessorKey: "regionCode", header: "WMS 地区编号" },
-      { accessorKey: "srmDisplayName", header: "SRM 显示名" },
+      { accessorKey: "regionCode", header: "地区编号" },
+      { accessorKey: "defaultName", header: "默认显示名" },
+      {
+        accessorKey: "boeName",
+        header: "京东方显示名",
+        cell: ({ row }) => row.original.boeName || "（同默认名）",
+      },
       {
         accessorKey: "updatedByName",
         header: "维护人",
@@ -59,10 +65,12 @@ export function RegionMapsPanel({ category }: { category: string }) {
     try {
       await upsertMutation.mutateAsync({
         regionCode: regionCode.trim(),
-        srmDisplayName: srmDisplayName.trim(),
+        defaultName: defaultName.trim(),
+        boeName: boeName.trim() || undefined,
       });
       setRegionCode("");
-      setSrmDisplayName("");
+      setDefaultName("");
+      setBoeName("");
       toast.success("已保存地区对照");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "保存失败");
@@ -72,16 +80,17 @@ export function RegionMapsPanel({ category }: { category: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>地区对照</CardTitle>
+        <CardTitle>地区编号对照</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          WMS 地区编号映射到京东方 SRM 下拉显示名。缺映射时发票箱单行标红，不拦读
-          WMS；核验时手工补选。表未迁库前保存会提示授权执行迁移。
+          地区编号全 SRM 共用一行：默认显示名必填；京东方显示名留空则用默认名，
+          只有显示不同的才需要单独维护。缺映射时发票箱单行标红，不拦读
+          WMS；核验时手工补选。
         </p>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="space-y-1">
-            <Label htmlFor="regionCode">WMS 地区编号</Label>
+            <Label htmlFor="regionCode">地区编号</Label>
             <Input
               id="regionCode"
               onChange={(event) => setRegionCode(event.target.value)}
@@ -90,12 +99,21 @@ export function RegionMapsPanel({ category }: { category: string }) {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="srmDisplayName">SRM 显示名</Label>
+            <Label htmlFor="defaultName">默认显示名</Label>
             <Input
-              id="srmDisplayName"
-              onChange={(event) => setSrmDisplayName(event.target.value)}
-              placeholder="台湾"
-              value={srmDisplayName}
+              id="defaultName"
+              onChange={(event) => setDefaultName(event.target.value)}
+              placeholder="中国台湾"
+              value={defaultName}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="boeName">京东方显示名（可空）</Label>
+            <Input
+              id="boeName"
+              onChange={(event) => setBoeName(event.target.value)}
+              placeholder="留空则用默认名"
+              value={boeName}
             />
           </div>
           <div className="flex items-end">
@@ -103,7 +121,7 @@ export function RegionMapsPanel({ category }: { category: string }) {
               disabled={
                 upsertMutation.isPending ||
                 !regionCode.trim() ||
-                !srmDisplayName.trim()
+                !defaultName.trim()
               }
               onClick={() => void onSave()}
             >
@@ -113,8 +131,8 @@ export function RegionMapsPanel({ category }: { category: string }) {
         </div>
         {isLoading ? null : rows.length === 0 ? (
           <EmptyState
-            description="先维护编号与 SRM 名称，再匹配交货计划"
-            title="还没有地区对照"
+            description="先维护编号与默认显示名，再匹配交货计划"
+            title="还没有原产地对照"
           />
         ) : (
           <DataTable columns={columns} data={rows} />

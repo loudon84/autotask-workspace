@@ -106,7 +106,6 @@ export function SchedulersListPage() {
         description="维护定时器的名称、开关与 cron。到点通知已登记的入口。"
         title="调度中心"
       />
-      <TenantSchedulerCard />
       <Select
         onValueChange={(value) =>
           setEnabledFilter(value as "all" | "true" | "false")

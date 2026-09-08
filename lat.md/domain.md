@@ -14,7 +14,11 @@ hints, and a hardcoded customer category code used when leasing work.
 Credentials are injected into the worker lease (and typically `ctx.credentials`).
 ACL is ownership / managed-user / task-admin scoped on the Task service.
 Category (`TIANDI` / `BOE`) is picked on the portal row; process menus bind to
-that code. See [[design-decisions#Portal Category Is Hardcoded]].
+that code. Category-specific fields live in JSONB `extra` (BOE CS mailbox is
+`extra.email`); Client renders them from descriptors, not extra columns. Morning
+SRM login unique-by `login_account` from those rows — do not hardcode AA/AD. See
+[[design-decisions#Portal Category Is Hardcoded]],
+[[design-decisions#Portal Extra Is JSONB]], and [[domain#MailInbox]].
 
 ## CategoryDocument
 
@@ -91,18 +95,44 @@ a change-order vs JSON baseline.
 v2.2 names stages from the CS point of view while keeping `BOE_PACK_*` status
 codes stable. Matching is a tenant-level HTTP job (not a per-portal SRM scan);
 leaf portals stay one-per-subcode. Cookie is keyed by SRM username (two logins
-cover nine sites). Qty mismatch is shown through save-draft but hard-blocks
+cover nine sites). Email OTP is a mail-inbox scene plus timer `boe.srm_login`,
+not a CS daily SRM login; see [[domain#MailInbox]]. Qty mismatch is shown through save-draft but hard-blocks
 only CS submit. Client header is a key-field subset, not the full SRM sample.
-Phase 1 skips attachments and AutoTask email OTP. Draft:
+Line table shows 11 columns (PO and item frozen for horizontal scroll).
+Enrich writes 行项目 / 订单数量 / 订单单位 / 剩余开票数 / 净重单位 from SRM.
+CS review is a change-order vs `reviewBaseline`: the page lists diffs, submit
+RPA applies only those diffs. Review also requires every editable header/line
+field and a manual attachment table: 箱单 filename contains `pl` (any case;
+`PL-{invoice}.pdf` is only a convention), 发票=`{invoice}.pdf`,
+提运单 any PDF, 双签 one file per unique PO named `{po}.pdf`. 箱单/发票/提运单
+match SRM default rows (delete disabled) so the Client hides delete for them;
+only 双签 can be added or removed. Submit Binding uses
+`dryRun: true` (fail-closed if missing): Flow uploads attachments and
+saves the draft, then stops — it never clicks 提交. Draft:
 `project-docs/prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`.
 
 Phase 1 code lives in Task [[service/app/domain/boe_packing.py#PROCESS_CODE]], Client
 route `/process-instances/invoice-packing`, and Flows `rpa_flow_srm_boe_pack_*`.
-WMS `data` is a line array (`cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`);
-header volume is the sum of line `cubic`. Region maps Alembic `b2d4f6a81935` is
-written but not migrated; same-login BOE RPA is serialized when leasing. The
-match timer is maintained on 调度中心 (enable + cron in `autotask_settings`);
-`.env` is fallback only and stays off until an operator enables it.
+WMS is `SMC_API_BASE_URL` + `/aiats/wms_sjh_pl_boe` with param `erpno`
+(delivery-plan number) and a flat line array
+(`cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`); header volume is the sum
+of line `cubic` (verified 2026-09-08). Net weight and volume keep at most five
+decimal places with trailing zeros stripped. `doc_no` now returns `[]`; do not use it.
+Region maps are a wide table
+(see [[design-decisions#Region Map Wide Table]]): one row per region code with
+`default_name` plus per-SRM columns (`boe_name`, empty = fall back to default).
+Alembic `b2d4f6a81935` migrated on the test DB
+2026-09-07 (production not yet); same-login BOE RPA is serialized when leasing. When the
+region-map table is missing, `list_maps` answers empty via a SAVEPOINT
+(`db.begin_nested()`) — it must never `db.rollback()` the shared session, or it
+silently discards the caller's pending work (e.g. the just-created match
+instance), which once surfaced as "Instance is not persistent within this
+Session" on the post-commit `db.refresh()`. The match timer is the independent
+timer `boe.pack_match` (see [[domain#SchedulerJob]]), maintained on 调度中心 like
+any other timer; it stays off until an operator enables it.
+List and detail put 发票箱单流水号 first (empty until save-draft). Delivery-plan
+`header_id` is stored as `headerId` so Client can open SDMS `viewDpInfo`; the
+packing form stays the edit surface and does not hold that id.
 
 ## SchedulerJob
 
@@ -111,8 +141,9 @@ target. Task’s TimerScheduler notifies the registry when due.
 
 
 Jobs are hot-reloaded; editing cron does not require a Task process restart.
-Tenant-level jobs that are not per-portal (BOE match delivery plan) live in
-`autotask_settings` via `/settings/schedulers`, not on `scheduler_jobs`. The
+Tenant-level jobs that are not per-portal (BOE match delivery plan
+`boe.pack_match`, BOE SRM morning login `boe.srm_login`) are registered as
+ordinary timers too — one row per job, not per portal.
 
 The 调度中心 only maintains name/enabled/cron. What runs after notify is
 registered by task code, not by Binding or portal. Jobs are hot-reloaded.
@@ -121,6 +152,23 @@ Each due fire is recorded in `timer_runs` (triggered/finished/status/error).
 See [[service/app/models/timer.py#Timer]] and
 [[service/app/services/timer_scheduler.py#TimerScheduler]].
 
+
+## MailInbox
+
+Task owns a generic mail inbox (IMAP first) so later scenes can create sales
+orders from mail; BOE SRM OTP is only scene 1.
+
+The IMAP account is a system mailbox. Login targets come from enabled BOE
+portal rows: unique `login_account`, mailbox from `extra.email` (CS address).
+OTP matching is this-click only: `To` plus IMAP UID watermark plus 5-minute
+TTL; leftover folder mail is never reused. If CAS has no OTP after password,
+login succeeds without reading mail. Timer `boe.srm_login` is registered
+(default 07:00, off until enabled) and currently only checks portal targets;
+CAS OTP RPA is not wired. Secrets stay in Task `.env`. Design:
+`project-docs/prd/boe/AutoTask-BOE 邮件读取.md`. IMAP fetch has not landed;
+[[service/app/domain/boe_srm_otp.py#pick_fresh_otp]] is in place.
+[[rpa-engine/src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]] still
+raises `BOE_OTP_REQUIRED` when the OTP panel is visible.
 
 ## Flow Package
 

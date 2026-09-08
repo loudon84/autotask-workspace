@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 from sqlalchemy import select
@@ -21,6 +21,9 @@ from app.domain.boe_packing import (
     SAVE_DRAFT_TEMPLATE_CODE,
     SUBMIT_TEMPLATE_CODE,
     VOL_UNIT,
+    attachment_rule_errors,
+    normalize_attachments,
+    review_required_errors,
 )
 from sqlalchemy.exc import ProgrammingError
 
@@ -60,9 +63,26 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+def _compact_weight_and_vol(summary: dict[str, Any]) -> None:
+    header = summary.get("header")
+    if isinstance(header, dict) and "totalVol" in header:
+        header["totalVol"] = compact_decimal(header.get("totalVol"))
+    lines = summary.get("lines")
+    if isinstance(lines, list):
+        for line in lines:
+            if isinstance(line, dict) and "netWeight" in line:
+                line["netWeight"] = compact_decimal(line.get("netWeight"))
+    baseline = summary.get("reviewBaseline")
+    if isinstance(baseline, dict):
+        _compact_weight_and_vol(baseline)
+
+
 def _summary(instance: ProcessInstance) -> dict[str, Any]:
     data = loads_json(instance.summary, {})
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    _compact_weight_and_vol(data)
+    return data
 
 
 def _save_summary(instance: ProcessInstance, summary: dict[str, Any]) -> None:
@@ -96,21 +116,50 @@ def _pick_field(item: dict[str, Any], *keys: str) -> str:
     return ""
 
 
+def plan_header_id(row: dict[str, Any]) -> str:
+    """交货计划接口主键，只用于打开 SDMS 查看页，不进可改头表。"""
+    return _pick_field(row, "header_id", "headerId")
+
+
+def compact_decimal(value: Any, *, places: int = 5) -> str:
+    """净重/体积最多 5 位小数，去掉多余尾零。"""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        number = Decimal(text)
+    except (InvalidOperation, ValueError):
+        return text
+    quantum = Decimal("1").scaleb(-places)
+    rendered = format(number.quantize(quantum, rounding=ROUND_HALF_UP), "f")
+    if "." in rendered:
+        rendered = rendered.rstrip("0").rstrip(".")
+    return rendered or "0"
+
+
 def _format_decimal(value: Decimal) -> str:
-    text = format(value, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return text or "0"
+    return compact_decimal(value) or "0"
 
 
 def _wms_line_rows(payload: Any) -> list[dict[str, Any]]:
-    if isinstance(payload, list):
-        return [item for item in payload if isinstance(item, dict)]
     if isinstance(payload, dict):
         nested = payload.get("list")
         if isinstance(nested, list):
             return [item for item in nested if isinstance(item, dict)]
         return [payload]
+    if isinstance(payload, list):
+        # 真实响应是 [{doc_no, total_vol, list: [行...]}]：文档包装里嵌套行，需下钻一层；
+        # 没有嵌套 list 的元素按行本身处理（兼容平铺数组）
+        rows: list[dict[str, Any]] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            nested = item.get("list")
+            if isinstance(nested, list):
+                rows.extend(x for x in nested if isinstance(x, dict))
+            else:
+                rows.append(item)
+        return rows
     return []
 
 
@@ -167,12 +216,17 @@ def _lines_from_wms(payload: Any) -> tuple[str, list[dict[str, Any]]]:
                 "poNum": _pick_field(item, "cuspo", "po_num", "poNum"),
                 "itemNum": _pick_field(item, "cusitem", "item_num", "itemNum"),
                 "deliveryQty": _pick_field(item, "qty", "delivery_qty", "deliveryQty"),
-                "netWeight": _pick_field(
-                    item, "netweight", "net_weight", "net_Weight", "netWeight"
+                "netWeight": compact_decimal(
+                    _pick_field(
+                        item, "netweight", "net_weight", "net_Weight", "netWeight"
+                    )
                 ),
+                "netWeightUnit": "",
                 "regionCode": _pick_field(item, "coo", "region", "regionCode"),
                 "regionSrmName": "",
                 "lineItem": "",
+                "orderQty": "",
+                "orderUnit": "",
                 "remainingQty": "",
                 "itemName": "",
             }
@@ -181,9 +235,17 @@ def _lines_from_wms(payload: Any) -> tuple[str, list[dict[str, Any]]]:
         total_vol = _format_decimal(cubic_sum)
     elif isinstance(payload, dict):
         total_vol = _pick_field(payload, "total_vol", "totalVol")
+    elif isinstance(payload, list):
+        # 文档包装形态：total_vol 在外层元素上（行里没有 cubic 时）
+        total_vol = ""
+        for item in payload:
+            if isinstance(item, dict):
+                total_vol = _pick_field(item, "total_vol", "totalVol")
+                if total_vol:
+                    break
     else:
         total_vol = ""
-    return total_vol, lines
+    return compact_decimal(total_vol), lines
 
 
 async def _portal_by_subcode(
@@ -308,6 +370,8 @@ def to_list_item(instance: ProcessInstance, portal: PortalAccount | None = None)
         "invoice_no": header.get("invoiceNo") or instance.biz_key,
         "factory": header.get("factory") or "",
         "customer_name": (portal.erp_entity_name if portal else ""),
+        "srm_draft_no": str(summary.get("srmDraftNo") or "").strip(),
+        "header_id": str(summary.get("headerId") or "").strip(),
     }
 
 
@@ -342,7 +406,9 @@ async def to_detail(
         "qtyWarning": summary.get("qtyWarning"),
         "orgCodeWarning": summary.get("orgCodeWarning"),
         "srmDraftNo": summary.get("srmDraftNo") or "",
+        "headerId": str(summary.get("headerId") or "").strip(),
         "reviewBaseline": summary.get("reviewBaseline"),
+        "attachments": normalize_attachments(summary.get("attachments") or []),
         "stageHistory": [
             {
                 "id": item.id,
@@ -543,8 +609,14 @@ async def match_delivery_plans(
             missing_portal.append(subcode)
             skipped.append({"docNo": doc_no, "reason": f"no_portal:{subcode}"})
             continue
+        header_id = plan_header_id(row)
         existing = await _existing_instance(db, portal.id, doc_no)
         if existing is not None:
+            if header_id:
+                existing_summary = _summary(existing)
+                if not str(existing_summary.get("headerId") or "").strip():
+                    existing_summary["headerId"] = header_id
+                    _save_summary(existing, existing_summary)
             skipped.append({"docNo": doc_no, "reason": "exists"})
             continue
         org_code = str(row.get("org_code") or "").strip()
@@ -554,6 +626,7 @@ async def match_delivery_plans(
             "lines": [],
             "deliverQty": str(row.get("deliver_qty") or "").strip(),
             "orgCode": org_code,
+            "headerId": header_id,
         }
         if org_code and org_code != EXPECTED_ORG_CODE:
             summary["orgCodeWarning"] = f"交易主体编号 {org_code} 不是 {EXPECTED_ORG_CODE}"
@@ -582,8 +655,7 @@ async def match_delivery_plans(
         await fetch_wms_for_instance(db, instance, actor=actor)
         created.append(instance.id)
 
-    if not created:
-        await db.commit()
+    await db.commit()
     return {
         "created_count": len(created),
         "skipped_count": len(skipped),
@@ -655,7 +727,10 @@ async def cancel_instance(
 
 def _editable_header(payload: dict[str, Any]) -> dict[str, Any]:
     allowed = {"invoiceNo", "factory", "invoiceDate", "etd", "consignArrivalDate", "totalVol"}
-    return {key: str(payload[key]).strip() for key in allowed if key in payload}
+    out = {key: str(payload[key]).strip() for key in allowed if key in payload}
+    if "totalVol" in out:
+        out["totalVol"] = compact_decimal(out["totalVol"])
+    return out
 
 
 def _editable_line(payload: dict[str, Any]) -> dict[str, Any]:
@@ -665,13 +740,20 @@ def _editable_line(payload: dict[str, Any]) -> dict[str, Any]:
         "itemNum",
         "deliveryQty",
         "netWeight",
+        "netWeightUnit",
         "regionCode",
         "regionSrmName",
         "lineItem",
+        "orderQty",
+        "orderUnit",
         "remainingQty",
         "itemName",
+        "factory",
     }
-    return {key: str(payload.get(key) or "").strip() for key in allowed}
+    out = {key: str(payload.get(key) or "").strip() for key in allowed}
+    if "netWeight" in out:
+        out["netWeight"] = compact_decimal(out["netWeight"])
+    return out
 
 
 async def patch_instance(
@@ -699,6 +781,18 @@ async def patch_instance(
             _editable_line(item) for item in body["lines"] if isinstance(item, dict)
         ]
         instance.line_total = len(summary["lines"])
+    if "attachments" in body:
+        summary["attachments"] = normalize_attachments(
+            body.get("attachments") if isinstance(body.get("attachments"), list) else []
+        )
+    required_errors = review_required_errors(
+        summary.get("header") or {}, summary.get("lines") or []
+    )
+    if required_errors:
+        raise BadRequestError(
+            message="；".join(required_errors[:6]),
+            message_key="errors.autotask.boe_pack.review_required",
+        )
     _apply_qty_warning(summary, summary.get("deliverQty"), summary.get("lines") or [])
     _save_summary(instance, summary)
     await db.commit()
@@ -723,6 +817,24 @@ async def submit_instance(
         raise BadRequestError(
             message=summary.get("qtyWarning") or "数量不一致，不能提交",
             message_key="errors.autotask.boe_pack.qty_mismatch",
+        )
+    required_errors = review_required_errors(
+        summary.get("header") or {}, summary.get("lines") or []
+    )
+    if required_errors:
+        raise BadRequestError(
+            message="；".join(required_errors[:6]),
+            message_key="errors.autotask.boe_pack.review_required",
+        )
+    attach_errors = attachment_rule_errors(
+        (summary.get("header") or {}).get("invoiceNo") or "",
+        summary.get("lines") or [],
+        summary.get("attachments") or [],
+    )
+    if attach_errors:
+        raise BadRequestError(
+            message="；".join(attach_errors[:6]),
+            message_key="errors.autotask.boe_pack.attachment_invalid",
         )
     actor = user.user_id
     _change_stage(
@@ -761,7 +873,15 @@ def _merge_enrich_output(summary: dict[str, Any], output: dict[str, Any]) -> Non
             continue
         key = (str(item.get("poNum") or ""), str(item.get("itemNum") or ""))
         base = dict(by_key.get(key) or {})
-        for field in ("lineItem", "remainingQty", "itemName", "factory"):
+        for field in (
+            "lineItem",
+            "remainingQty",
+            "itemName",
+            "factory",
+            "orderQty",
+            "orderUnit",
+            "netWeightUnit",
+        ):
             if item.get(field):
                 base[field] = str(item.get(field) or "").strip()
         if not base.get("poNum"):
@@ -855,7 +975,17 @@ async def dispatch_finished(db: AsyncSession, task: AutomationTask, run: RpaRun)
         return True
 
     if task.task_type == SUBMIT_TEMPLATE_CODE:
-        if succeeded:
+        dry_run = bool(output.get("dryRun") or output.get("committed") is False)
+        if succeeded and dry_run:
+            _clear_instance_error(instance)
+            _change_stage(
+                db,
+                instance,
+                ProcessStage.BOE_PACK_REVIEW,
+                actor=actor,
+                note="演练 dryRun：已保存 SRM 草稿（含附件），未点提交",
+            )
+        elif succeeded:
             instance.status = ProcessInstanceStatus.COMPLETED.value
             _clear_instance_error(instance)
             _change_stage(

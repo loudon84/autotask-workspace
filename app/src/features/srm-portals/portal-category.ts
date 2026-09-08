@@ -1,5 +1,6 @@
 import { FileSpreadsheet, Package, ShoppingCart, Workflow } from "lucide-react";
 import type { NavItem } from "@/components/layout/types";
+import type { PortalExtraField } from "@/types/category-document";
 
 export const PORTAL_CATEGORY = {
   TIANDI: "TIANDI",
@@ -42,6 +43,31 @@ const PROCESS_MENU_BY_CATEGORY: Record<PortalCategory, ProcessMenuItem[]> = {
     },
   ],
 };
+
+export const PORTAL_EXTRA_FIELDS: Record<PortalCategory, PortalExtraField[]> = {
+  TIANDI: [],
+  BOE: [
+    {
+      key: "email",
+      label: "邮箱",
+      fieldType: "email",
+      required: true,
+      placeholder: "该门户客服收验证码的邮箱",
+      helpText: "验证码邮件的收件人，不是 IMAP 系统邮箱",
+    },
+  ],
+};
+
+export function extraFieldsForCategory(
+  category: PortalCategory,
+  fromApi?: Array<{ code: string; extraFields?: PortalExtraField[] }>
+): PortalExtraField[] {
+  const apiFields = fromApi?.find((item) => item.code === category)?.extraFields;
+  if (apiFields) {
+    return apiFields;
+  }
+  return PORTAL_EXTRA_FIELDS[category] ?? [];
+}
 
 export function portalCategoryLabel(code: string | undefined): string {
   const match = PORTAL_CATEGORY_OPTIONS.find((item) => item.value === code);

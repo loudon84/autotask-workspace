@@ -58,9 +58,6 @@ UI is feature-first under `src/features/` with thin TanStack file routes.
 
 
 Primary domains: tasks, processes, statements, BOE invoice packing, workflows/bindings, SRM portals,
-runs/artifacts, schedulers (Binding jobs plus tenant BOE match timer), web-workspace, and auth/endpoint configuration.
-
-Primary domains: tasks, processes, statements, workflows/bindings, SRM portals,
 runs/artifacts, schedulers (independent timers: name/cron/enabled; see
 [[app/src/features/schedulers/schedulers-list.tsx#SchedulersListPage]]),
 web-workspace, and auth/endpoint configuration.

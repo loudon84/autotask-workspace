@@ -26,27 +26,6 @@ vi.mock("@/services/autotask-api", () => ({
   },
 }));
 
-const { mockMutateSchedulerSettings } = vi.hoisted(() => ({
-  mockMutateSchedulerSettings: vi.fn(),
-}));
-
-vi.mock("@/features/settings/api/use-scheduler-settings", () => ({
-  useSchedulerSettings: () => ({
-    data: {
-      signPoll: { enabled: false, cron: "*/30 * * * *" },
-      scan: { enabled: false, cron: "0 8 * * *" },
-      boePack: { enabled: false, cron: "0 7 * * *" },
-      nextRunAt: { signPoll: null, scan: null, boePack: null },
-    },
-    isLoading: false,
-    isError: false,
-  }),
-  useUpdateSchedulerSettings: () => ({
-    mutate: mockMutateSchedulerSettings,
-    isPending: false,
-  }),
-}));
-
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
@@ -130,23 +109,6 @@ describe("调度中心列表", () => {
   });
 
 
-  it("显示京东方匹配交货计划租户级定时器", async () => {
-    renderWithClient(<SchedulersListPage />);
-    expect(await screen.findByText("京东方匹配交货计划")).toBeInTheDocument();
-    expect(screen.getByLabelText("启用")).toBeInTheDocument();
-    expect(screen.getByLabelText("cron")).toBeInTheDocument();
-  });
-
-  it("保存京东方定时器只提交 boePack", async () => {
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderWithClient(<SchedulersListPage />);
-    await screen.findByText("京东方匹配交货计划");
-    await user.click(screen.getByLabelText("启用"));
-    await user.click(screen.getByRole("button", { name: "保存" }));
-    expect(mockMutateSchedulerSettings).toHaveBeenCalledWith(
-      { boePack: { enabled: true, cron: "0 7 * * *" } },
-      expect.any(Object)
-    );
   it("没有门户列", async () => {
     renderWithClient(<SchedulersListPage />);
     await screen.findByText("打印当前时间");

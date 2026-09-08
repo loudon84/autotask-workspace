@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-04
+最后更新：2026-09-08
 
 
 ## 1. 用途
@@ -40,7 +40,7 @@
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
    
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行（当前 head）。正式库未迁。**
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行。BOE 地区表 `b2d4f6a81935` 测库已有。门户 JSONB `extra` 迁移 `e7c2b9d04a18` 已于 2026-09-08 经用户授权在测库执行（当前 head）。正式库未迁 extra。**
 
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
@@ -249,7 +249,104 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-09-08
+
+- **调度中心登记京东方-SRM晨间登录**：不是 Client 重启，是 Task 启动时按 `timer_catalog.REGISTRATIONS` 插入缺失行。`boe.srm_login` 之前没进目录所以列表没有。现已登记（默认关，`0 7 * * *`）。**需重启唯一 Task 4520**。立即执行目前只核对门户去重账号，不打开 SRM（打码 RPA 未接）。
+
+- **门户 extra 迁库 + 验证码只认本次点击（用户授权测库）**：`alembic upgrade e7c2b9d04a18`，`portal_accounts.extra` JSONB 已建（测库 `192.168.102.247` / `nodeskclaw_task`）。BOE 邮箱走 `extra.email`。验证码规则已写成 `pick_fresh_otp`：按本账号 `To` 隔离、点获取验证码前拍 IMAP UID 水位、超过 5 分钟不用、历史信不用。当天已登录过则账密后无验证码页，不读邮件。IMAP 拉取和 CAS 填码尚未写。**未**迁正式库。**需重启 4520** 后门户表单才吃到 extra。
+
+- **门户专属字段走 JSONB extra（不要加 email 列）**：通用列仍是真实列；BOE 客服邮箱是 `extra.email`，描述符 + 动态表单，天地伟业没有该字段。晨间登录仍按 `loginAccount` 去重读 `extra.email`，不要写死 AA/AD。
+
+- **邮件读取设计更正（门户邮箱，不写死 AA/AD）**：`.env` 对照表删掉。京东方多门户共用少量 SRM 账号，登录前按门户 `loginAccount` 去重；客服邮箱挂在门户分类专属 `extra` 上。晨间登录 RPA 仍待设计确认后实现。
+
+- **邮件读取设计文档（代码未写）**：发票箱单主路径已通，按草稿需求单开 `project-docs/prd/boe/AutoTask-BOE 邮件读取.md`。读信归 Task（IMAP + 场景），验证码是场景 1 不是唯一用途；独立定时器 `boe.srm_login` 默认 07:00，失败重试不超过 2 次。SOP §7 已改指向该文。探测脚本 `probe_ali_mail.py` 改为读 `.env`，仓库内授权码已删。
+
+- **保存草稿 create 不回包（1.0.23 已发布并升级绑定）**：zip 里页面还在新建表单，但 SRM 已有单。Trace：`POST /invoicepackinglist/create` 发出后 status=-1（约 8s 内无响应），RPA 按「保存会关窗回列表」等 `.invoice-list` 失败。1.0.23 等保存接口/表单流水号，仍停在表单就点「返回」再搜列表。**当前这张单可直接重试保存草稿**（列表已有草稿会只回写流水号、不再新建）。Flow 包无需重启引擎。
+
+- **发票箱单流水号置顶 + 交货计划跳 SDMS**：列表/详情第一项都是流水号（没有就空着）。交货计划 `header_id` 存 `summary.headerId`，点单号打开 SDMS 查看页 `viewDpInfo`（不打开编辑）；核验可改字段仍在「基本信息」。已有实例再点「立即匹配交货计划」会补 `headerId`。**需重启 4520**；客户端热更新。
+
+- **提交点「上传文件」才喂附件（1.0.22 已发布并升级绑定）**：1.0.21 给行内隐藏 `input[type=file]` 直接 `set_input_files`，影刀实际是点右侧冻结列 `a.elBtnA`「上传文件」。1.0.22 按此点开 FileChooser 再喂文件，行定位改用 `.el-table__fixed-body-wrapper`。演示门户 Binding 已升 1.0.22。Flow 包无需重启引擎。
+
+- **净重/体积最多 5 位小数**：WMS 常带回 `0.45000`、`3.52100000000000000`。读 WMS、回读实例、核验页保存都收成最多 5 位并去掉多余尾零（`0.45` / `3.521`）。**需重启 4520**；客户端热更新。
+
+- **附件按固定前三行再新增双签（1.0.21 已发布并升级绑定）**：SRM 打开草稿后前三行已是箱单/发票/提运单，类型不能改。提交 RPA 按序直接上传，不再按类型扫行或点新增；保存草稿已删空双签行，有几份双签就点几次新增。Client 核验页同样锁死前三行顺序。演示门户 Binding 已升 1.0.21。Flow 包无需重启引擎；客户端热更新。
+
+- **提交打开草稿改点流水号按钮（1.0.20 已发布并升级绑定）**：1.0.19 对列表每一行调 `inner_text()`，隐藏 `tr`（nth(9)）空等 30s。影刀是展开 → 填「发票箱单流水号」→ 搜索 → 等该行文本按钮再点。1.0.20 按此改，不再扫整张表。演示门户 Binding 已升 1.0.20。Flow 包无需重启引擎。
+
+- **提交先搜再找行（1.0.19 已发布并升级绑定）**：影刀是「搜索 → 有数据 → 再找元素」，不能在空表/暂无数据上扫冻结列。1.0.19：列表搜流水号、采购凭证搜 PO+料号、打开草稿后的项目信息，都等到行里真出现关键字才定位本次开票数/净重。演示门户 Binding 已升 1.0.19。Flow 包无需重启引擎。
+
+- **提交找不到行（1.0.18 已发布并升级绑定）**：`BOE_LINE_ROW_MISSING 9100069442|47-7001373` 是因为 PO/料号在项目信息左侧冻结列，主表 inner_text 没有这两列。1.0.18 拼冻结列+主表定位，只改本次开票数/净重；净重尾零不再当变更。演示门户 Binding 已升 1.0.18。Flow 包无需重启引擎。
+
+- **箱单文件名只校验含 pl**：`PL-发票号.pdf` 改为建议写法；硬限制是文件名包含 `pl`（大小写均可）。发票/双签规则不变。**需重启 4520**；客户端热更新。
+
+- **项目信息 11 列 + 核验变更单写死（1.0.17 已发布并升级绑定）**：行表现在是客户PO、客户料号、本次开票数、净重、净重单位、地区编号、SRM 地区、行项目、订单数量、订单单位、剩余开票数；前两列冻结可横滑。补全 RPA 从 SRM 回填行多读订单数量/单位/净重单位。客服核验=变更单已写入 SOP §5.3.1：基线 diff 给客服看，提交只改差异。已有实例要重跑补全才会有新列。演示门户 Binding 已升 1.0.17。**需重启 4520**；客户端热更新。
+
+- **WMS 换正式路径 + dryRun 提交改为只保存（1.0.16 已发布并升级绑定）**：WMS 从 `/test_demo/boe` 切到 `/aiats/wms_sjh_pl_boe`，参数仍是 `erpno`，返回平铺行 `cuspo/cusitem/qty/netweight/cubic/coo`（`doc_no` 现已空数组）。提交 Binding `dryRun: true` 时 RPA 只把核验改动和附件写到 SRM 草稿并点保存，不再点「提交」；实例停在客服核验，方便继续改。演示门户 Binding 已升 1.0.16。**需重启 4520** 后新 WMS 路径生效；客户端需热更新。
+
+### 2026-09-07
+
+- **核验页去掉箱单/发票/提运单删除**：与 SRM 一致，这三行删除不可点，Client 不再显示删除（类型也锁死）；只有双签可新增/删除。客户端需热更新。
+
+- **提交 dryRun 仍真传附件（1.0.15 已发布并升级绑定）**：用户明确附件可以真传到 SRM，只有「提交单据」不能真点。1.0.15：打开草稿 → 按核验页本地 PDF 写入附件表（影刀「上传文件」/隐藏 file input）→ 点保存落草稿 → dryRun 再 trial-click「提交」、写保护在保存之后才装。实例仍停在客服核验。Client 点提交前会先 PATCH 附件路径。演示门户 Binding 已升 1.0.15，提交 Binding 仍 `dryRun: true`。Flow 包变更无需重启引擎；阶段备注文案变更需重启 4520；客户端需热更新。
+
+- **客服核验必填 + 附件规则 + 提交 dryRun（1.0.14 已发布并升级绑定）**：核验页可填字段全部红星必填；附件改在核验页手工上传并按规则校验（箱单 `PL-发票号.pdf`、发票 `发票号.pdf`、提运单不限、双签=每个 PO 一份且文件名为 PO）。提交对齐天地伟业 Binding `dryRun: true`：缺省也当演练，Flow 只 trial-click「提交」、写保护拦写请求，成功后实例仍停在客服核验、不标已完成。只有 Binding 显式 `dryRun: false` 才可能真点。演示门户 Binding 已升 1.0.14 且提交 Binding 写入 `dryRun: true`。**需重启 4520** 后新校验生效；Flow 包变更无需重启引擎。客户端需热更新或重开。
+
+- **点开列表草稿要点流水号按钮（1.0.13 已发布并升级绑定）**：1.0.12 已能按供应商发票号搜到草稿，随后点首行第一个 `td` 进详情，Playwright 空等 30s（定位到 `<td rowspan` 勾选/冻结列，点不到）。影刀点的是流水号文本按钮 `I…`。1.0.13：点可见的 `button.el-button--text`；若 Client 还没有 `srmDraftNo` 且列表已有该发票草稿，直接回写流水号，不再打开重填。三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.13。Flow 包变更无需重启引擎。
+
+- **列表查询按影刀补「展开 + 供应商发票号 + 状态草稿」（1.0.12 已发布并升级绑定）**：1.0.11 保存后回列表用 `placeholder*='发票'`，先命中「发票箱单流水号」框，填供应商发票号搜不到行，报「列表未找到供应商发票号 101SJH202609195 的草稿」。用户补录影刀步骤：展开搜索条件 → 精确填 `placeholder=供应商发票号` → 状态下拉选草稿 → 点「搜 索」→ 读首行流水号文本按钮 `I…`。1.0.12 按此改；保存后列表刷新会重试查询；重跑若打开已保存草稿且同 PO 再挂行报已存在则跳过挂行。三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.12。Flow 包变更无需重启引擎。
+
+- **保存关窗后从列表按发票号取流水号（1.0.11 已发布并升级绑定）**：用户确认保存已成功，失败只因保存后关闭当前窗口，表单上的「发票箱单流水号」读不到；列表会多出一条草稿。按用户拍板：回列表、用供应商发票号搜索、读第一条且发票号必须一致，流水号形如 `I260907250`。1.0.11 三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.11。
+
+- **删双签附件要点右侧冻结列（1.0.10 已发布并升级绑定）**：地区已通，保存卡在删第四行「双签PO/协议」。主表行里也有删除按钮但 `visible=false`（被 `.el-table__fixed-right` 盖住），Playwright 空等 30s；探针：箱单/发票/提运单的删除是 `disabled`，只有双签能点。修复=按主表文件类型定位行号，点冻结列同一行的 `button:has-text('删除'):not(.is-disabled)`。影刀没有这一步（一期不传附件、为了能保存才删空行），不需要补录。1.0.10 三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.10。
+
+- **多行按「刚挂上的那一行」填（1.0.9 已发布并升级绑定）**：用户问多行有没有考虑。循环挂每一行原本就有，但开票数/净重用全表 `.last`、地区用全表最后一个可见 input——多行会撞 el-table 冻结列克隆，第二行也可能填到上一行。改成挂行后只操作项目信息主表最后一行（`item_data_row`），地区点该行的 el-select，选完 Escape 再挂下一行；双签附件按类型删最多 20 行（多 PO 可能多种子行）。1.0.9 三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.9。
+
+- **地区下拉要「先输入再点选项」（1.0.8 已发布并升级绑定）**：用户明确影刀也不好操作——先输入「中国台湾」，再选择内容才有效。探针：原产国/地区列在项目表横向滚动区外（input rect.x≈1999，表宽 3521）；控件是 filterable el-select，input 默认 readonly，要点 `.el-select` 外壳才能打开（248 项）；键盘输入「中国台湾」后 input 有字但仍须点精确选项，值才留下。1.0.7 点 `.last`（冻结列克隆、不可见）等于没选上。修复=`_pick_region`：水平滚进视口 → 点外壳 → 输入 `regionSrmName` → 点 exact 选项 → 读回校验。1.0.8 三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.8。
+
+- **save_draft 1.0.7：补地区下拉 + 删除默认「双签PO/协议」附件行（已发布并升级绑定）**：用户验证保存草稿失败两点——①地区操作没有数据（save_draft 只挂了采购凭证行，没填 *本次开票数/*净重/*原产国/地区；Client 实例已有 `regionSrmName=中国台湾`）；②附件表新建页默认 4 行（箱单/发票/提运单/双签PO/协议），第四行双签空行会挡保存，一期不传附件所以必须删掉。影刀：地区是 `placeholder=国/地区` 的 el-select，选项点 `中国台湾`。修复：挂行后填开票数/净重（input-number 键盘填）并点地区下拉选 `regionSrmName`；保存前按文件类型删所有「双签PO/协议」行；流水号改读 input value（此前 inner_text 读不到 I260907250）。另：若 PO 已有 SRM 草稿会弹「不允许创建新的流水」，现收成 `BOE_PO_DRAFT_EXISTS`。1.0.7 三 Flow 已 PUBLISHED，演示门户 Binding 已升 1.0.7。Flow 包变更 Worker 下次领取即用新包。
+
+- **演示期「禁止真实提交」三层防护落地（1.0.6 已发布并升级绑定）**：用户明确演示开发阶段最多保存草稿、不能真实提交 SRM。核查+加固：①save_draft 全程只点「保存」（代码确认无 submit 路径），`save_button` 选择器收严为 `:not(:has-text('提交'))` 并兼容「保 存」空格文本；enrich 全程不点文档保存/提交（仅采购凭证弹窗内保存回填行）。②submit Flow 入口加硬安全闸：调用方未显式传 `allowRealSubmit=true` 直接 `BOE_SUBMIT_BLOCKED_DEMO` 失败——即使误点按钮/误配 Binding 也不可能真实提交，正式上线需服务端显式放行。③Client 详情页「提交 SRM 单据」按钮加确认警告（说明演示期禁止真实提交、任务会被安全闸拦截）。Flow 单测 + client vitest 103 全过；1.0.6 三 Flow 已 PUBLISHED（enrich/save_draft/submit），演示门户 Binding 已升 1.0.6。Flow 包变更无需重启引擎，Worker 下次领取任务自动用新包。
+
+- **save_draft 卡「总体积」根因：Playwright 被静态 aria-disabled 误导，字段实际可填（1.0.5 已发布并升级绑定）**：14:2x 试跑 enrich 已 SUCCESS（引擎内全链路首次跑通），save_draft 随后在新建页填头表时 `总体积` fill 30s 超时。trace 显示前置全对（登录/导航/列表搜索/新建/AI否/工厂弹窗/发票号+三个日期全填上），唯独总体积不动。第一版误判为「自动计算字段不可填」直接跳过，用户拍板"肯定是可以输入"后探针复测：总体积是 el-input-number，带**静态** `aria-disabled="true"` 属性，Playwright fill 的 actionability 检查把它当禁用拒填；但 input 本身 `disabled=false`，**force 点击 + Ctrl+A + 键盘输入可正常填入且 Vue 接受不回弹**（与用户手动一致），JS 原生 setter 赋值也可行。修复：①save_draft/submit 总体积改走 `_fill_input_number`（force 点击+键盘输入为主，JS 赋值兜底）；②`prepare_invoice_create` 选工厂后读回工厂输入框值，为空则重开弹窗再选一次，仍空报 `BOE_FACTORY_NOT_SET`；③三 Flow selectors 补 `factory_input`。Registry 版本不可覆盖（409 FLOW_VERSION_EXISTS），1.0.4 作废直接升 1.0.5。引擎 9 测 + Flow 单测全过；1.0.5 已 PUBLISHED（enrich `fab49d02-…`、save_draft `2ccd7876-…`、submit `123db15e-…`），演示门户 3 条 Binding 已升 1.0.5。**引擎代码改动（boe_srm.py 工厂读回校验），需重启 4610 生效（用户自己重启）。**
+
+- **enrich 引擎内崩溃根因：frozen RunContext 禁止回写 ctx.page（已修）**：14:0x 试跑仍失败，trace 时间线显示应用卡点击→新页签→wait_for_load_state 全部成功，随后 2.4ms 内直接进失败截图——异常是纯 Python 层的：`RunContext` 是 `@dataclass(frozen=True, slots=True)`，`open_invoice_packing` 里 `ctx.page = page` 抛 `FrozenInstanceError` → FLOW_UNHANDLED_ERROR；失败截图又取自初始页（门户首页），误导成「没进单据页」。本地重放之前没抓到是因为 harness 用了可变的 SimpleNamespace。修复：①`open_invoice_packing` 删掉 `ctx.page = page`（调用方本就用返回值）；②`ArtifactRecorder.screenshot` 改取浏览器 context 里最近打开的未关闭页面（Flow 切页签后失败截图不再拍错页）。重放 harness 改用 frozen dataclass 模拟引擎 ctx，全链路 SUCCESS（行项目 00010/剩余 20700/工厂 1200）。引擎 274 测过（仅 1 个 Linux 部署冒烟测在 Windows 上固有失败，与本次无关）。**引擎代码改动，需重启 4610 生效；Flow 包不变（仍 1.0.3）。**
+
+- **enrich 全链路本地重放成功，1.0.3 已发布并升级绑定**：13:50 试跑失败（FLOW_UNHANDLED_ERROR）后，用「真实会话 + 真实输入 + 真实选择器」本地重放 flow.run() 逐个抓真异常：①**侧栏菜单竞态**——bsrm 侧栏挂载晚于内容区，默认展开「交货计划管理」，菜单初始化完成时重渲染会把刚点开的「送货管理」子菜单收回去（trace 里 发票箱单 li 先 not stable 再 not visible；failure.png 里菜单回到默认态）；修复=`open_invoice_packing` 落地后等 1.5s，再按「发票箱单可见吗」决定点不点送货管理，最多 4 轮，仍不可见报 `BOE_NAV_MENU_FAILED`。②**回填行被 el-table 冻结列拆成两个 tbody**——序号/PO/行项目/包装物/工厂/物料编码在 `.el-table__fixed` 克隆表，物料描述/数量/剩余开票数在主表，旧解析只读主表所以全空；修复=两段 td 非空文本拼接后按 PO 锚点解析（`parse_item_cells`，`parse_item_row` 保留兼容）。重放结果全对：行项目 00010 / 剩余开票数 20700 / 物料描述 TCON_MST7554TP1_88P / 工厂 1200。引擎 9 测（新增菜单重置重试、菜单不开报错两例）+ enrich 6 测（新增冻结表拼接真实数据例）全过。1.0.3 三 Flow 已 PUBLISHED（enrich `0b7b383b-…`、save_draft `c74b29a9-…`、submit `0bf0805b-…`），演示门户 Binding 已升 1.0.3。**需重启 4610 生效（boe_srm.py 是引擎侧代码）。** 另外确认：应用卡开新页签本身没问题（trace 证实 2.4s 点击后新页签正常打开），用户看到的「点了没开页」实际是后续菜单竞态导致流程崩在 bsrm 首页。
+
+- **探针实测 DOM 定位 enrich 真正卡点，1.0.2 已发布并升级绑定**：用户质疑"根本不知道 DOM 元素"后，改用探针脚本（`rpa-engine/scripts/_tmp_probe_boe_*.py`，带会话 storage_state 起浏览器逐级验证）拿到全链路 ground truth：①首页「供应商登录」同页 SSO → `#/dashboard/index?ticket=…`（ticket 在 hash 里，域名仍是 supply.boe.com），登录成功标志=`.ant-menu` 首页菜单出现；②「交货计划管理」应用卡**开新标签页**落 `bsrm.boe.com/other/#/DeliveryPlan`；③新建页默认「启用AI识别=是」→ **全部表单项锁定、项目信息「新增」disabled**，点「否」立即解锁（这正是影刀第一步点 AI识别-否 的原因）；④未选工厂点「新增」只 toast「请先填写基本信息中的工厂字段」——工厂必须经字段后缀 `button.content-search` 唤起「获取工厂」弹窗（工厂代码搜索→选行→确认）。修复：`boe_srm.py` 新增 `prepare_invoice_create`（关 AI 识别 + 工厂弹窗选择，enrich/save_draft 共用）；enrich 在点新增前调用（工厂取 `summary.header.factory`，来自交货计划匹配）；save_draft 新建路径同样改走该函数（原来直接 fill 工厂输入框不会触发工厂名称带出）；save_draft 的 `ai_recognize_no` 选择器收严到启用AI识别表单域内（原宽松兜底可能误点「是否一次性供应商」的否）。引擎 7 测 + 三 Flow 7 测全过；1.0.2 三 Flow 已 PUBLISHED（enrich `f8a8b5f0-…`、save_draft `2bf26e77-…`、submit `730e06f0-…`），演示门户 3 条 Binding 已升 1.0.2。**需重启 4610 生效（引擎代码变了）。** 注意：PowerShell `Set-Content -Encoding utf8` 会写 BOM 导致 Registry 拒收（MANIFEST_INVALID），已去 BOM。
+
+- **登录成功判定改为「首页/导航元素出现」（用户拍板）**：12:13 试跑报 `BOE_LOGIN_PAGE_NOT_FOUND`——点「供应商登录」是**同页跳转**，SSO 免登后回首页/导航页（URL 不一定含 bsrm，可能 supply.boe.com 带 ticket），代码只认 bsrm 域名误判未登录。用户明确：等首页或导航页元素出现即登录成功、无需填表。修复：`_login_state` 四态判定（bsrm/dashboard URL 或 `login_success` 元素=已登录；`#username`=CAS 表单；「供应商登录」入口=未登录），点入口后轮询最多 20s 等任一终态；表单提交后同样等首页/导航元素，否则报 `BOE_LOGIN_FAILED`。引擎侧测试重写 7 用例（含同页 SSO 免填、首页已登录直接返回），全过。**需重启 4610 生效。**
+
+- **SSO 免登与 ticket 落地两个登录 bug 已修**：12:01 试跑 enrich 又失败，trace 暴露两个问题——①浏览器已有 BOE 会话时，点「供应商登录」后 CAS SSO 免登直接跳 bsrm，登录表单根本不出现，代码死等 `#username` 30s 超时；②`open_invoice_packing` 的 ticket 守卫把「当前 URL 含 ticket」也拦了（`BOE_TICKET_URL_FORBIDDEN`），而 SSO 登录成功落地 `bsrm.boe.com?ticket=ST-xxx` 恰恰是正常路径。修复：登录每步后检查是否已到 bsrm（SSO 直达则直接返回），表单不存在且未跳转才报 `BOE_LOGIN_PAGE_NOT_FOUND`；ticket 守卫删除（只约束不主动 goto ticket URL，落地不管）。`tests/test_boe_srm.py` 重写 5 用例（CAS 表单+隐私勾选、SSO 跳转免填、表单缺失报错、ticket 落地放行、OTP），全过。**需重启 4610 生效（用户自己重启，用 restart_engine_4610.ps1）。**
+
+- **发票箱单详情补「卡在哪」三件套（对齐对账单详情）**：用户反馈进来不知道任务卡在哪。服务端 `to_detail` 本就返回 `stageHistory`/`subTasks`/`lastError*`，客户端没渲染。新增：`boe-packing-model.ts` 的 `BOE_PACK_SUBTASK_NODES`（enrich/save_draft/submit 三节点）与 `resolveBoePackBlocker`（优先实例 lastError，其次最新 FAILED/WAITING_HUMAN 子任务，标题直接写「卡在「阶段名」」）；详情页加阻塞横幅（标题+错误码+指引，同 StatementBlocker 样式）、底部加「子任务与执行记录」（复用 `ProcessSubTaskTree`，可跳任务详情）和「阶段历史」两张卡；列表页阶段列对有错误的行加红字截断提示。`BoePackDetail.subTasks` 类型补 `lineNumber`。vitest 103 过、tsc src 无错误。
+
+- **发票箱单页面对齐天地伟业风格（紧凑化）**：用户反馈"太占地方"。列表页 `space-y-6→4`、按钮改 `size="sm"` 并加「刷新」（同对账单列表）；详情页 `space-y-6→4`、PageHeader 加「返回列表」、阶段进度条收进「流程进度」卡片（标题 `text-base`，同 StatementSopProgress 卡片）、基本信息 2 列 Label+Input 堆叠改 3 列 `gap-3 text-sm`（只读字段 inline「标签：值」，可编辑字段 text-xs 标签 + h-8 输入框）、项目信息表加行数标题/横向滚动/whitespace-nowrap/输入框 h-8 w-24。vitest 103 过、tsc src 无错误；dev server 热更新即可见。
+
+- **京东方 RPA 登录/导航步骤按影刀重修（1.0.1 已发布并升级绑定）**：ENRICH 超时根因——1.0.0 登录直接在门户 SPA 首页填账号密码（首页没有登录框，30s 填充超时），且 `otp_dialog` 选择器混用 CSS+text 引擎非法。按 `影刀-京东方-selectorsV2.xml` 重修 `boe_srm.py`：登录=首页点「供应商登录」(`div.buttonSign`)→CAS 填 `#username`/`#password`→勾 `#checkPrivacyPolicy`→点 `input[type=submit][name=submit]`→等回首页（`.ant-menu` 首页菜单），验证码页仍报 `BOE_OTP_REQUIRED`；导航=首页点「交货计划管理」应用卡（`div.quickText`）进 bsrm（可能开新标签页，`open_invoice_packing` 现返回活动页并更新 `ctx.page`）→`div.el-submenu__title` 送货管理→`li.el-menu-item` 发票箱单。采购凭证弹窗选择器全部收敛到 `.el-dialog[aria-label='采购凭证查询']` 作用域；enrich 改为从项目信息表**回填行**解析行项目/工厂/物料描述/剩余开票数（`parse_item_row` 按 PO 单元格定位列偏移，兼容前置复选框列），列表搜索与弹窗搜索按钮拆成 `list_search_button`/`popup_search_button` 两个键。三个 Flow 1.0.1 已 PUBLISHED（enrich `3e4a35b0-…`、save_draft `61a2c61f-…`、submit `034dd59e-…`），`bind_boe_pack_flows.py` 加「版本不同则升级已有 Binding」逻辑，演示门户 3 条 Binding 已升 1.0.1。**重要发现：此前 4610 跑的是系统 Python + 旧工作区 editable 安装（`D:\auto_task_work_space\...\nodeskclaw-rpa-engine`），不是本工作区代码；已用 `scripts/restart_engine_4610.ps1`（.venv）重启，health ok。** Flow 单测 4 过。save_draft/submit 的头表字段选择器（工厂弹窗、日期控件等）仍待下一轮按影刀对齐。
+
+- **京东方三个 Flow 已发布并绑演示门户**：`rpa_flow_srm_boe_pack_enrich/save_draft/submit` 1.0.0 全部 PUBLISHED 到 Registry（enrich `cc436919-…`、save_draft `427936bb-…`、submit `e32d99ff-…`，`_publish_1.0.0.json` 已落各 Flow 目录，发布脚本 `rpa-engine/scripts/_publish_boe_pack_flows.py`）。真实租户（`2be7c618-…`）补上 3 个流程模板（seed JSON 的 BOE 模板在 seed-tenant-001 下，真实租户一直没有）；演示门户（C000142-01）3 条 Binding 已建 ENABLED。新脚本 `service/scripts/boe/bind_boe_pack_flows.py`（预览/--yes/--all-portals，幂等），用法见 `scripts/boe/README.md`。**另一个京东方门户（C016173-01）未绑，要绑跑 `--yes --all-portals`。** 现在匹配建单后 ENRICH 会真实派 RPA 任务，Worker 在线即可跑。
+
+- **箱单进度条补「匹配交货计划」首节点**：Client `BOE_PACK_MAIN_STAGES` 之前从「读 WMS」起显示，缺第一个阶段节点；已把 `BOE_PACK_SCAN_PLAN` 加进主阶段数组（服务端 STAGE_DEFINITIONS 本就有）。vitest 103 过、tsc src 无错误。
+
+- **原产地入口按需求文档落位（管理中心→基础数据子菜单）**：PRD 要求"管理中心下加一个基础数据，有一个原产地列表"，此前误挂在门户分类→京东方文档页。最终结构：侧栏管理中心下「基础数据」为可展开子菜单（Database 图标），内含「原产地」菜单项直达维护页 `/base-data/region-maps`（原地区对照面板，卡片标题「地区编号对照」）；未来新基础数据类型在该子菜单加项即可，无中间列表页。分类文档页不再挂该面板。routeTree 已由 dev server 自动重生成，tsc src 无错误、vitest 103 过。**客户端需重启或等热更新后可见新菜单。**
+
+- **原产地保存 500 已修复**：`upsert_map` 括号优先级 bug——`await db.execute(...).scalar_one_or_none()` 的 `.scalar_one_or_none()` 作用在协程上（`AttributeError: 'coroutine' object has no attribute 'scalar_one_or_none'`）。已改为先 await 再取 scalar；补两个走通查询路径的回归测试（新建/更新各一，此前测试只覆盖校验分支所以没抓到）。pytest 7 过，4520 已带修复重启。
+
+- **地区对照表改宽表 + 默认名兜底（按用户拍板）**：`region_code_maps` 从长表（每分类一行）改为宽表——`(tenant_id, region_code)` 一行，`default_name` 必填 + `boe_name` 可空；京东方名留空则回退默认名，只有显示不同的地区才单独维护，维护量大减。新 SRM 需要原产地时才随该 SRM 接入开发加列（如 `tiandy_name`），宽表只是预留口子；无专列的分类一律读默认名。行初始化走手工维护（不在匹配时懒创建，缺映射照旧标红待人工补）。改动：模型/迁移 `b2d4f6a81935`（未迁库，直接改文件）、`region_code_map_service`（`list_maps` 去掉 category 参数、`mapping_dict` 按分类解析专列→默认名兜底）、`/region-maps` API 去 category、Client 面板改三列（编号/默认名/京东方名可空）。验证：service pytest 11 过（含 boe_name 兜底、其他分类读默认名两个新用例）、client vitest 103 过、tsc src 无错误。**测试库已迁（用户授权 09-07）**：`b2d4f6a81935` 原 down_revision 是 `a1c3e5f70824`，与 timer_runs 链分叉出两个 head，已改挂 `d4b2f7a91e05` 后 `upgrade head` 成功，`region_code_maps` 已建（0 行，10 列结构验证无误）；4520 已带新代码重启（health ok）。**正式库未迁。**
+
+- **京东方 WMS 接口按最新需求对齐（参数 erpno + 平铺返回）**：SMC 同端点两种行为——传 `doc_no` 命中旧 mock 返回 `[{doc_no, total_vol, list:[...]}]` 包装结构（上午误判为真实规格修了一版解析），传 `erpno` 才是需求文档规格：平铺行数组 `cuspo/cusitem/qty/netweight/grossweight/cubic/coo`、总体积=行 cubic 累加。已改 `boe_smc_client.fetch_wms_packing` 用 `erpno`；解析器两种形状都兼容（平铺为主）。实测 `erpno=101SJH2026040195` 返回与文档示例一致；清库重跑后实例行数据完整（PO 9100024162 / 料号 47-7001645 / 数量 5400 / 净重 3.521 / 地区 TAIWAN,CHINA）、总体积 0.06534 立方米；数量闸门正确告警（计划 5000 ≠ WMS 5400）。pytest 3 过，4520 已带修复重启。
+- **「看不到任务」排查结论**：匹配链路正常（09:21 立即执行 SUCCESS、实例落库）；看不见是因为①结果在「流程实例→京东方→发票箱单」页而非任务中心（未配 Binding 不派 RPA 任务）②列表按门户归属过滤，非管理员仅见名下门户——两个京东方门户所有者均为熊静，张崭/王东晖/赵亮/张丽洁为任务管理员可见全部。
+
 ### 2026-09-04
+
+- **京东方「匹配交货计划」502 根因已修复**：`boe_smc_client.py` 的 httpx 没加 `trust_env=False`，Windows 下 httpx 会从注册表读 IE 系统代理（本机 Clash `192.168.103.17:7893`），内网 SMC 地址经代理解析不了 → 502。现象迷惑点：curl/Postman 不走系统代理所以正常。修复后实测拉到货计划 200、1 行（演示子代码 C000142-01）。项目内其余 httpx 客户端本就全带 `trust_env=False`，属漏网。4520 已带修复重启，页面点「立即匹配」即可真实建单。
+
+- **京东方联调清理脚本已就位**：`service/scripts/boe/clear_boe_packing_data.py` —— 只硬删 `srm_boe_invoice_packing` 实例树（实例/行/阶段历史 + 关联任务/Run 全家桶），不碰天地伟业数据与门户/Binding/定时器配置；默认预览、`--yes` 实删、可传 doc_no 只删指定单。原 `scripts/verify_boe_timer.py` 一并迁入 `scripts/boe/`，京东方联调脚本与天地伟业分目录管理。已验证：预览模式正确列出实例 `101SJH2026040195`（1 实例/2 阶段历史/0 任务），指定单号与查无此单两种模式正常。用法文档见 `service/scripts/boe/README.md`（对照根目录 scripts/README.md 体例，代码与文档分离）。
+
+- **京东方匹配第二个隐藏 bug 已修复并端到端验证通过**：502 修好后匹配仍报 `Instance '<ProcessInstance>' is not persistent within this Session`（`fetch_wms_for_instance` 里 commit 后的 `db.refresh`）。根因：`region_code_map_service.list_maps` 兜底地区表未迁（`b2d4f6a81935`）时 `except ProgrammingError: await db.rollback()` —— **整会话回滚**把调用方事务里刚 flush 的新实例 INSERT 一并回滚，ORM 对象变成无主对象；后续 commit 实际空转、refresh 炸。修复：`list_maps` 改用 `db.begin_nested()` SAVEPOINT 只回滚失败的那条查询，返回空映射继续主流程；`tests/test_region_code_map.py` 新增回归（断言缺表时绝不调 `db.rollback()`）。验证：定时器入口真实触发一轮 → 交货计划 200、WMS 200、新建实例 `发票箱单 - 101SJH2026040195` 落库（stage=`BOE_PACK_ENRICH`，ENRICH 子任务因门户未绑 Binding 按预期跳过）；相关 pytest 7 过；4520 已带修复重启。**此前用户「点立即匹配看不到任务」就是 502 + 本 bug 叠加所致；现在页面刷新列表可见该实例。**
+
+- **京东方匹配已挂独立定时器（对齐重构设计，取代 09-03 旧方案）**：入口 `service/app/services/boe_timers.py`（逐租户复用 `boe_packing_service.match_delivery_plans`），catalog 登记 `boe.pack_match` `0 7 * * *` 默认停用；`main.py` 注册入口、不再启动旧 `BoeMatchScheduler` 循环（文件与 `autotask_settings` 旧键暂留，验证后拆除，同天地伟业旧循环的处理）。Client 调度中心删除旧租户卡片 `tenant-scheduler-card.tsx`、`use-scheduler-settings.ts` 及 `SchedulerSettings` 类型，京东方作为普通定时器行在列表/详情维护。顺带修复合并残留：`schedulers-list.tsx` 丢失 `TenantSchedulerCard` import（调度中心白屏根因）、`scheduler-jobs.test.tsx` 缺 `}`、master 京东方箱单页用的 `PageHeader actions` 属性已补进组件、`remote-dto-mappers.ts` 类型来源改回 `@/types/portal-account`、`statement-model.ts` 一处类型收窄。验证：service pytest 39 过（含新增 `test_boe_timers.py` 3 项）、client vitest 16 过、tsc src 无错误（仅 node_modules 既有噪音）、`lat check` 过。**要启用：重启 4520 注册入口后，在调度中心打开「京东方-匹配交货计划」开关即可。**
 
 - **在线更新客户端已落地**：`app/` 接入 electron-updater（generic，`https://release.superic.com/autotask/stable/`，可用 `AUTOTASK_UPDATE_URL` 覆盖）。主进程 `src/main/app-updater.ts`（启动 15s 首查、6h 轮询、用户确认下载/安装、仅 Windows 打包版）；弹窗在 `src/features/app-update/`；NSIS maker 加了 publish 配置、安装包名带版本号。发版脚本 `npm run release:build` / `release:publish`，服务器侧脚本在 `app/scripts/server/`。已验证 `npm run make` 产出 `AutoTask-Studio-<版本>-setup.exe` + blockmap + latest.yml。单测 101 全过、`lat check` 过。**待办：服务器 `/data/smc-release/autotask/` 目录 + promote 脚本（需 SSH 权限）；端到端更新验证。** 注意本机目前访问 release.superic.com:443 不通（内网 192.168.102.104）。
 

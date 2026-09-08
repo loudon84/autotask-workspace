@@ -60,6 +60,7 @@ def _portal_account(**overrides):
         "portal_name": "客户 SRM 门户",
         "portal_url": "https://portal.example.com/srm",
         "login_account": "buyer@example.com",
+        "extra": {},
         "client_open_mode": ClientOpenMode.WEBCONTENTS.value,
         "client_session_partition": "persist:portal-001",
         "status": PortalAccountStatus.ENABLED.value,
@@ -170,6 +171,7 @@ def test_portal_account_create_accepts_boe_category():
         erpEntityCode="CUST-001",
         erpEntityName="示例客户 A",
         category="BOE",
+        extra={"email": "cs@example.com"},
         portalName="客户 SRM 门户",
         portalUrl="https://portal.example.com/srm",
         loginAccount="buyer@example.com",
@@ -177,6 +179,38 @@ def test_portal_account_create_accepts_boe_category():
         clientOpenMode="webcontents",
     )
     assert body.category == "BOE"
+    assert body.extra == {"email": "cs@example.com"}
+
+
+def test_portal_account_create_boe_requires_email():
+    with pytest.raises(ValidationError):
+        PortalAccountCreate(
+            entityType="CUSTOMER",
+            erpEntityCode="CUST-001",
+            erpEntityName="示例客户 A",
+            category="BOE",
+            portalName="客户 SRM 门户",
+            portalUrl="https://portal.example.com/srm",
+            loginAccount="V1002012AA",
+            credentialRef="secret",
+            clientOpenMode="webcontents",
+        )
+
+
+def test_portal_account_create_tiandi_drops_extra():
+    body = PortalAccountCreate(
+        entityType="CUSTOMER",
+        erpEntityCode="CUST-001",
+        erpEntityName="示例客户 A",
+        category="TIANDI",
+        extra={"email": "cs@example.com"},
+        portalName="客户 SRM 门户",
+        portalUrl="https://portal.example.com/srm",
+        loginAccount="buyer@example.com",
+        credentialRef="secret",
+        clientOpenMode="webcontents",
+    )
+    assert body.extra == {}
 
 
 def test_portal_account_create_rejects_unknown_category():

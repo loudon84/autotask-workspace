@@ -13,26 +13,25 @@ router = APIRouter()
 
 class RegionMapResponse(CamelModel):
     id: str
-    category: str
     region_code: str = Field(serialization_alias="regionCode")
-    srm_display_name: str = Field(serialization_alias="srmDisplayName")
+    default_name: str = Field(serialization_alias="defaultName")
+    boe_name: str | None = Field(None, serialization_alias="boeName")
     updated_by_name: str = Field("", serialization_alias="updatedByName")
 
 
 class RegionMapUpsert(CamelModel):
-    category: str
     region_code: str = Field(alias="regionCode")
-    srm_display_name: str = Field(alias="srmDisplayName")
+    default_name: str = Field(alias="defaultName")
+    boe_name: str | None = Field(None, alias="boeName")
 
 
 @router.get("", response_model=ApiResponse[list[RegionMapResponse]])
 async def list_region_maps(
-    category: str,
     db: AsyncSession = Depends(get_db),
     user: UserCache = Depends(get_current_user),
 ):
     tenant_id = require_tenant_access(user)
-    rows = await svc.list_maps(db, tenant_id, category)
+    rows = await svc.list_maps(db, tenant_id)
     return ApiResponse(data=[RegionMapResponse.model_validate(row) for row in rows])
 
 
@@ -46,9 +45,9 @@ async def upsert_region_map(
     row = await svc.upsert_map(
         db,
         tenant_id,
-        category=body.category,
         region_code=body.region_code,
-        srm_display_name=body.srm_display_name,
+        default_name=body.default_name,
+        boe_name=body.boe_name,
         actor=user,
     )
     return ApiResponse(data=RegionMapResponse.model_validate(row))

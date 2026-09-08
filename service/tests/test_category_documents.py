@@ -40,6 +40,8 @@ async def test_list_categories_includes_hardcoded_codes(monkeypatch: pytest.Monk
     assert rows[0].document_count == 2
     assert rows[1].label == "京东方"
     assert rows[1].document_count == 0
+    assert rows[0].extra_fields == []
+    assert [field.key for field in rows[1].extra_fields] == ["email"]
 
 
 @pytest.mark.asyncio

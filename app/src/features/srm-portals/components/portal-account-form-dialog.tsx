@@ -27,6 +27,7 @@ import { OwnerPicker } from "@/features/srm-portals/components/owner-picker";
 import { formatOwnerLabel, resolveOwnerDisplayName } from "@/features/srm-portals/owner-label";
 import {
   DEFAULT_PORTAL_CATEGORY,
+  extraFieldsForCategory,
   PORTAL_CATEGORY_OPTIONS,
 } from "@/features/srm-portals/portal-category";
 import { useAuth } from "@/modules/auth/AutoTaskAuthProvider";
@@ -56,6 +57,7 @@ type FormState = {
   portalName: string;
   portalUrl: string;
   loginAccount: string;
+  extra: Record<string, string>;
   clientOpenMode: ClientOpenMode;
   clientSessionPartition: string;
   credentialRef: string;
@@ -63,7 +65,7 @@ type FormState = {
   ownerUserId: string;
 };
 
-type FieldErrors = Partial<Record<keyof FormState, string>>;
+type FieldErrors = Partial<Record<string, string>>;
 
 const defaultFormState: FormState = {
   entityType: "CUSTOMER",
@@ -75,6 +77,7 @@ const defaultFormState: FormState = {
   portalName: "",
   portalUrl: "",
   loginAccount: "",
+  extra: {},
   clientOpenMode: "webcontents",
   clientSessionPartition: "",
   credentialRef: "",
@@ -93,12 +96,27 @@ function portalToFormState(portal: PortalAccount): FormState {
     portalName: portal.portalName,
     portalUrl: portal.portalUrl,
     loginAccount: portal.loginAccount,
+    extra: { ...(portal.extra ?? {}) },
     clientOpenMode: portal.clientOpenMode,
     clientSessionPartition: portal.clientSessionPartition,
     credentialRef: "",
     status: portal.status,
     ownerUserId: portal.ownerUserId ?? "",
   };
+}
+
+function extraForSubmit(
+  category: PortalCategory,
+  extra: Record<string, string>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const field of extraFieldsForCategory(category)) {
+    const value = (extra[field.key] ?? "").trim();
+    if (value) {
+      out[field.key] = value;
+    }
+  }
+  return out;
 }
 
 function parseFieldErrors(body: unknown): FieldErrors {
@@ -119,8 +137,8 @@ function parseFieldErrors(body: unknown): FieldErrors {
       ) {
         const loc = (item as { loc: unknown[]; msg: string }).loc;
         const field = loc.at(-1);
-        if (typeof field === "string" && field in defaultFormState) {
-          errors[field as keyof FormState] = (item as { msg: string }).msg;
+        if (typeof field === "string") {
+          errors[field] = (item as { msg: string }).msg;
         }
       }
     }
@@ -128,8 +146,8 @@ function parseFieldErrors(body: unknown): FieldErrors {
   }
 
   for (const [key, value] of Object.entries(record)) {
-    if (key in defaultFormState && typeof value === "string") {
-      errors[key as keyof FormState] = value;
+    if (typeof value === "string") {
+      errors[key] = value;
     }
   }
 
@@ -155,6 +173,7 @@ function buildCreateInput(
     portalName: form.portalName.trim(),
     portalUrl: form.portalUrl.trim(),
     loginAccount: form.loginAccount.trim(),
+    extra: extraForSubmit(form.category, form.extra),
     credentialRef: form.credentialRef.trim(),
     clientOpenMode: form.clientOpenMode,
     clientSessionPartition: sessionPartition,
@@ -203,7 +222,17 @@ export function PortalAccountFormDialog({
     setForm((prev) => ({ ...prev, [key]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
+      delete next[key as string];
+      return next;
+    });
+  };
+
+  const updateExtraField = (key: string, value: string) => {
+    setForm((prev) => ({ ...prev, extra: { ...prev.extra, [key]: value } }));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
       delete next[key];
+      delete next.extra;
       return next;
     });
   };
@@ -251,6 +280,7 @@ export function PortalAccountFormDialog({
           portalName: form.portalName.trim(),
           portalUrl: form.portalUrl.trim(),
           loginAccount: form.loginAccount.trim(),
+          extra: extraForSubmit(form.category, form.extra),
           ...(form.credentialRef.trim()
             ? { credentialRef: form.credentialRef.trim() }
             : {}),
@@ -309,9 +339,19 @@ export function PortalAccountFormDialog({
           <div className="space-y-2">
             <Label>分类 *</Label>
             <Select
-              onValueChange={(value) =>
-                updateField("category", value as PortalCategory)
-              }
+              onValueChange={(value) => {
+                const next = value as PortalCategory;
+                setForm((prev) => ({
+                  ...prev,
+                  category: next,
+                }));
+                setFieldErrors((prev) => {
+                  const nextErrors = { ...prev };
+                  delete nextErrors.category;
+                  delete nextErrors.extra;
+                  return nextErrors;
+                });
+              }}
               value={form.category}
             >
               <SelectTrigger className="w-full">
@@ -439,6 +479,28 @@ export function PortalAccountFormDialog({
               </p>
             )}
           </div>
+
+          {extraFieldsForCategory(form.category).map((field) => (
+            <div className="space-y-2" key={field.key}>
+              <Label htmlFor={`extra-${field.key}`}>
+                {field.required ? `${field.label} *` : field.label}
+              </Label>
+              <Input
+                id={`extra-${field.key}`}
+                onChange={(e) => updateExtraField(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                required={field.required}
+                title={field.helpText}
+                type={field.fieldType === "email" ? "email" : "text"}
+                value={form.extra[field.key] ?? ""}
+              />
+              {(fieldErrors[field.key] || fieldErrors.extra) && (
+                <p className="text-destructive text-xs">
+                  {fieldErrors[field.key] || fieldErrors.extra}
+                </p>
+              )}
+            </div>
+          ))}
 
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="credentialRef">

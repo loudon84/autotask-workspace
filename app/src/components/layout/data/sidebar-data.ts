@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Monitor,
   Timer,
+  Database,
 } from "lucide-react";
 import { processInstanceNavItem } from "@/features/srm-portals/portal-category";
 import type { SidebarData } from "../types";
@@ -37,6 +38,13 @@ export const sidebarData: SidebarData = {
             { title: "运行监控", url: "/runs", icon: Activity },
             { title: "门户", url: "/srm-portals", icon: Globe },
             { title: "门户分类", url: "/portal-categories", icon: FolderOpen },
+            {
+              title: "基础数据",
+              icon: Database,
+              items: [
+                { title: "原产地", url: "/base-data/region-maps" },
+              ],
+            },
             { title: "调度中心", url: "/schedulers", icon: Timer },
             { title: "系统设置", url: "/settings", icon: Settings },
             { title: "流程模板", url: "/workflows", icon: GitBranch },
@@ -60,6 +68,7 @@ export const routeTitles: Record<string, string> = {
   "/components": "RPA 组件库",
   "/srm-portals": "客户/供应商门户",
   "/portal-categories": "门户分类",
+  "/base-data/region-maps": "原产地",
   "/schedulers": "调度中心",
   "/runs": "运行监控",
   "/artifacts": "任务记录",

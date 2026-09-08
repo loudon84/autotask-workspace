@@ -50,7 +50,14 @@ independent TimerScheduler.
 - Catalog upsert on boot: [[service/app/services/timer_service.py#ensure_catalog_rows]];
   [[service/app/services/timer_catalog.py#REGISTRATIONS]] holds demo plus
   [[service/app/services/tiandy_timers.py#scan_pending_due|tiandy scan]] /
-  [[service/app/services/tiandy_timers.py#sign_poll_due|sign-poll]] entries
+  [[service/app/services/tiandy_timers.py#sign_poll_due|sign-poll]] /
+  [[service/app/services/boe_timers.py#pack_match_due|boe pack-match]] /
+  [[service/app/services/boe_timers.py#srm_login_due|boe srm-login]] entries
+  (`boe.srm_login` is registered, default off; CAS OTP RPA is not wired yet; see
+  [[domain#MailInbox]])
+- The old `BoeMatchScheduler` loop is no longer started (replaced by the
+  `boe.pack_match` timer); the file and its `autotask_settings` keys stay
+  dormant until removal is verified, same as legacy scan/sign-poll loops
 - Legacy Binding `scheduler_jobs` rows are all disabled (replaced by timers);
   JobScheduler loop still runs but fires nothing
 - Every due fire lands in `timer_runs` (`/timers/{id}/runs`); if the table is

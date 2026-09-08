@@ -1,7 +1,7 @@
 export type RegionCodeMap = {
   id: string;
-  category: string;
   regionCode: string;
-  srmDisplayName: string;
+  defaultName: string;
+  boeName?: string | null;
   updatedByName?: string;
 };

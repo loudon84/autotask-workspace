@@ -1,4 +1,5 @@
 from sqlalchemy import Index, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -27,6 +28,9 @@ class PortalAccount(BaseModel):
     portal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     portal_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     login_account: Mapped[str] = mapped_column(String(255), nullable=False)
+    extra: Mapped[dict] = mapped_column(
+        JSONB, default=dict, nullable=False, server_default="{}"
+    )
     credential_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
     client_open_mode: Mapped[str] = mapped_column(String(32), default="webcontents", nullable=False)
     client_session_partition: Mapped[str] = mapped_column(String(255), default="", nullable=False)

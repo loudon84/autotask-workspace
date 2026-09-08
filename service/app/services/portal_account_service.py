@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from app.domain.portal_extra import PortalExtraError, normalize_portal_extra
 from app.models.base import not_deleted
 from app.models.enums import PortalAccountStatus, PortalPermission
 from app.models.portal_access_grant import PortalAccessGrant
@@ -295,6 +296,7 @@ async def create_portal_account(
         portal_name=body.portal_name,
         portal_url=body.portal_url,
         login_account=body.login_account,
+        extra=body.extra,
         credential_ref=body.credential_ref,
         client_open_mode=client_open_mode,
         client_session_partition=client_session_partition,
@@ -388,6 +390,17 @@ async def update_portal_account(
             else:
                 changed_fields[field] = {"from": str(old_value), "to": str(value)}
         setattr(account, field, value)
+
+    try:
+        account.extra = normalize_portal_extra(
+            category=str(account.category or ""),
+            extra=getattr(account, "extra", None),
+        )
+    except PortalExtraError as exc:
+        raise BadRequestError(
+            message=str(exc),
+            message_key="errors.autotask.portal_account.invalid_extra",
+        ) from exc
 
     if previous_status != PortalAccountStatus.DISABLED.value and account.status == PortalAccountStatus.DISABLED.value:
         await audit_service.write_audit_log(

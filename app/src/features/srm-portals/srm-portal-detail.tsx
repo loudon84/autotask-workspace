@@ -11,7 +11,10 @@ import { Label } from "@/components/ui/label";
 import { usePortalAccount } from "@/features/srm-portals/api/use-portal-accounts";
 import { PortalAccountFormDialog } from "@/features/srm-portals/components/portal-account-form-dialog";
 import { formatOwnerLabel } from "@/features/srm-portals/owner-label";
-import { portalCategoryLabel } from "@/features/srm-portals/portal-category";
+import {
+  extraFieldsForCategory,
+  portalCategoryLabel,
+} from "@/features/srm-portals/portal-category";
 import { usePortalWritePermission } from "@/features/srm-portals/hooks/use-portal-write-permission";
 import { WorkflowBindingManager } from "@/features/workflows/workflow-binding-manager";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -100,6 +103,13 @@ export function SrmPortalDetailPage({ portalId }: { portalId: string }) {
           <Field label="门户名称" value={portal.portalName} />
           <Field label="门户地址" value={portal.portalUrl} />
           <Field label="登录账号" value={portal.loginAccount || "-"} />
+          {extraFieldsForCategory(portal.category).map((field) => (
+            <Field
+              key={field.key}
+              label={field.label}
+              value={portal.extra?.[field.key] || "-"}
+            />
+          ))}
           <Field
             label="创建人"
             value={

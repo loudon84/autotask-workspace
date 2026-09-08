@@ -1514,7 +1514,7 @@
       </web>
       <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/185f291de2f55af9ac6506f148d28d96113502b6e3f8f150825574a6457d0ed2_semantic_False.png" rectangle="[192,471,18,41]" desc="" />
     </selector>
-    <selector id="36f6e21c-fbe0-486c-b507-b420756f6f5e" name="选中首行数据" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\dab72e38-d3b9-4657-9ded-f62f306049e8.jpg" version="2">
+    <selector id="36f6e21c-fbe0-486c-b507-b420756f6f5e" name="选中首行数据" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\fb727076-0880-4313-96f3-71bf660ea2af.jpg" version="2">
       <web x:name="div" x:selected="false">
         <optional id="root" class="main-container" index-of-type="0" index="1" />
       </web>
@@ -1591,7 +1591,7 @@
         <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
       </web>
       <web x:name="div" x:selected="false">
-        <optional role="tabpanel" id="el-collapse-content-8244" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-8244" index="1" />
+        <optional role="tabpanel" id="el-collapse-content-1465" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-1465" index="1" />
       </web>
       <web x:name="div" x:selected="false">
         <optional class="el-collapse-item__content" index-of-type="0" index="0" />
@@ -1609,7 +1609,7 @@
         <optional class="el-form-item__content" index-of-type="0" index="1" />
       </web>
       <web x:name="div" x:selected="false">
-        <optional class="search-wrap el-tooltip" index-of-type="0" aria-describedby="el-tooltip-7747" factoryname="北京京东方显示技术有限公司 (B4)" index="0" />
+        <optional class="search-wrap el-tooltip" index-of-type="0" aria-describedby="el-tooltip-9392" index="0" />
       </web>
       <web x:name="div" x:selected="false">
         <optional class="el-dialog__wrapper" index-of-type="1" index="1" />
@@ -1620,8 +1620,8 @@
       <web x:name="div" x:selected="false">
         <optional class="el-dialog__body" index-of-type="1" index="1" />
       </web>
-      <web x:name="div" x:selected="false">
-        <optional class="new-avue-curd mycrud-btn dialog-search" index-of-type="0" index="0" />
+      <web x:name="div">
+        <optional contains:class="dialog-search" index-of-type="0" index="0" />
       </web>
       <web x:name="div" x:selected="false">
         <optional index-of-type="0" index="0" />
@@ -1641,16 +1641,16 @@
       <web x:name="tbody" x:selected="false">
         <optional index-of-type="0" index="1" />
       </web>
-      <web x:name="tr" contains:class="current-row">
-        <optional index-of-type="0" index="0" />
+      <web x:name="tr">
+        <optional class="el-table__row" index-of-type="0" index="0" />
       </web>
-      <web x:name="td" contains:class="el-table_65_column_640">
-        <optional index-of-type="1" index="1" />
+      <web x:name="td" index-of-type="1">
+        <optional contains:class="el-table_15_column_143" index="1" />
       </web>
       <web x:name="div" class="cell">
         <optional index-of-type="0" index="0" />
       </web>
-      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/12b14606cae97140a96c44e7b94200bf7841afbee6af4064f8ae9110ebc84bcf_semantic_False.png" rectangle="[218,471,296,41]" desc="" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/f015e22f932644c855489d6860a9304b9dfa8a7724bd210ca459bbb036ad1775_semantic_False.png" rectangle="[218,449,296,37]" desc="" />
     </selector>
     <selector id="37901a36-11ca-46fb-accd-575cc259b5a1" name="开票日期" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\30b66025-18b5-42c9-a8d1-a7070cf41380.jpg" version="2">
       <web x:name="div" x:selected="false">
@@ -3489,29 +3489,32 @@
       </web>
       <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/aea37ca10655e1b7da03deff92348bc30274e5317d9ce67e6812717db596091e_semantic_False.png" rectangle="[528,792,62,28]" desc="" />
     </selector>
-    <selector id="672d8813-f6b1-4a82-8400-adc41cf52f44" name="地区-选中值" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\43ec721f-9022-450e-80a0-94f7da271ea9.jpg" version="2">
-      <web x:name="div" x:selected="false">
-        <optional class="el-select-dropdown el-popper" index-of-type="11" x-placement="top-start" index="21" />
+    <selector id="672d8813-f6b1-4a82-8400-adc41cf52f44" name="地区-选中值" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\26f9c144-0f26-499c-b0a0-4c97dc3e4cc4.jpg" version="2">
+      <web x:name="body">
+        <optional index-of-type="0" index="1" />
       </web>
-      <web x:name="div" x:selected="false">
+      <web x:name="div">
+        <optional class="el-select-dropdown el-popper" index-of-type="4" x-placement="bottom-start" index="13" />
+      </web>
+      <web x:name="div">
         <optional class="el-scrollbar" index-of-type="0" index="0" />
       </web>
-      <web x:name="div" x:selected="false">
+      <web x:name="div">
         <optional class="el-select-dropdown__wrap el-scrollbar__wrap" index-of-type="0" index="0" />
       </web>
       <web x:name="ul">
         <optional class="el-scrollbar__view el-select-dropdown__list" index-of-type="0" index="0" />
       </web>
-      <web x:name="li">
-        <optional innerText="中国台湾" class="el-select-dropdown__item selected hover" index-of-type="224" index="224" />
+      <web x:name="li" contains:class="el-select-dropdown__item">
+        <optional innerText="中国台湾" index-of-type="224" index="224" />
       </web>
-      <web x:name="span" innerText="中国台湾" xbox-display="true">
+      <web x:name="span" innerText="中国台湾">
         <optional index-of-type="0" index="0" />
       </web>
       <xpath enable="true">
-        <segment value="//div[12]//ul/li/span[normalize-space(.)=&quot;中国台湾&quot;]" />
+        <segment value="//body/div/div/div/ul/li[contains(@class, &quot;el-select-dropdown__item&quot;)]/span[normalize-space(.)=&quot;中国台湾&quot;]" />
       </xpath>
-      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/4c20b48cbf49c5929b46da1f21f4820a5a5271fd520c41c3f0a4c93f79be4dfa_semantic_False.png" rectangle="[528,792,62,49]" desc="" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/3c6f24150931912863c980449f154d539dc49636fbb5e5f2b6e4a9ab673ed89d_semantic_False.png" rectangle="[712,655,62,23]" desc="" />
     </selector>
     <selector id="9e6e9c29-12ec-4ee6-a11b-f779ee89df43" name="附件信息" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\cefa25d8-fcf4-488c-85d8-101a9a2473ef.jpg" version="2">
       <web x:name="div" x:selected="false">
@@ -3824,6 +3827,1462 @@
       </web>
       <anchor text="提交" targetRectangle="[1152,125,68,32]" anchorRectangle="[1171,131,28,18]" version="1" threshold="0.6" />
       <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/5118df8ae91786469adadad174fba8b7d4a82346fdea4a689e405809c82d88d9_semantic_False.png" rectangle="[750,183,44,46]" desc="" />
+    </selector>
+    <selector id="24a043a8-eead-4d6a-9b3c-1e4f091479b2" name="输入框_el-input__inner_2" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\57e1f9a9-a587-4a1a-94c3-426e633fe1e8.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card item-card is-hover-shadow" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr">
+        <optional class="el-table__row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="td" contains:class="el-table_18_column_163">
+        <optional index-of-type="11" index="11" />
+      </web>
+      <web x:name="div" contains:class="cell">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-input--mini el-input" index-of-type="0" index="0" />
+      </web>
+      <web x:name="input" type="number">
+        <optional class="el-input__inner" index-of-type="0" autocomplete="off" placeholder="本次开票数" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[contains(@class, &quot;el-table__body&quot;)]/table//tr/td[contains(@class, &quot;el-table_18_column_163&quot;)]/div[contains(@class, &quot;cell&quot;)]//input[@type=&quot;number&quot;]" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/3b9b0ebe99ec50c718e179fc738699f14e5b2594589d931bb43a9a78979f740e_semantic_False.png" rectangle="[806,581,67,37]" desc="" />
+    </selector>
+    <selector id="9b5c97a9-fa82-4fb9-a889-e32631cfd246" name="展开-列表搜索条件" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\3233c991-861e-4c27-a484-ef38913bbe3b.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-9222" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-9222" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-col el-col-6 avue-form__menu avue-form__menu--center" index-of-type="3" index="3" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item el-form-item--feedback el-form-item--mini" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button">
+        <optional innerText="展开" type="button" class="el-button el-button--text el-button--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="span" innerText="展开">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/9f15632b515e47679135bdebe8c64f71d7bee8a5629bff7f71445276a3eb319f_semantic_False.png" rectangle="[938,254,15,21]" desc="" />
+    </selector>
+    <selector id="180a6d31-1362-48bc-8d7d-aa7b6c0a6e68" name="供应商发票号-输入搜索" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\4f3c4d63-1061-4975-8064-3b44c1abf84b.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-9222" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-9222" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="供应商发票号" class="el-col el-col-6 el-col-offset-0 el-col-xs-24 el-col-sm-12 el-col-md-6 avue-form__row" index-of-type="3" index="3" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="供应商发票号" class="el-form-item el-form-item--feedback el-form-item--mini avue-form__item--" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-tooltip el-input el-input--mini el-input--suffix avue-input" index-of-type="0" i18nkey="i18n_requisition_head_supplierInvoiceNum" search="true" editdisabled="true" display="true" aria-describedby="el-tooltip-3097" index="0" />
+      </web>
+      <web x:name="input">
+        <optional type="text" class="el-input__inner" index-of-type="0" autocomplete="off" placeholder="供应商发票号" index="0" />
+      </web>
+      <anchor text="供应商发票号" targetRectangle="[1291,183,171,28]" anchorRectangle="[1181,181,110,28]" version="1" threshold="0.6" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/b70e1563ca3033469ac0273931676e3b251372025c5f2e1c5b19adc895c83d07_semantic_False.png" rectangle="[840,248,111,37]" desc="" />
+    </selector>
+    <selector id="aedef8e0-a927-4128-b42e-3addc81045b9" name="状态-搜索" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\afdefec3-078b-4dd6-8778-e02a2223124c.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-9222" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-9222" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-col el-col-6 el-col-offset-0 el-col-xs-24 el-col-sm-12 el-col-md-6 avue-form__row" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item el-form-item--feedback el-form-item--mini avue-form__item--" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-select el-tooltip el-select--mini avue-select" index-of-type="0" i18nkey="i18n_Status" search="true" hide="true" searchmultiple="true" editdisabled="true" display="true" aria-describedby="el-tooltip-3910" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-input el-input--mini el-input--suffix" index-of-type="1" index="1" />
+      </web>
+      <web x:name="input">
+        <optional type="text" class="el-input__inner" index-of-type="0" readonly="readonly" autocomplete="off" placeholder="状态" index="0" />
+      </web>
+      <anchor text="状态" targetRectangle="[689,183,171,28]" anchorRectangle="[579,181,110,28]" version="1" threshold="0.6" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/7150ceaeb04a7fdf336d7e969215c60acb01ee98aa21b20d0224011327abb424_semantic_False.png" rectangle="[448,248,111,37]" desc="" />
+    </selector>
+    <selector id="d4e259d6-3a6e-444e-83ee-16744c1139e0" name="草稿-选择状态草稿" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\465a782b-503a-4fff-b6e9-64e8ca12a837.jpg" version="2">
+      <web x:name="div" contains:class="is-multiple">
+        <optional index-of-type="4" x-placement="bottom-start" index="13" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-select-dropdown__wrap el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="ul">
+        <optional class="el-scrollbar__view el-select-dropdown__list" index-of-type="0" index="0" />
+      </web>
+      <web x:name="li" contains:class="el-select-dropdown__item">
+        <optional innerText="草稿" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" innerText="草稿">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/f8546074a5e58442f31aa45b79356c3aeb953265d633327cc118180f07d4ed12_semantic_False.png" rectangle="[448,319,44,23]" desc="" />
+    </selector>
+    <selector id="907b7283-b7dd-42c2-80f6-9d5716ad7ce2" name="搜 索-列表执行搜索按钮" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\f7f68b4f-00e5-4580-a618-643a3f77b57d.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-9222" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-9222" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-col el-col-6 avue-form__menu avue-form__menu--center" index-of-type="9" index="9" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item el-form-item--feedback el-form-item--mini" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button" contains:class="el-button--primary el-button--mini">
+        <optional innerText="搜 索" type="button" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span">
+        <optional innerText="搜 索" index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/057f3c07c9160ac85186e1d41bec018dc39a32e47d7c5df67b155d0db638e17b_semantic_False.png" rectangle="[836,390,17,21]" desc="" />
+    </selector>
+    <selector id="2892368f-7727-47e2-833c-8f815f941cfc" name="I260907336" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\795c7bf9-b373-4a0b-a69f-f1a333391d64.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr">
+        <optional class="el-table__row current-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="td">
+        <optional innerText="I260907336" class="el-table_2_column_5 is-left" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="I260907336" class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional innerText="I260907336" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button" contains:class="el-button--text">
+        <optional innerText="I260907336" type="button" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span">
+        <optional innerText="I260907336" index-of-type="0" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[contains(@class, &quot;el-table__body&quot;)]/table//tr/td//button[contains(@class, &quot;el-button--text&quot;)]/span" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/00184e926f6fc8dae59b6d95b2b7d2035e56e875807e14f6f7f8457925d34def_semantic_False.png" rectangle="[201,616,47,23]" desc="" />
+    </selector>
+    <selector id="8be65144-c964-4f8e-b1e5-3c10d99a3d59" name="I260908029" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\e5a62624-3311-4ede-b445-19f1a20ea0e2.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr">
+        <optional class="el-table__row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="td">
+        <optional innerText="I260908029" class="el-table_131_column_1335 is-left" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" startsWith:innerText="I" class="cell">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[contains(@class, &quot;el-table__body&quot;)]/table//tr/td/div[starts-with(normalize-space(.), &quot;I&quot;)][@class=&quot;cell&quot;]" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/65ed3aeb0c64d4709e9a45a6b45bd57b2aa3a376e512d04757310ff7d4d5b988_semantic_False.png" rectangle="[197,477,96,54]" desc="" />
+    </selector>
+    <selector id="1f8fedf4-005d-4a3c-9ae3-f4e5279b4a45" name="发票箱单流水号-搜索条件" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\7302faf6-8871-41e5-b353-22052ce2c417.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-3962" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-3962" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="发票箱单流水号" class="el-col el-col-6 el-col-offset-0 el-col-xs-24 el-col-sm-12 el-col-md-6 avue-form__row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="发票箱单流水号" class="el-form-item el-form-item--feedback el-form-item--mini avue-form__item--" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-tooltip el-input el-input--mini el-input--suffix avue-input" index-of-type="0" i18nkey="i18n_invoicePackageSerialNumber" search="true" editdisabled="true" display="true" aria-describedby="el-tooltip-9662" index="0" />
+      </web>
+      <web x:name="input">
+        <optional type="text" class="el-input__inner" index-of-type="0" autocomplete="off" placeholder="发票箱单流水号" index="0" />
+      </web>
+      <anchor text="发票箱单流水号" targetRectangle="[388,183,171,28]" anchorRectangle="[278,181,110,28]" version="1" threshold="0.6" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/467c0455e1ffbe9b028e1a1a1e3f63f03a8eed6db0c2b7ee2a54d7089c6c7aee_semantic_False.png" rectangle="[252,248,111,37]" desc="" />
+    </selector>
+    <selector id="b378c297-a806-4087-a602-65206d5978c0" name="搜 索-发票箱单列表" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\fa6b5df4-46e1-4959-a6be-9c934843f8b8.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__search" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="form">
+        <optional class="el-form" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-group avue-group--header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tablist" class="el-collapse" index-of-type="0" aria-multiselectable="true" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item is-active" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional role="tabpanel" id="el-collapse-content-3962" class="el-collapse-item__wrap" index-of-type="1" aria-labelledby="el-collapse-head-3962" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-collapse-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-form__group avue-form__group--flex" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-col el-col-6 avue-form__menu avue-form__menu--center" index-of-type="3" index="3" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item el-form-item--feedback el-form-item--mini" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-form-item__content" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button">
+        <optional innerText="搜 索" type="button" class="el-button el-button--primary el-button--mini" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" innerText="搜 索">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/4abe0bae77a9da126305e5d2267e66091c5d22c9dc51c605b44200b61ac99b0b_semantic_False.png" rectangle="[836,254,17,21]" desc="" />
+    </selector>
+    <selector id="b55fe049-86c8-4d57-8cdc-806528291ecd" name="发票箱单列表搜索有数路" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\6744d1e7-4de8-43d7-bdc9-6d29c552fd7f.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body-wrapper">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[contains(@class, &quot;el-table__body-wrapper&quot;)]" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/4fb526008fe696527f9302085ab5ab2852f1c8e7c6abc4746d690ff143a201d9_semantic_False.png" rectangle="[164,453,809,88]" desc="" />
+    </selector>
+    <selector id="85a9360a-a637-4d72-889f-0b251e9dd77f" name="发票箱单单流水号" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\b938f911-b986-4847-b8f5-09c829dbc20a.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="invoice-list avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr">
+        <optional class="el-table__row current-row" index-of-type="0" index="0" />
+      </web>
+      <web x:name="td">
+        <optional innerText="I260908029" class="el-table_143_column_1462 is-left" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional innerText="I260908029" class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional innerText="I260908029" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button" contains:class="el-button el-button--text">
+        <optional innerText="I260908029" type="button" index-of-type="0" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[contains(@class, &quot;el-table__body&quot;)]/table//tr/td//button[contains(@class, &quot;el-button&quot;)][contains(@class, &quot;el-button--text&quot;)]" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/4fb526008fe696527f9302085ab5ab2852f1c8e7c6abc4746d690ff143a201d9_semantic_False.png" rectangle="[200,466,49,53]" desc="" />
+    </selector>
+    <selector id="0d9fa61e-55f1-4572-b428-b34b844b138c" name="上传文件_箱单" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\6da0bd15-a915-4790-b4da-0f8cbbb5bc75.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card item-card is-hover-shadow" index-of-type="4" theme="page" index="4" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-right">
+        <optional index-of-type="4" index="4" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-body-wrapper">
+        <optional index-of-type="1" index="1" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr" index-of-type="0">
+        <optional class="el-table__row" index="0" />
+      </web>
+      <web x:name="td">
+        <optional class="el-table_241_column_2488 is-center" index-of-type="11" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional class="attachment-upload" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" size="small">
+        <optional class="uploader uploader-example" index-of-type="0" attrs="[object Object]" btnname="上传文件" row="[object Object]" index="0" />
+      </web>
+      <web x:name="label">
+        <optional innerText="上传文件" class="uploader-btn" index-of-type="0" index="1" />
+      </web>
+      <web x:name="a">
+        <optional innerText="上传文件" class="elBtnA" index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/82ca5ef90a8d21ba5eeba766ee0033cb0952460dcc9e41fbcb2d9f1b5c1717c0_semantic_False.png" rectangle="[858,616,31,21]" desc="" />
+    </selector>
+    <selector id="08476189-c368-420b-870b-aedc3e9a1727" name="上传文件_发票" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\601ca43d-5d60-4b3e-9c6c-f196a02997c2.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card item-card is-hover-shadow" index-of-type="4" theme="page" index="4" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-right">
+        <optional index-of-type="4" index="4" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-body-wrapper">
+        <optional index-of-type="1" index="1" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr" class="el-table__row" index-of-type="1">
+        <optional index="1" />
+      </web>
+      <web x:name="td">
+        <optional class="el-table_241_column_2488 is-center" index-of-type="11" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional class="attachment-upload" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" size="small">
+        <optional class="uploader uploader-example" index-of-type="0" attrs="[object Object]" btnname="上传文件" row="[object Object]" index="0" />
+      </web>
+      <web x:name="label">
+        <optional innerText="上传文件" class="uploader-btn" index-of-type="0" index="1" />
+      </web>
+      <web x:name="a">
+        <optional innerText="上传文件" class="elBtnA" index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/47d2f0d73a1e78fd995c7aa1bd57460de50162d315e1633a0994c59ba72a83cf_semantic_False.png" rectangle="[858,673,31,21]" desc="" />
+    </selector>
+    <selector id="06b47949-6d23-439b-9ee4-08605af6d49a" name="新增" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\3ce06501-e662-4646-8856-e54a5acf6d86.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" index-of-type="4" theme="page">
+        <optional class="el-card item-card is-hover-shadow" index="4" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__menu" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud__left" index-of-type="0" index="0" />
+      </web>
+      <web x:name="button">
+        <optional innerText="新增" type="button" class="el-button el-button--primary el-button--mini" index-of-type="0" index="0" />
+      </web>
+      <anchor text="新增" targetRectangle="[273,351,61,28]" anchorRectangle="[294,356,24,16]" version="1" threshold="0.6" />
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/0b3165b62fae5dbc8c5839e82307026350dacde3f158e735aabdb695dfdec4db_semantic_False.png" rectangle="[177,476,39,37]" desc="" />
+    </selector>
+    <selector id="1fc14a1f-b135-475e-a97a-df714f5e14e7" name="输入框——文件类型" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\340b7df4-54bc-446e-86be-d5c7c3e7dab2.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" theme="page">
+        <optional class="el-card item-card is-hover-shadow" index-of-type="4" index="4" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__body">
+        <optional index-of-type="2" index="2" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr" class="el-table__row" index-of-type="3">
+        <optional index="3" />
+      </web>
+      <web x:name="td">
+        <optional class="el-table_241_column_2479 is-left" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" class="cell">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-select" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div">
+        <optional class="el-input el-input--suffix" index-of-type="0" index="0" />
+      </web>
+      <web x:name="input">
+        <optional type="text" class="el-input__inner" index-of-type="0" readonly="readonly" autocomplete="off" placeholder="请选择" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//div[@theme=&quot;page&quot;]//div[contains(@class, &quot;el-table__body&quot;)]/table//tr[4][@class=&quot;el-table__row&quot;]/td/div[@class=&quot;cell&quot;]//div/input" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/04a159e7b28ad53e9ffd996caef004b258969ba831c04fd49e21f92046a0ef92_semantic_False.png" rectangle="[214,787,93,52]" desc="" />
+    </selector>
+    <selector id="9c114e50-4eb6-4107-940b-0a905010e8fb" name="双签PO/协议" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\e51c4a6c-97aa-4ea2-abe0-62ef383bf7aa.jpg" version="2">
+      <web x:name="body">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="div">
+        <optional class="el-select-dropdown el-popper" index-of-type="5" x-placement="top-start" index="15" />
+      </web>
+      <web x:name="div">
+        <optional class="el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div">
+        <optional class="el-select-dropdown__wrap el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="ul">
+        <optional class="el-scrollbar__view el-select-dropdown__list" index-of-type="0" index="0" />
+      </web>
+      <web x:name="li" contains:class="el-select-dropdown__item">
+        <optional innerText="双签PO/协议" index-of-type="2" index="2" />
+      </web>
+      <web x:name="span" innerText="双签PO/协议">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/a2f78a621147fbb7d756511cdc5cbc885515281d1e6456a94798f9f5d2e6a38c_semantic_False.png" rectangle="[214,633,78,23]" desc="" />
+    </selector>
+    <selector id="a05bec16-051a-40f6-a414-a7d94c4a4096" name="上传文件_双签" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="BOE SRM 系统" screenshot=".dev\screenshot\04c3ad9d-8f4b-491b-b1f6-0322dc620e3d.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="root" class="main-container" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-content" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="main-container-view" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="wl-scroll el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="subapp-viewport" class="app-view-box" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" data-name="invoicePackingList" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="basic-container role avue-view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card is-always-shadow" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card item-card is-hover-shadow" index-of-type="4" theme="page" index="4" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="new-avue-curd mycrud-btn" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="avue-crud" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-transition el-table--mini" index-of-type="2" index="2" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-right">
+        <optional index-of-type="4" index="4" />
+      </web>
+      <web x:name="div" contains:class="el-table__fixed-body-wrapper">
+        <optional index-of-type="1" index="1" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="tbody" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr" class="el-table__row" index-of-type="3">
+        <optional index="3" />
+      </web>
+      <web x:name="td">
+        <optional class="el-table_241_column_2488 is-center" index-of-type="11" index="11" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional class="attachment-upload" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" size="small">
+        <optional class="uploader uploader-example" index-of-type="0" attrs="[object Object]" btnname="上传文件" row="[object Object]" index="0" />
+      </web>
+      <web x:name="label">
+        <optional innerText="上传文件" class="uploader-btn" index-of-type="0" index="1" />
+      </web>
+      <web x:name="a">
+        <optional innerText="上传文件" class="elBtnA" index-of-type="0" index="1" />
+      </web>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/acb816087c7601e7454a4d36b1a2a745a7cb9c0dddec0965a4df8d33c47c37fe_semantic_False.png" rectangle="[858,801,31,21]" desc="" />
     </selector>
   </group>
 </repository>

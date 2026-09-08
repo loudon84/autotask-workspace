@@ -128,6 +128,20 @@ function normalizePortalCategory(value: unknown): PortalCategory {
   return "TIANDI";
 }
 
+function normalizePortalExtra(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (item == null || item === "") {
+      continue;
+    }
+    out[key] = String(item);
+  }
+  return out;
+}
+
 export function mapPortalAccount(raw: unknown): PortalAccount {
   const data = mapKeysToCamel<Record<string, unknown>>(raw);
 
@@ -145,6 +159,7 @@ export function mapPortalAccount(raw: unknown): PortalAccount {
     portalName: String(data.portalName ?? data.name ?? ""),
     portalUrl: String(data.portalUrl ?? data.url ?? ""),
     loginAccount: String(data.loginAccount ?? ""),
+    extra: normalizePortalExtra(data.extra),
     clientOpenMode: normalizeClientOpenMode(data.clientOpenMode),
     clientSessionPartition: String(data.clientSessionPartition ?? ""),
     status: normalizePortalStatus(data.status),

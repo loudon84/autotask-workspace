@@ -2,9 +2,10 @@ import json
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.domain.portal_category import DEFAULT_PORTAL_CATEGORY, parse_portal_category
+from app.domain.portal_extra import PortalExtraError, normalize_portal_extra
 from app.models.enums import ClientOpenMode, EntityType, PortalAccountStatus
 from app.schemas.common import CamelModel
 
@@ -37,6 +38,7 @@ class PortalAccountCreate(CamelModel):
     portal_name: str = Field(alias="portalName")
     portal_url: str = Field(alias="portalUrl")
     login_account: str = Field(alias="loginAccount")
+    extra: dict[str, str] = Field(default_factory=dict, alias="extra")
     credential_ref: str = Field(alias="credentialRef")
     client_open_mode: ClientOpenMode = Field(
         ClientOpenMode.WEBCONTENTS,
@@ -78,6 +80,16 @@ class PortalAccountCreate(CamelModel):
         }
         return _validate_non_empty(value, labels.get(info.field_name, info.field_name))
 
+    @model_validator(mode="after")
+    def extra_matches_category(self):
+        try:
+            self.extra = normalize_portal_extra(
+                category=self.category, extra=self.extra
+            )
+        except PortalExtraError as exc:
+            raise ValueError(str(exc)) from exc
+        return self
+
 
 class PortalAccountUpdate(CamelModel):
     entity_type: EntityType | None = Field(None, alias="entityType")
@@ -89,6 +101,7 @@ class PortalAccountUpdate(CamelModel):
     portal_name: str | None = Field(None, alias="portalName")
     portal_url: str | None = Field(None, alias="portalUrl")
     login_account: str | None = Field(None, alias="loginAccount")
+    extra: dict[str, str] | None = Field(None, alias="extra")
     credential_ref: str | None = Field(None, alias="credentialRef")
     client_open_mode: ClientOpenMode | None = Field(None, alias="clientOpenMode")
     client_session_partition: str | None = Field(None, alias="clientSessionPartition")
@@ -138,6 +151,7 @@ class PortalAccountResponse(CamelModel):
     portal_name: str = Field(serialization_alias="portalName")
     portal_url: str = Field(serialization_alias="portalUrl")
     login_account: str = Field(serialization_alias="loginAccount")
+    extra: dict[str, str] = Field(default_factory=dict, serialization_alias="extra")
     client_open_mode: str = Field(serialization_alias="clientOpenMode")
     client_session_partition: str = Field(serialization_alias="clientSessionPartition")
     status: str

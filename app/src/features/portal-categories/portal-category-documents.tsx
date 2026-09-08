@@ -16,7 +16,6 @@ import {
 } from "@/features/portal-categories/api/use-category-document-mutations";
 import { useCategoryDocuments } from "@/features/portal-categories/api/use-portal-categories";
 import { portalCategoryLabel } from "@/features/srm-portals/portal-category";
-import { RegionMapsPanel } from "@/features/region-maps/region-maps-panel";
 import { autotaskApi } from "@/services/autotask-api";
 import type { CategoryDocument } from "@/types/category-document";
 import { formatBeijingDateTime } from "@/utils/date-time";
@@ -143,7 +142,6 @@ export function PortalCategoryDocumentsPage({
           </Button>
         </div>
       </PageHeader>
-      {category === "BOE" ? <RegionMapsPanel category={category} /> : null}
       {documents.length === 0 ? (
         <EmptyState
           description="上传 .doc / .docx / .pdf 等文件，客服和运维都可以维护"

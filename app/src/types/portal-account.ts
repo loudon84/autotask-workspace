@@ -16,6 +16,7 @@ export interface PortalAccount {
   portalName: string;
   portalUrl: string;
   loginAccount: string;
+  extra: Record<string, string>;
   clientOpenMode: ClientOpenMode;
   clientSessionPartition: string;
   status: PortalStatus;
@@ -47,6 +48,7 @@ export type UpdatePortalAccountInput = Partial<
     | "portalName"
     | "portalUrl"
     | "loginAccount"
+    | "extra"
     | "clientOpenMode"
     | "clientSessionPartition"
     | "status"

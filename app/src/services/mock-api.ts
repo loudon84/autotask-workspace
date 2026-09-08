@@ -8,7 +8,10 @@ import tasksData from "@/mock/tasks.json";
 import workersData from "@/mock/workers.json";
 import workflowTemplatesData from "@/mock/workflow-templates.json";
 import { mapPortalAccount } from "@/services/dto-mappers";
-import { PORTAL_CATEGORY_OPTIONS } from "@/features/srm-portals/portal-category";
+import {
+  extraFieldsForCategory,
+  PORTAL_CATEGORY_OPTIONS,
+} from "@/features/srm-portals/portal-category";
 import type { TimerRun } from "@/features/schedulers/types";
 import {
   getHumanActionById,
@@ -433,6 +436,7 @@ export const mockApi = {
         documentCount: mockCategoryDocuments.filter(
           (row) => row.category === option.value
         ).length,
+        extraFields: extraFieldsForCategory(option.value),
       }))
     ),
 
@@ -452,27 +456,26 @@ export const mockApi = {
     return delay(undefined);
   },
 
-  listRegionMaps: async (category: string) =>
-    delay(mockRegionMaps.filter((row) => row.category === category)),
+  listRegionMaps: async () => delay([...mockRegionMaps]),
 
   upsertRegionMap: async (body: {
-    category: string;
     regionCode: string;
-    srmDisplayName: string;
+    defaultName: string;
+    boeName?: string;
   }) => {
     const existing = mockRegionMaps.find(
-      (row) =>
-        row.category === body.category && row.regionCode === body.regionCode
+      (row) => row.regionCode === body.regionCode
     );
     if (existing) {
-      existing.srmDisplayName = body.srmDisplayName;
+      existing.defaultName = body.defaultName;
+      existing.boeName = body.boeName || null;
       return delay({ ...existing });
     }
     const created = {
       id: newId("region"),
-      category: body.category,
       regionCode: body.regionCode,
-      srmDisplayName: body.srmDisplayName,
+      defaultName: body.defaultName,
+      boeName: body.boeName || null,
       updatedByName: "Mock 用户",
     };
     mockRegionMaps.push(created);

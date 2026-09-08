@@ -32,6 +32,7 @@ import { Route as ProcessesInstanceIdRouteImport } from './routes/processes/$ins
 import { Route as ProcessInstancesStatementsRouteImport } from './routes/process-instances/statements'
 import { Route as ProcessInstancesInvoicePackingRouteImport } from './routes/process-instances/invoice-packing'
 import { Route as PortalCategoriesCategoryRouteImport } from './routes/portal-categories/$category'
+import { Route as BaseDataRegionMapsRouteImport } from './routes/base-data/region-maps'
 import { Route as ProcessesInstanceIdIndexRouteImport } from './routes/processes/$instanceId/index'
 import { Route as ProcessInstancesStatementsIndexRouteImport } from './routes/process-instances/statements/index'
 import { Route as ProcessInstancesInvoicePackingIndexRouteImport } from './routes/process-instances/invoice-packing/index'
@@ -158,6 +159,11 @@ const PortalCategoriesCategoryRoute =
     path: '/portal-categories/$category',
     getParentRoute: () => rootRouteImport,
   } as any)
+const BaseDataRegionMapsRoute = BaseDataRegionMapsRouteImport.update({
+  id: '/base-data/region-maps',
+  path: '/base-data/region-maps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProcessesInstanceIdIndexRoute =
   ProcessesInstanceIdIndexRouteImport.update({
     id: '/',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/base-data/region-maps': typeof BaseDataRegionMapsRoute
   '/portal-categories/$category': typeof PortalCategoriesCategoryRoute
   '/process-instances/invoice-packing': typeof ProcessInstancesInvoicePackingRouteWithChildren
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/base-data/region-maps': typeof BaseDataRegionMapsRoute
   '/portal-categories/$category': typeof PortalCategoriesCategoryRoute
   '/runs/$runId': typeof RunsRunIdRoute
   '/schedulers/$jobId': typeof SchedulersJobIdRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/components': typeof ComponentsRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/base-data/region-maps': typeof BaseDataRegionMapsRoute
   '/portal-categories/$category': typeof PortalCategoriesCategoryRoute
   '/process-instances/invoice-packing': typeof ProcessInstancesInvoicePackingRouteWithChildren
   '/process-instances/statements': typeof ProcessInstancesStatementsRouteWithChildren
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/components'
     | '/dashboard'
     | '/settings'
+    | '/base-data/region-maps'
     | '/portal-categories/$category'
     | '/process-instances/invoice-packing'
     | '/process-instances/statements'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/components'
     | '/dashboard'
     | '/settings'
+    | '/base-data/region-maps'
     | '/portal-categories/$category'
     | '/runs/$runId'
     | '/schedulers/$jobId'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/components'
     | '/dashboard'
     | '/settings'
+    | '/base-data/region-maps'
     | '/portal-categories/$category'
     | '/process-instances/invoice-packing'
     | '/process-instances/statements'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   ComponentsRoute: typeof ComponentsRoute
   DashboardRoute: typeof DashboardRoute
   SettingsRoute: typeof SettingsRoute
+  BaseDataRegionMapsRoute: typeof BaseDataRegionMapsRoute
   PortalCategoriesCategoryRoute: typeof PortalCategoriesCategoryRoute
   ProcessInstancesInvoicePackingRoute: typeof ProcessInstancesInvoicePackingRouteWithChildren
   ProcessInstancesStatementsRoute: typeof ProcessInstancesStatementsRouteWithChildren
@@ -580,6 +593,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalCategoriesCategoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/base-data/region-maps': {
+      id: '/base-data/region-maps'
+      path: '/base-data/region-maps'
+      fullPath: '/base-data/region-maps'
+      preLoaderRoute: typeof BaseDataRegionMapsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/processes/$instanceId/': {
       id: '/processes/$instanceId/'
       path: '/'
@@ -689,6 +709,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComponentsRoute: ComponentsRoute,
   DashboardRoute: DashboardRoute,
   SettingsRoute: SettingsRoute,
+  BaseDataRegionMapsRoute: BaseDataRegionMapsRoute,
   PortalCategoriesCategoryRoute: PortalCategoriesCategoryRoute,
   ProcessInstancesInvoicePackingRoute:
     ProcessInstancesInvoicePackingRouteWithChildren,

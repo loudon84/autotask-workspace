@@ -8,7 +8,11 @@ from nodeskclaw_rpa_engine.runtime.errors import (
     RpaHumanRequiredError,
     RpaRetryableError,
 )
-from nodeskclaw_rpa_engine.runtime.boe_srm import login_boe_srm, open_invoice_packing
+from nodeskclaw_rpa_engine.runtime.boe_srm import (
+    login_boe_srm,
+    open_invoice_packing,
+    prepare_invoice_create,
+)
 from nodeskclaw_rpa_engine.runtime.official_srm_login import login_official_srm
 
 __all__ = [
@@ -23,4 +27,5 @@ __all__ = [
     "login_boe_srm",
     "login_official_srm",
     "open_invoice_packing",
+    "prepare_invoice_create",
 ]

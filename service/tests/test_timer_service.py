@@ -118,8 +118,13 @@ def test_production_catalog_entries():
         "demo.print_now",
         "tiandy.scan_pending",
         "tiandy.sign_poll",
+        "boe.pack_match",
+        "boe.srm_login",
     }
     assert by_target["demo.print_now"].cron == "0 8 * * *"
     assert by_target["tiandy.scan_pending"].cron == "0 8 * * *"
     assert by_target["tiandy.sign_poll"].cron == "*/30 * * * *"
+    assert by_target["boe.pack_match"].cron == "0 7 * * *"
+    assert by_target["boe.srm_login"].cron == "0 7 * * *"
+    assert by_target["boe.srm_login"].name == "京东方-SRM晨间登录"
     assert all(item.enabled is False for item in REGISTRATIONS)

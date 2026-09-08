@@ -44,7 +44,9 @@ Task validates Binding Flow pins and Engine workers pull leases / push callbacks
 Workers call SDMS/ERP/OA using bases and secrets injected at lease time from Task
 `.env`.
 
-Client may open SDMS pages using `GET /integration-endpoints` (`sdmsBaseUrl`).
+Client may open SDMS pages using `GET /integration-endpoints` (`sdmsBaseUrl`):
+sales order `view`, statement `view`, and BOE delivery plan `viewDpInfo`
+(`fdId` = `header_id`). These are view URLs only; AutoTask edit stays in Client.
 Outbound HTTP evidence is recorded as [[domain#IntegrationCallLog]]. Redis-backed
 command queues remain an open production hardening item when the port is
 unreachable.

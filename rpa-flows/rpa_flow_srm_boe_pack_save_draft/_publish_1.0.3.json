@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_boe_pack_save_draft",
+  "rpaFlowVersion": "1.0.3",
+  "rpaFlowVersionId": "c74b29a9-1c00-4dc0-be72-375dd161570e",
+  "packageChecksum": "sha256:89613656bfa1f229a18fb472a74bb080220812d1c9df0a8ed7728e121e359d06",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_boe_pack_save_draft"
+}

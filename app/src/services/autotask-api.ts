@@ -618,17 +618,17 @@ export const autotaskApi = {
   },
 
   regionMaps: {
-    list: (category: string): Promise<import("@/types/region-map").RegionCodeMap[]> => {
+    list: (): Promise<import("@/types/region-map").RegionCodeMap[]> => {
       const api = pickApi();
       if ("listRegionMaps" in api && typeof api.listRegionMaps === "function") {
-        return api.listRegionMaps(category);
+        return api.listRegionMaps();
       }
       return Promise.resolve([]);
     },
     upsert: (body: {
-      category: string;
       regionCode: string;
-      srmDisplayName: string;
+      defaultName: string;
+      boeName?: string;
     }): Promise<import("@/types/region-map").RegionCodeMap> => {
       const api = pickApi();
       if ("upsertRegionMap" in api && typeof api.upsertRegionMap === "function") {
@@ -674,7 +674,11 @@ export const autotaskApi = {
     },
     patch: (
       id: string,
-      body: { header?: Record<string, unknown>; lines?: unknown[] }
+      body: {
+        header?: Record<string, unknown>;
+        lines?: unknown[];
+        attachments?: unknown[];
+      }
     ): Promise<import("@/types/boe-packing").BoePackDetail> => {
       const api = pickApi();
       if ("patchBoePacking" in api && typeof api.patchBoePacking === "function") {

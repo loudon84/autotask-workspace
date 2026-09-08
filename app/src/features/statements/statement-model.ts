@@ -133,7 +133,10 @@ export function resolveStatementBlocker(input: {
     return null;
   }
 
-  const latestByKey = new Map<string, (typeof input.subTasks)[number]>();
+  const latestByKey = new Map<
+    string,
+    NonNullable<typeof input.subTasks>[number]
+  >();
   for (const task of [...(input.subTasks ?? [])].sort((left, right) =>
     left.updatedAt.localeCompare(right.updatedAt)
   )) {

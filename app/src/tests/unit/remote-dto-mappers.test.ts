@@ -159,10 +159,11 @@ describe("remote DTO 映射", () => {
         portalName: "供应商门户",
         portalUrl: "https://supplier.example.com",
         loginAccount: "demo",
+        extra: {},
         credentialRef: "credential-demo",
         clientOpenMode: "webcontents",
         clientSessionPartition: "persist:srm:demo",
-        status: "enabled",
+        status: "ENABLED",
         ownerUserId: "admin",
         ownerName: "admin",
         createdByName: "admin",
@@ -174,6 +175,7 @@ describe("remote DTO 映射", () => {
       ou: "104",
       category: "TIANDI",
       credentialRef: "credential-demo",
+      extra: {},
       status: "ENABLED",
     });
 

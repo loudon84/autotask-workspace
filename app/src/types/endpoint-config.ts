@@ -126,3 +126,20 @@ export function buildSdmsCheckViewUrl(
   }
   return `${base}/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=${encodeURIComponent(id)}`;
 }
+
+/** SDMS 交货计划查看页：fdId = header_id。只打开查看，不打开编辑。 */
+// @lat: [[integration#External Systems]]
+export function buildSdmsDpViewUrl(
+  baseUrl: string | undefined,
+  headerId: string
+): string | null {
+  const id = headerId.trim();
+  if (!id) {
+    return null;
+  }
+  const base = (baseUrl ?? "").trim().replace(TRAILING_SLASHES_PATTERN, "");
+  if (!base) {
+    return null;
+  }
+  return `${base}/sdms/dp/sdms_dp_main/sdmsDpMain.do?method=viewDpInfo&fdId=${encodeURIComponent(id)}`;
+}

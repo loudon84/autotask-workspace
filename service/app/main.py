@@ -108,17 +108,15 @@ async def lifespan(app: FastAPI):
     app.state.job_scheduler = job_scheduler
 
 
-    # 京东方匹配常驻启动；开关与 cron 在 autotask_settings，每个 tick 热加载。
-    boe_match_scheduler = None
-    from app.services.boe_match_scheduler import BoeMatchScheduler
-
-    boe_match_scheduler = BoeMatchScheduler(async_session_factory)
-    await boe_match_scheduler.start()
-    logger.info("京东方匹配交货计划调度器已启动（autotask_settings 热更新）")
-    app.state.boe_match_scheduler = boe_match_scheduler
     from app.services.timer_scheduler import TimerScheduler
     from app.services import timer_registry
     from app.services import timer_service as timer_svc
+    from app.services.boe_timers import (
+        BOE_PACK_MATCH_TARGET,
+        BOE_SRM_LOGIN_TARGET,
+        pack_match_due,
+        srm_login_due,
+    )
     from app.services.demo_timer import DEMO_PRINT_NOW_TARGET, print_current_time
     from app.services.tiandy_timers import (
         TIANDI_SCAN_TARGET,
@@ -130,6 +128,8 @@ async def lifespan(app: FastAPI):
     timer_registry.register(DEMO_PRINT_NOW_TARGET, print_current_time)
     timer_registry.register(TIANDI_SCAN_TARGET, scan_pending_due)
     timer_registry.register(TIANDI_SIGN_POLL_TARGET, sign_poll_due)
+    timer_registry.register(BOE_PACK_MATCH_TARGET, pack_match_due)
+    timer_registry.register(BOE_SRM_LOGIN_TARGET, srm_login_due)
 
     timer_scheduler = None
     try:
@@ -150,8 +150,6 @@ async def lifespan(app: FastAPI):
         if timer_scheduler is not None:
             await timer_scheduler.stop()
         await job_scheduler.stop()
-        if boe_match_scheduler is not None:
-            await boe_match_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()
         await engine.dispose()

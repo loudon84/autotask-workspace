@@ -22,15 +22,27 @@ export type BoePackHeader = {
   volUnit?: string;
 };
 
+export type BoePackAttachType = "箱单" | "发票" | "提运单" | "双签PO/协议";
+
+export type BoePackAttachment = {
+  id?: string;
+  type?: BoePackAttachType | string;
+  fileName?: string;
+  filePath?: string;
+};
+
 export type BoePackLine = {
   lineNo?: string;
   poNum?: string;
   itemNum?: string;
   deliveryQty?: string;
   netWeight?: string;
+  netWeightUnit?: string;
   regionCode?: string;
   regionSrmName?: string;
   lineItem?: string;
+  orderQty?: string;
+  orderUnit?: string;
   remainingQty?: string;
   itemName?: string;
   factory?: string;
@@ -54,6 +66,8 @@ export type BoePackListItem = {
   invoiceNo?: string;
   factory?: string;
   customerName?: string;
+  srmDraftNo?: string;
+  headerId?: string;
 };
 
 export type BoePackDetail = BoePackListItem & {
@@ -61,8 +75,8 @@ export type BoePackDetail = BoePackListItem & {
   lines: BoePackLine[];
   qtyWarning?: string | null;
   orgCodeWarning?: string | null;
-  srmDraftNo?: string;
   reviewBaseline?: Record<string, unknown> | null;
+  attachments?: BoePackAttachment[];
   stageHistory: Array<{
     id: string;
     fromStage?: string | null;
@@ -78,6 +92,7 @@ export type BoePackDetail = BoePackListItem & {
     status: string;
     createdAt: string;
     updatedAt: string;
+    lineNumber?: string | null;
   }>;
 };
 

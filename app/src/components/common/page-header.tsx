@@ -1,10 +1,17 @@
 type PageHeaderProps = {
   title: string;
   description?: string;
+  /** 右侧操作区；与 children 等价，优先取 actions */
+  actions?: React.ReactNode;
   children?: React.ReactNode;
 };
 
-export function PageHeader({ title, description, children }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  children,
+}: PageHeaderProps) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-2">
       <div>
@@ -13,7 +20,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
           <p className="text-muted-foreground">{description}</p>
         )}
       </div>
-      {children}
+      {actions ?? children}
     </div>
   );
 }

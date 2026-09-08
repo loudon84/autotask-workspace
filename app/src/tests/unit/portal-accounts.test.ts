@@ -22,6 +22,7 @@ describe("mapPortalAccount", () => {
     expect(result.erpEntityName).toBe("客户A");
     expect(result.portalName).toBe("客户A SRM");
     expect(result.category).toBe("TIANDI");
+    expect(result.extra).toEqual({});
     expect(result.portalUrl).toBe("https://example.com");
     expect(result.status).toBe("ENABLED");
   });
@@ -39,6 +40,7 @@ describe("mapPortalAccount", () => {
       portal_name: "生产门户",
       portal_url: "https://portal.example.com",
       login_account: "buyer@example.com",
+      extra: { email: "cs@example.com" },
       client_open_mode: "system_browser",
       client_session_partition: "persist:portal-cust-001",
       status: "DISABLED",
@@ -52,6 +54,7 @@ describe("mapPortalAccount", () => {
     expect(result.ou).toBe("104");
     expect(result.portalName).toBe("生产门户");
     expect(result.category).toBe("BOE");
+    expect(result.extra).toEqual({ email: "cs@example.com" });
     expect(result.status).toBe("DISABLED");
     expect(result.clientOpenMode).toBe("system_browser");
   });

@@ -30,4 +30,16 @@ REGISTRATIONS: tuple[TimerRegistration, ...] = (
         cron="*/30 * * * *",
         enabled=False,
     ),
+    TimerRegistration(
+        target="boe.pack_match",
+        name="京东方-匹配交货计划",
+        cron="0 7 * * *",
+        enabled=False,
+    ),
+    TimerRegistration(
+        target="boe.srm_login",
+        name="京东方-SRM晨间登录",
+        cron="0 7 * * *",
+        enabled=False,
+    ),
 )

@@ -1,0 +1,116 @@
+=== 行表原产国列 ===
+{
+ "thsCount": 32,
+ "regionIdx": 17,
+ "regionHeader": "*原产国/地区",
+ "tdCount": 32,
+ "regionTdHtml": "<div class=\"cell el-tooltip\" style=\"width: 118px;\"><span><div data-v-7600beb4=\"\" class=\"el-select el-select--mini\"><!----><div class=\"el-input el-input--mini el-input--suffix\"><!----><input type=\"text\" readonly=\"readonly\" autocomplete=\"off\" placeholder=\"国/地区\" class=\"el-input__inner\"><!----><span class=\"el-input__suffix\"><span class=\"el-input__suffix-inner\"><i class=\"el-select__caret el-input__icon el-icon-arrow-up\"></i><!----><!----><!----><!----><!----></span><!----></span><!----><!----></div><div class=\"el-select-dropdown el-popper\" style=\"display: none; min-width: 103px;\"><div class=\"el-scr",
+ "editable": [
+  {
+   "i": 0,
+   "header": "",
+   "inputs": [
+    "el-checkbox__original"
+   ],
+   "select": 0
+  },
+  {
+   "i": 11,
+   "header": "*本次开票数",
+   "inputs": [
+    "本次开票数"
+   ],
+   "select": 0
+  },
+  {
+   "i": 12,
+   "header": "*净重",
+   "inputs": [
+    "净重"
+   ],
+   "select": 0
+  },
+  {
+   "i": 13,
+   "header": "净重单位",
+   "inputs": [
+    "净重单位"
+   ],
+   "select": 1
+  },
+  {
+   "i": 17,
+   "header": "*原产国/地区",
+   "inputs": [
+    "国/地区"
+   ],
+   "select": 1
+  }
+ ]
+}
+原产国下拉选项: ["千克", "升", "克"]
+下拉里没有 中国台湾!
+=== 附件行 ===
+[
+ {
+  "no": "1",
+  "typeValue": "1200",
+  "btnDisabled": null,
+  "btnAria": null,
+  "btnCls": null
+ },
+ {
+  "no": "",
+  "typeValue": "千克",
+  "btnDisabled": null,
+  "btnAria": null,
+  "btnCls": null
+ },
+ {
+  "no": "1",
+  "typeValue": "",
+  "btnDisabled": null,
+  "btnAria": null,
+  "btnCls": null
+ },
+ {
+  "no": "1",
+  "typeValue": "箱单",
+  "btnDisabled": true,
+  "btnAria": null,
+  "btnCls": "el-button el-button--text el-button--mini is-disabled"
+ },
+ {
+  "no": "2",
+  "typeValue": "发票",
+  "btnDisabled": true,
+  "btnAria": null,
+  "btnCls": "el-button el-button--text el-button--mini is-disabled"
+ },
+ {
+  "no": "3",
+  "typeValue": "提运单",
+  "btnDisabled": true,
+  "btnAria": null,
+  "btnCls": "el-button el-button--text el-button--mini is-disabled"
+ },
+ {
+  "no": "4",
+  "typeValue": "双签PO/协议",
+  "btnDisabled": false,
+  "btnAria": null,
+  "btnCls": "el-button el-button--text el-button--mini"
+ },
+ {
+  "no": "",
+  "typeValue": "1",
+  "btnDisabled": null,
+  "btnAria": null,
+  "btnCls": null
+ }
+]
+附件行数: 8
+已删附件行 6 (双签PO/协议)
+=== 保存后 toast ===
+["操作成功"]
+流水号: 未找到

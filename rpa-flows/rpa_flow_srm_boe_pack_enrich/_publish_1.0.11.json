@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_boe_pack_enrich",
+  "rpaFlowVersion": "1.0.11",
+  "rpaFlowVersionId": "b650846b-c40d-45f0-afd4-fd89a2e27105",
+  "packageChecksum": "sha256:93d7b3a0720d26702c3f050ce7d6ac391abbd54e252321d7821a0fd74d4e4418",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_boe_pack_enrich"
+}

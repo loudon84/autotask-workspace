@@ -55,7 +55,8 @@ async def fetch_delivery_plans() -> SmcHttpResult:
     if not settings.SMC_API_BASE_URL:
         return SmcHttpResult(url=url, status_code=None, body="", data=[], error="未配置 SMC_API_BASE_URL")
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # trust_env=False：内网地址不能走本机系统代理（registry），否则 502
+        async with httpx.AsyncClient(timeout=30.0, trust_env=False) as client:
             response = await client.post(url)
         body = response.text
         payload: Any = None
@@ -78,11 +79,14 @@ async def fetch_delivery_plans() -> SmcHttpResult:
 
 async def fetch_wms_packing(doc_no: str) -> SmcHttpResult:
     url = _join_url(settings.SMC_API_BASE_URL, settings.BOE_WMS_PATH)
-    params = {"doc_no": doc_no}
+    # 正式路径 /aiats/wms_sjh_pl_boe，参数 erpno=交货计划单号。
+    # 返回平铺行 cuspo/cusitem/qty/netweight/cubic/coo；doc_no 现已空数据。
+    params = {"erpno": doc_no}
     if not settings.SMC_API_BASE_URL:
         return SmcHttpResult(url=url, status_code=None, body="", data=[], error="未配置 SMC_API_BASE_URL")
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # trust_env=False：内网地址不能走本机系统代理（registry），否则 502
+        async with httpx.AsyncClient(timeout=30.0, trust_env=False) as client:
             response = await client.get(url, params=params)
         body = response.text
         payload: Any = None

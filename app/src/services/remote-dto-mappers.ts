@@ -9,9 +9,9 @@ import type { DashboardData } from "@/types/dashboard";
 import type { HumanAction, HumanActionType } from "@/types/human-action";
 import type {
   CreatePortalAccountInput,
-  SRMPortal,
   UpdatePortalAccountInput,
-} from "@/types/srm-portal";
+} from "@/types/portal-account";
+import type { SRMPortal } from "@/types/srm-portal";
 import type {
   LogLevel,
   RunLog,
@@ -497,6 +497,7 @@ export function toRemotePortalCreate(
     portalName: input.portalName,
     portalUrl: input.portalUrl,
     loginAccount: input.loginAccount,
+    extra: input.extra ?? {},
     ...(input.credentialRef ? { credentialRef: input.credentialRef } : {}),
     clientOpenMode: input.clientOpenMode,
     clientSessionPartition: input.clientSessionPartition,
@@ -525,6 +526,7 @@ export function toRemotePortalUpdate(
     ...(input.loginAccount === undefined
       ? {}
       : { loginAccount: input.loginAccount }),
+    ...(input.extra === undefined ? {} : { extra: input.extra }),
     ...(input.credentialRef === undefined || input.credentialRef === ""
       ? {}
       : { credentialRef: input.credentialRef }),

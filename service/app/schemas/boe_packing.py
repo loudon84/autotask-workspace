@@ -24,6 +24,8 @@ class BoePackingListItem(CamelModel):
     invoice_no: str = Field("", serialization_alias="invoiceNo")
     factory: str = ""
     customer_name: str = Field("", serialization_alias="customerName")
+    srm_draft_no: str = Field("", serialization_alias="srmDraftNo")
+    header_id: str = Field("", serialization_alias="headerId")
 
 
 class BoePackingHeaderPatch(CamelModel):
@@ -41,16 +43,28 @@ class BoePackingLinePatch(CamelModel):
     item_num: str | None = Field(None, alias="itemNum")
     delivery_qty: str | None = Field(None, alias="deliveryQty")
     net_weight: str | None = Field(None, alias="netWeight")
+    net_weight_unit: str | None = Field(None, alias="netWeightUnit")
     region_code: str | None = Field(None, alias="regionCode")
     region_srm_name: str | None = Field(None, alias="regionSrmName")
     line_item: str | None = Field(None, alias="lineItem")
+    order_qty: str | None = Field(None, alias="orderQty")
+    order_unit: str | None = Field(None, alias="orderUnit")
     remaining_qty: str | None = Field(None, alias="remainingQty")
     item_name: str | None = Field(None, alias="itemName")
+    factory: str | None = None
+
+
+class BoePackingAttachmentPatch(CamelModel):
+    id: str | None = None
+    type: str | None = None
+    file_name: str | None = Field(None, alias="fileName")
+    file_path: str | None = Field(None, alias="filePath")
 
 
 class BoePackingPatchRequest(CamelModel):
     header: BoePackingHeaderPatch | None = None
     lines: list[BoePackingLinePatch] | None = None
+    attachments: list[BoePackingAttachmentPatch] | None = None
 
 
 class BoeMatchResponse(CamelModel):

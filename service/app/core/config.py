@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     BOE_PACK_MATCH_JOB_HOUR: int = Field(default=7, ge=0, le=23)
     BOE_PACK_MATCH_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
     BOE_DELIVERY_PLAN_PATH: str = "/aiats/ebs_sjh_header_boe"
-    BOE_WMS_PATH: str = "/test_demo/boe"
+    BOE_WMS_PATH: str = "/aiats/wms_sjh_pl_boe"
 
     SEED_DATA_ENABLED: bool = True
     SKIP_AUTO_MIGRATE: bool = False
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
 
     # 环境级外部系统基址。测试/正式只改这里，不要写进 Binding、不要写进登录页。
     # SMC_API_BASE_URL：公司内部 SQL→JSON 接口平台（对账单查询等）。
-    # SDMS_BASE_URL：SDMS 网页主机（Client 打开销售订单/对账单链接）。
+    # SDMS_BASE_URL：SDMS 网页主机（Client 打开销售订单/对账单/交货计划查看链接）。
     # 以后 OA 可加 OA_BASE_URL，租约会透传 oaBaseUrl。
     SMC_API_BASE_URL: str = ""
     SDMS_BASE_URL: str = ""

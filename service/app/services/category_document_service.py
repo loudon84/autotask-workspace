@@ -13,10 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.domain.portal_category import CATEGORY_LABELS, PortalCategory, parse_portal_category
+from app.domain.portal_extra import extra_fields_for
 from app.models.base import not_deleted
 from app.models.category_document import CategoryDocument
 from app.models.user_cache import UserCache
-from app.schemas.category_document import CategoryDocumentResponse, CategorySummary
+from app.schemas.category_document import (
+    CategoryDocumentResponse,
+    CategorySummary,
+    ExtraFieldSchema,
+)
 
 ALLOWED_SUFFIXES = {
     ".doc",
@@ -78,6 +83,17 @@ async def list_categories(db: AsyncSession, tenant_id: str) -> list[CategorySumm
             code=item.value,
             label=CATEGORY_LABELS[item],
             document_count=counts.get(item.value, 0),
+            extra_fields=[
+                ExtraFieldSchema(
+                    key=field.key,
+                    label=field.label,
+                    field_type=field.field_type,
+                    required=field.required,
+                    placeholder=field.placeholder,
+                    help_text=field.help_text,
+                )
+                for field in extra_fields_for(item.value)
+            ],
         )
         for item in PortalCategory
     ]

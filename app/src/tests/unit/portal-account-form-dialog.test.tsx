@@ -50,6 +50,7 @@ const portal: PortalAccount = {
   portalName: "供应商门户",
   portalUrl: "https://supplier.example.com",
   loginAccount: "portal-user",
+  extra: {},
   clientOpenMode: "webcontents",
   clientSessionPartition: "persist:portal-c001",
   category: "TIANDI",
@@ -100,6 +101,7 @@ describe("PortalAccountFormDialog credentialRef", () => {
         credentialRef: "credential-demo",
         loginAccount: "portal-user",
         category: "TIANDI",
+        extra: {},
       }),
       expect.any(Object)
     );
@@ -139,6 +141,34 @@ describe("PortalAccountFormDialog credentialRef", () => {
     expect(updateMutateMock.mock.calls[0]?.[0].patch).toMatchObject({
       credentialRef: "credential-updated",
     });
+  });
+
+  it("京东方显示邮箱，天地伟业不显示", () => {
+    const { rerender } = render(
+      <PortalAccountFormDialog
+        mode="edit"
+        onOpenChange={vi.fn()}
+        open
+        portal={portal}
+      />
+    );
+    expect(screen.queryByLabelText("邮箱 *")).not.toBeInTheDocument();
+
+    rerender(
+      <PortalAccountFormDialog
+        mode="edit"
+        onOpenChange={vi.fn()}
+        open
+        portal={{
+          ...portal,
+          category: "BOE",
+          extra: { email: "xiongjing@smart-core.com.cn" },
+        }}
+      />
+    );
+    expect(screen.getByLabelText("邮箱 *")).toHaveValue(
+      "xiongjing@smart-core.com.cn"
+    );
   });
 
   it("归属人显示姓名和工号，并可以按姓名搜索", async () => {

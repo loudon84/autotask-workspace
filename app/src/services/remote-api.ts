@@ -649,7 +649,11 @@ export const remoteApi = {
 
   patchBoePacking: async (
     id: string,
-    body: { header?: Record<string, unknown>; lines?: unknown[] }
+    body: {
+      header?: Record<string, unknown>;
+      lines?: unknown[];
+      attachments?: unknown[];
+    }
   ): Promise<BoePackDetail> => {
     const data = await requestAutotaskApi<unknown>({
       method: "PATCH",
@@ -683,19 +687,18 @@ export const remoteApi = {
     return mapItemResponse<BoePackDetail>(data);
   },
 
-  listRegionMaps: async (category: string): Promise<RegionCodeMap[]> => {
+  listRegionMaps: async (): Promise<RegionCodeMap[]> => {
     const data = await requestAutotaskApi<unknown>({
       method: "GET",
       path: "/region-maps",
-      query: { category },
     });
     return mapListResponse<RegionCodeMap>(data);
   },
 
   upsertRegionMap: async (body: {
-    category: string;
     regionCode: string;
-    srmDisplayName: string;
+    defaultName: string;
+    boeName?: string;
   }): Promise<RegionCodeMap> => {
     const data = await requestAutotaskApi<unknown>({
       method: "POST",

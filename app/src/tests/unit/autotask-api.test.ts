@@ -66,18 +66,17 @@ describe("default endpoint config", () => {
   });
 
     it("does not invent a default SDMS web URL", async () => {
-    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl } = await import(
-      "@/types/endpoint-config"
-    );
+    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl, buildSdmsDpViewUrl } =
+      await import("@/types/endpoint-config");
     expect(buildSdmsOmViewUrl(undefined, "1100983")).toBeNull();
     expect(buildSdmsOmViewUrl("", "1100983")).toBeNull();
     expect(buildSdmsCheckViewUrl(undefined, "36775")).toBeNull();
+    expect(buildSdmsDpViewUrl(undefined, "81543")).toBeNull();
   });
 
     it("builds SDMS OM view URLs from headerId", async () => {
-    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl } = await import(
-      "@/types/endpoint-config"
-    );
+    const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl, buildSdmsDpViewUrl } =
+      await import("@/types/endpoint-config");
     expect(buildSdmsOmViewUrl("http://192.168.99.35:8080/", "1100983")).toBe(
       "http://192.168.99.35:8080/sdms/om/sdms_om_main/sdmsOmMain.do?method=view&fdId=1100983"
     );
@@ -86,6 +85,11 @@ describe("default endpoint config", () => {
       "http://192.168.99.35:8080/sdms/check/sdms_check_cust_headers/sdmsCheckCustHeaders.do?method=view&fdId=36775"
     );
     expect(buildSdmsCheckViewUrl("http://example.com", "")).toBeNull();
+    expect(buildSdmsDpViewUrl("http://192.168.99.35:8080/", "81543")).toBe(
+      "http://192.168.99.35:8080/sdms/dp/sdms_dp_main/sdmsDpMain.do?method=viewDpInfo&fdId=81543"
+    );
+    expect(buildSdmsDpViewUrl("http://example.com", "")).toBeNull();
+    expect(buildSdmsDpViewUrl(undefined, "81543")).toBeNull();
   });
 });
 

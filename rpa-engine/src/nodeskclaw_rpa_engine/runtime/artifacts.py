@@ -123,6 +123,16 @@ class ArtifactRecorder:
         self._max_bytes = max_bytes
         self._root.mkdir(parents=True, exist_ok=True)
 
+    def _active_page(self) -> Any:
+        """Flow 可能切到新标签页（如京东方应用卡）：截图取最近打开的未关闭页面。"""
+        try:
+            pages = [p for p in self._page.context.pages if not p.is_closed()]
+            if pages:
+                return pages[-1]
+        except Exception:
+            pass
+        return self._page
+
     async def screenshot(
         self,
         name: str,
@@ -133,7 +143,7 @@ class ArtifactRecorder:
         filename = self._filename(name, ".png")
         path = self._root / "screenshots" / f"{uuid4().hex}-{filename}"
         path.parent.mkdir(parents=True, exist_ok=True)
-        await self._page.screenshot(path=str(path), full_page=full_page)
+        await self._active_page().screenshot(path=str(path), full_page=full_page)
         return await self.record_file(
             path,
             artifact_type=ArtifactType.SCREENSHOT,

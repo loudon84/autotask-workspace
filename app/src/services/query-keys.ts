@@ -46,8 +46,7 @@ export const queryKeys = {
   },
   regionMaps: {
     all: ["region-maps"] as const,
-    list: (category: string) =>
-      [...queryKeys.regionMaps.all, category] as const,
+    list: () => [...queryKeys.regionMaps.all] as const,
   },
   boePacking: {
     all: ["boe-packing"] as const,
@@ -71,7 +70,6 @@ export const queryKeys = {
   },
   settings: {
     all: ["settings"] as const,
-    schedulers: ["settings", "schedulers"] as const,
   },
   schedulerJobs: {
     all: ["scheduler-jobs"] as const,

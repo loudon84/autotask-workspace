@@ -15,6 +15,7 @@ import {
   boePackStageName,
   canRetryBoePack,
 } from "@/features/boe-packing/boe-packing-model";
+import { SdmsDeliveryPlanLabel } from "@/features/boe-packing/sdms-delivery-plan-label";
 import { autotaskApi } from "@/services/autotask-api";
 import { queryKeys } from "@/services/query-keys";
 import type { BoePackListItem } from "@/types/boe-packing";
@@ -25,10 +26,26 @@ export function BoePackingListPage() {
   const [tab, setTab] = useState("all");
   const [acting, setActing] = useState(false);
   const stage = tab === "all" ? undefined : tab;
-  const { data, isLoading, refetch } = useBoePackingList({ stage });
+  const { data, isLoading, isFetching, refetch } = useBoePackingList({ stage });
 
   const columns = useMemo<ColumnDef<BoePackListItem>[]>(
     () => [
+      {
+        accessorKey: "srmDraftNo",
+        header: "发票箱单流水号",
+        cell: ({ row }) => row.original.srmDraftNo ?? "",
+      },
+      {
+        id: "docNo",
+        header: "交货计划",
+        cell: ({ row }) => (
+          <SdmsDeliveryPlanLabel
+            docNo={row.original.bizKey}
+            headerId={row.original.headerId}
+            labeled={false}
+          />
+        ),
+      },
       { accessorKey: "invoiceNo", header: "供应商发票号" },
       { accessorKey: "customerName", header: "客户" },
       { accessorKey: "factory", header: "BOE 工厂" },
@@ -36,7 +53,17 @@ export function BoePackingListPage() {
         id: "stage",
         header: "阶段",
         cell: ({ row }) => (
-          <Badge variant="outline">{boePackStageName(row.original.stage)}</Badge>
+          <div className="space-y-1">
+            <Badge variant="outline">{boePackStageName(row.original.stage)}</Badge>
+            {row.original.lastErrorMessage ? (
+              <p
+                className="max-w-56 truncate text-destructive text-xs"
+                title={row.original.lastErrorMessage}
+              >
+                {row.original.lastErrorMessage}
+              </p>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -86,13 +113,24 @@ export function BoePackingListPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        actions={
-          <div className="flex gap-2">
-            <Button
-              disabled={acting}
-              onClick={async () => {
+        description="按交货计划建单并读取 WMS 装箱信息"
+        title="发票箱单"
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={isFetching}
+            onClick={() => void refetch()}
+            size="sm"
+            variant="outline"
+          >
+            刷新
+          </Button>
+          <Button
+            disabled={acting}
+            size="sm"
+            onClick={async () => {
                 setActing(true);
                 try {
                   const result = await autotaskApi.boePacking.match();
@@ -120,14 +158,11 @@ export function BoePackingListPage() {
                   setActing(false);
                 }
               }}
-            >
-              立即匹配交货计划
-            </Button>
-          </div>
-        }
-        description="按交货计划建单并读取 WMS 装箱信息。门户客户编号须等于子代码。"
-        title="发票箱单"
-      />
+          >
+            立即匹配交货计划
+          </Button>
+        </div>
+      </PageHeader>
       <Tabs onValueChange={setTab} value={tab}>
         <TabsList>
           {BOE_PACK_STAGE_TABS.map((item) => (
