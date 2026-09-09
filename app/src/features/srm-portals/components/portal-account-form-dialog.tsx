@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiClientError } from "@/actions/autotask-api";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ function portalToFormState(portal: PortalAccount): FormState {
     extra: { ...(portal.extra ?? {}) },
     clientOpenMode: portal.clientOpenMode,
     clientSessionPartition: portal.clientSessionPartition,
-    credentialRef: "",
+    credentialRef: portal.credentialRef ?? "",
     status: portal.status,
     ownerUserId: portal.ownerUserId ?? "",
   };
@@ -192,6 +193,7 @@ export function PortalAccountFormDialog({
 }: PortalAccountFormDialogProps) {
   const [form, setForm] = useState<FormState>(defaultFormState);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const createMutation = useCreatePortalAccount();
   const updateMutation = useUpdatePortalAccount();
@@ -208,6 +210,7 @@ export function PortalAccountFormDialog({
       return;
     }
     setFieldErrors({});
+    setPasswordVisible(false);
     if (mode === "edit" && portal) {
       setForm(portalToFormState(portal));
     } else {
@@ -506,19 +509,28 @@ export function PortalAccountFormDialog({
             <Label htmlFor="credentialRef">
               门户密码{mode === "create" ? " *" : ""}
             </Label>
-            <Input
-              autoComplete="new-password"
-              id="credentialRef"
-              onChange={(e) => updateField("credentialRef", e.target.value)}
-              placeholder={
-                mode === "create"
-                  ? "门户登录密码"
-                  : "留空则不修改"
-              }
-              required={mode === "create"}
-              type="password"
-              value={form.credentialRef}
-            />
+            <div className="relative">
+              <Input
+                autoComplete="new-password"
+                className="pr-8"
+                id="credentialRef"
+                onChange={(e) => updateField("credentialRef", e.target.value)}
+                placeholder="门户登录密码"
+                required={mode === "create"}
+                type={passwordVisible ? "text" : "password"}
+                value={form.credentialRef}
+              />
+              <Button
+                aria-label={passwordVisible ? "隐藏密码" : "显示密码"}
+                className="absolute top-1/2 right-0.5 -translate-y-1/2"
+                onClick={() => setPasswordVisible((visible) => !visible)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                {passwordVisible ? <EyeOff /> : <Eye />}
+              </Button>
+            </div>
             {fieldErrors.credentialRef && (
               <p className="text-destructive text-xs">
                 {fieldErrors.credentialRef}

@@ -1,0 +1,13 @@
+{
+  "supplier_login_entry": "div.buttonSign:has-text('供应商登录')",
+  "username": "#username",
+  "password": "#password",
+  "privacy_checkbox": "#checkPrivacyPolicy",
+  "login_button": "input[type='submit'][name='submit']",
+  "login_success": ".ant-menu span.menu-span:has-text('首页')",
+  "otp_dialog": "text=获取验证码",
+  "email_auth": "#emailAuth",
+  "get_code": "#getCodeBtn",
+  "verification_code": "#verificationCode",
+  "two_factor": "#twoFactorAuth"
+}

@@ -132,8 +132,8 @@ export function SchedulerJobDetailPage({ jobId }: { jobId: string }) {
       cell: ({ row }) => runDurationText(row.original),
     },
     {
-      accessorKey: "error",
-      header: "错误",
+                    accessorKey: "error",
+                    header: "结果",
       cell: ({ row }) => row.original.error ?? "—",
     },
   ];

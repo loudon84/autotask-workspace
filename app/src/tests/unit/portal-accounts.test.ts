@@ -41,6 +41,7 @@ describe("mapPortalAccount", () => {
       portal_url: "https://portal.example.com",
       login_account: "buyer@example.com",
       extra: { email: "cs@example.com" },
+      credential_ref: "secret",
       client_open_mode: "system_browser",
       client_session_partition: "persist:portal-cust-001",
       status: "DISABLED",
@@ -55,6 +56,7 @@ describe("mapPortalAccount", () => {
     expect(result.portalName).toBe("生产门户");
     expect(result.category).toBe("BOE");
     expect(result.extra).toEqual({ email: "cs@example.com" });
+    expect(result.credentialRef).toBe("secret");
     expect(result.status).toBe("DISABLED");
     expect(result.clientOpenMode).toBe("system_browser");
   });

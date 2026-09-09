@@ -563,9 +563,14 @@ async def _maybe_enqueue_rpa(
             task_input=task_input,
             actor=actor,
         )
-    except BadRequestError:
+    except BadRequestError as exc:
         if required:
             raise
+        _set_instance_error(
+            instance,
+            error_code="PROCESS_BINDING_MISSING",
+            error_message=exc.message or f"未绑定 {template_code}",
+        )
         return None
 
 

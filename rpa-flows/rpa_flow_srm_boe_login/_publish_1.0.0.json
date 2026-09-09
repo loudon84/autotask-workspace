@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_boe_login",
+  "rpaFlowVersion": "1.0.0",
+  "rpaFlowVersionId": "331ea4f3-23c0-4a8b-9884-2890fd6bdac7",
+  "packageChecksum": "sha256:6bc84e6c99bf12f622b528fbad8b6231e10c41ba8642d2344c8a2537f7f77c36",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_boe_login"
+}

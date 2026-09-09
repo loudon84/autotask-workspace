@@ -106,6 +106,7 @@ class RunConfig(CamelModel):
     erp_client_id: str | None = None
     erp_client_secret: str | None = None
     searches: list[dict[str, Any]] | None = None
+    otp_mailbox: str | None = None
 
     @field_validator("portal_url")
     @classmethod

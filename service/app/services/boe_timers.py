@@ -1,10 +1,7 @@
 """京东方定时器入口：到点做什么写在这里，调度内核只负责 notify。
 
 - boe.pack_match：对拥有京东方门户账号的每个租户跑一轮匹配交货计划
-  （租户级一次 HTTP，不按门户复制定时器）
-- boe.srm_login：按门户 loginAccount 去重后晨间登录（RPA 尚未接入时只核对目标）
-
-开关与 cron 在调度中心维护（timers 表），本模块不含调度循环。
+- boe.srm_login：IMAP 就绪后按门户 loginAccount 去重，串行派薄登录 RPA
 """
 
 from __future__ import annotations
@@ -17,9 +14,13 @@ from sqlalchemy import select
 from app.core.deps import async_session_factory
 from app.domain.boe_srm_login import collect_boe_srm_login_targets
 from app.domain.portal_category import PortalCategory
+from app.integrations.imap_mail import MailImapError
 from app.models.base import not_deleted
 from app.models.portal_account import PortalAccount
 from app.services import boe_packing_service
+from app.services import boe_srm_login_service as login_svc
+from app.services import mail_otp_service
+from app.services.timer_registry import TimerBusinessError
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ BOE_PACK_MATCH_TARGET = "boe.pack_match"
 BOE_SRM_LOGIN_TARGET = "boe.srm_login"
 
 
-async def pack_match_due() -> None:
+async def pack_match_due() -> str:
     """到点：逐租户匹配交货计划；单租户失败不影响其他租户。"""
     async with async_session_factory() as db:
         tenants = list(
@@ -52,11 +53,18 @@ async def pack_match_due() -> None:
             except Exception:
                 logger.exception("京东方匹配失败 tenant=%s", tenant_id)
                 await db.rollback()
-        logger.info("定时京东方匹配到点：新建 %d 单（租户 %d 个）", created, len(tenants))
+        summary = f"新建 {created} 单（租户 {len(tenants)} 个）"
+        logger.info("定时京东方匹配到点：%s", summary)
+        return summary
 
 
-async def srm_login_due() -> None:
-    """到点：按门户去重核对晨间登录目标。CAS 打码 RPA 尚未接入，本轮不打开浏览器。"""
+async def srm_login_due() -> str:
+    """到点：核对 IMAP，再按去重账号串行登录。摘要写入 timer_runs，禁止写验证码。"""
+    try:
+        await mail_otp_service.assert_imap_ready()
+    except MailImapError as exc:
+        raise TimerBusinessError(str(exc)) from exc
+
     async with async_session_factory() as db:
         portals = list(
             (
@@ -65,25 +73,35 @@ async def srm_login_due() -> None:
                 )
             ).scalars().all()
         )
-        by_tenant: dict[str, list[PortalAccount]] = defaultdict(list)
-        for row in portals:
-            by_tenant[str(row.tenant_id)].append(row)
-        total = 0
-        problems = 0
-        for tenant_id, rows in by_tenant.items():
-            result = collect_boe_srm_login_targets(rows)
-            total += len(result.targets)
-            problems += len(result.errors)
-            for err in result.errors:
-                logger.warning("京东方晨间登录配置 tenant=%s %s", tenant_id, err)
-            if result.targets:
-                logger.info(
-                    "京东方晨间登录到点 tenant=%s accounts=%d rpa=not_wired",
-                    tenant_id,
-                    len(result.targets),
+    by_tenant: dict[str, list[PortalAccount]] = defaultdict(list)
+    by_id = {str(row.id): row for row in portals}
+    for row in portals:
+        by_tenant[str(row.tenant_id)].append(row)
+
+    lines: list[str] = []
+    any_fail = False
+    for tenant_id, rows in by_tenant.items():
+        collected = collect_boe_srm_login_targets(rows)
+        for err in collected.errors:
+            lines.append(err)
+            any_fail = True
+        for target in collected.targets:
+            portal = by_id.get(target.sample_portal_id)
+            if portal is None:
+                lines.append(f"{target.login_account} 失败：门户不存在")
+                any_fail = True
+                continue
+            async with async_session_factory() as db:
+                result = await login_svc.login_one_account(
+                    db,
+                    tenant_id=tenant_id,
+                    portal=portal,
+                    target=target,
+                    actor="timer:boe.srm_login",
                 )
-        logger.info(
-            "京东方晨间登录汇总 accounts=%d errors=%d（RPA 尚未接入，未登录 SRM）",
-            total,
-            problems,
-        )
+            lines.append(f"{target.login_account} {result}")
+            if result != "成功":
+                any_fail = True
+    summary = login_svc.summarize_login_wave(lines, any_fail=any_fail)
+    logger.info("京东方晨间登录汇总 %s", summary)
+    return summary

@@ -177,6 +177,7 @@ def create_app(
                 resolved_task_client,
                 run_id=command.lease.run_id,
             ),
+            task_api=resolved_task_client,
         )
         resolved_run_handler = resolved_runtime
 

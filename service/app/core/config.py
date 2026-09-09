@@ -80,6 +80,16 @@ class Settings(BaseSettings):
     ERP_CLIENT_SECRET: str = ""
     SDMS_ATTACHMENT_API_BASE_URL: str = ""
 
+    # 阿里企业邮箱 IMAP。授权码不是网页登录密码。SRM 账号/客服邮箱不在这里。
+    ALI_MAIL_HOST: str = "imap.qiye.aliyun.com"
+    ALI_MAIL_PORT: int = 993
+    ALI_MAIL_USER: str = ""
+    ALI_MAIL_AUTH: str = ""
+    ALI_MAIL_FOLDER: str = "BOE-SRM一站式平台-验证码"
+    ALI_MAIL_READONLY: bool = True
+    ALI_MAIL_OTP_POLL_SECONDS: float = Field(default=4.0, gt=0, le=30)
+    ALI_MAIL_OTP_WAIT_SECONDS: float = Field(default=90.0, gt=0, le=300)
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value):

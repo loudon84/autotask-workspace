@@ -56,11 +56,13 @@ async def run_timer_now(db: AsyncSession, timer: Timer) -> TimerRun:
         db, timer_id=timer.id, target=timer.target, triggered_at=datetime.now()
     )
     try:
-        had_listener = await timer_registry.notify(timer.target)
+        had_listener, summary = await timer_registry.notify(timer.target)
     except Exception as exc:
         await record_finish(db, run, ok=False, error=str(exc)[:500])
         return run
-    await record_finish(db, run, ok=True, had_listener=had_listener)
+    await record_finish(
+        db, run, ok=True, had_listener=had_listener, error=summary
+    )
     return run
 
 

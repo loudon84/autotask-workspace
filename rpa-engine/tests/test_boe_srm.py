@@ -94,10 +94,20 @@ class FakePage:
 
 
 class FakeCtx:
-    def __init__(self, page: FakePage, credentials: dict, portal_url: str = "https://supply.boe.com") -> None:
+    def __init__(
+        self,
+        page: FakePage,
+        credentials: dict,
+        portal_url: str = "https://supply.boe.com",
+        *,
+        config: dict | None = None,
+        otp=None,  # noqa: ANN001
+    ) -> None:
         self.page = page
         self.credentials = credentials
         self.portal_url = portal_url
+        self.config = config or {}
+        self.otp = otp
 
 
 SELECTORS = {
@@ -119,15 +129,14 @@ def sel(name: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_login_raises_when_otp_visible() -> None:
+async def test_login_already_logged_in_ignores_otp_locator() -> None:
     page = FakePage(
         {"otp": FakeLocator(visible=True, name="otp")},
         url="https://supply.boe.com/#/dashboard",
     )
     ctx = FakeCtx(page, {"username": "AA", "password": "secret"})
-    with pytest.raises(RpaBusinessError) as exc_info:
-        await login_boe_srm(ctx, selector=sel)
-    assert exc_info.value.code == "BOE_OTP_REQUIRED"
+    await login_boe_srm(ctx, selector=sel)
+    assert page.gotos == []
 
 
 @pytest.mark.asyncio
@@ -266,3 +275,235 @@ async def test_open_invoice_packing_menu_never_opens() -> None:
         await open_invoice_packing(ctx, selector=sel)
     assert exc_info.value.code == "BOE_NAV_MENU_FAILED"
     assert nav_d.clicks == 4
+
+
+class FakeOtp:
+    def __init__(self, code: str = "654321") -> None:
+        self.code = code
+        self.watermarks = 0
+        self.fetches = 0
+
+    async def watermark(self) -> int:
+        self.watermarks += 1
+        return 10
+
+    async def fetch_code(self, **kwargs) -> str:  # noqa: ANN003
+        del kwargs
+        self.fetches += 1
+        return self.code
+
+
+@pytest.mark.asyncio
+async def test_login_otp_without_mailbox_fails() -> None:
+    from nodeskclaw_rpa_engine.runtime import boe_srm as mod
+
+    mod._otp_clicks.clear()
+    user = FakeLocator(visible=True, name="user")
+    get_code = FakeLocator(visible=False, name="get_code")
+
+    def _show_otp() -> None:
+        get_code.visible = True
+
+    login = FakeLocator(name="login", on_click=_show_otp)
+    page = FakePage(
+        {
+            "otp": FakeLocator(visible=False, name="otp"),
+            "user": user,
+            "pass": FakeLocator(name="pass"),
+            "privacy": FakeLocator(visible=False, name="privacy"),
+            "login": login,
+            "#getCodeBtn": get_code,
+        },
+        url="https://supply.boe.com",
+    )
+    ctx = FakeCtx(page, {"username": "AA", "password": "secret"})
+    with pytest.raises(RpaBusinessError) as exc_info:
+        await login_boe_srm(ctx, selector=sel)
+    assert exc_info.value.code == "BOE_OTP_MAILBOX_MISSING"
+
+
+@pytest.mark.asyncio
+async def test_login_fills_otp_from_task_client() -> None:
+    from nodeskclaw_rpa_engine.runtime import boe_srm as mod
+
+    mod._otp_clicks.clear()
+    user = FakeLocator(visible=True, name="user")
+    get_code = FakeLocator(visible=False, name="get_code")
+    verify = FakeLocator(name="verification")
+    home = FakeLocator(visible=False, name="home_menu")
+    clicks = {"n": 0}
+
+    def _login_click() -> None:
+        clicks["n"] += 1
+        if clicks["n"] == 1:
+            get_code.visible = True
+            return
+        user.visible = False
+        get_code.visible = False
+        home.visible = True
+
+    login = FakeLocator(name="login", on_click=_login_click)
+    page = FakePage(
+        {
+            "otp": FakeLocator(visible=False, name="otp"),
+            "user": user,
+            "pass": FakeLocator(name="pass"),
+            "privacy": FakeLocator(visible=False, name="privacy"),
+            "login": login,
+            "home_menu": home,
+            "#getCodeBtn": get_code,
+            "#verificationCode": verify,
+            "#emailAuth": FakeLocator(visible=True, name="email_auth"),
+        },
+        url="https://supply.boe.com",
+    )
+    otp = FakeOtp()
+    ctx = FakeCtx(
+        page,
+        {"username": "AA", "password": "secret"},
+        config={"otpMailbox": "aa@example.com"},
+        otp=otp,
+    )
+    await login_boe_srm(ctx, selector=sel)
+    assert otp.watermarks == 1
+    assert otp.fetches == 1
+    assert verify.fills == ["654321"]
+    assert get_code.clicks == 1
+    assert home.visible is True
+
+
+def _otp_page(
+    *,
+    user: FakeLocator,
+    get_code: FakeLocator,
+    verify: FakeLocator,
+    home: FakeLocator,
+    login: FakeLocator,
+) -> FakePage:
+    return FakePage(
+        {
+            "otp": FakeLocator(visible=False, name="otp"),
+            "user": user,
+            "pass": FakeLocator(name="pass"),
+            "privacy": FakeLocator(visible=False, name="privacy"),
+            "login": login,
+            "home_menu": home,
+            "#getCodeBtn": get_code,
+            "#verificationCode": verify,
+            "#emailAuth": FakeLocator(visible=True, name="email_auth"),
+        },
+        url="https://supply.boe.com",
+    )
+
+
+@pytest.mark.asyncio
+async def test_login_otp_bounce_reuses_code_and_retries() -> None:
+    """提交验证码后跳回登录页：算一次失败，5 分钟内复用已取码再登，不再点获取验证码。"""
+    from nodeskclaw_rpa_engine.runtime import boe_srm as mod
+
+    mod._otp_clicks.clear()
+    user = FakeLocator(visible=True, name="user")
+    get_code = FakeLocator(visible=False, name="get_code")
+    verify = FakeLocator(name="verification")
+    home = FakeLocator(visible=False, name="home_menu")
+    clicks = {"n": 0}
+
+    def _login_click() -> None:
+        clicks["n"] += 1
+        if clicks["n"] in (1, 3):
+            get_code.visible = True
+            return
+        if clicks["n"] == 2:
+            get_code.visible = False
+            return
+        user.visible = False
+        get_code.visible = False
+        home.visible = True
+
+    login = FakeLocator(name="login", on_click=_login_click)
+    ctx = FakeCtx(
+        _otp_page(
+            user=user, get_code=get_code, verify=verify, home=home, login=login
+        ),
+        {"username": "AA", "password": "secret"},
+        config={"otpMailbox": "aa@example.com"},
+        otp=FakeOtp(),
+    )
+    await login_boe_srm(ctx, selector=sel)
+    assert ctx.otp.watermarks == 1
+    assert ctx.otp.fetches == 1
+    assert get_code.clicks == 1
+    assert verify.fills == ["654321", "654321"]
+    assert user.fills == ["AA", "AA"]
+    assert home.visible is True
+
+
+@pytest.mark.asyncio
+async def test_login_otp_bounce_gives_up_after_two_retries() -> None:
+    """首次 + 再试 2 次仍跳回登录页则失败；全程只点一次获取验证码。"""
+    from nodeskclaw_rpa_engine.runtime import boe_srm as mod
+
+    mod._otp_clicks.clear()
+    user = FakeLocator(visible=True, name="user")
+    get_code = FakeLocator(visible=False, name="get_code")
+    verify = FakeLocator(name="verification")
+    home = FakeLocator(visible=False, name="home_menu")
+    clicks = {"n": 0}
+
+    def _login_click() -> None:
+        clicks["n"] += 1
+        if clicks["n"] % 2 == 1:
+            get_code.visible = True
+            return
+        get_code.visible = False
+
+    login = FakeLocator(name="login", on_click=_login_click)
+    ctx = FakeCtx(
+        _otp_page(
+            user=user, get_code=get_code, verify=verify, home=home, login=login
+        ),
+        {"username": "AA", "password": "secret"},
+        config={"otpMailbox": "aa@example.com"},
+        otp=FakeOtp(),
+    )
+    with pytest.raises(RpaBusinessError) as exc_info:
+        await login_boe_srm(ctx, selector=sel)
+    assert exc_info.value.code == "BOE_LOGIN_FAILED"
+    assert "提交验证码后未回到首页" in str(exc_info.value)
+    assert ctx.otp.fetches == 1
+    assert get_code.clicks == 1
+    assert len(verify.fills) == 3
+    assert home.visible is False
+
+
+@pytest.mark.asyncio
+async def test_login_password_bounce_retries_without_otp() -> None:
+    """点登录又回到账密页、没有验证码区：算一次失败，再填账密登录。"""
+    user = FakeLocator(visible=True, name="user")
+    home = FakeLocator(visible=False, name="home_menu")
+    clicks = {"n": 0}
+
+    def _login_click() -> None:
+        clicks["n"] += 1
+        if clicks["n"] == 1:
+            return
+        user.visible = False
+        home.visible = True
+
+    login = FakeLocator(name="login", on_click=_login_click)
+    page = FakePage(
+        {
+            "otp": FakeLocator(visible=False, name="otp"),
+            "user": user,
+            "pass": FakeLocator(name="pass"),
+            "privacy": FakeLocator(visible=False, name="privacy"),
+            "login": login,
+            "home_menu": home,
+        },
+        url="https://supply.boe.com",
+    )
+    ctx = FakeCtx(page, {"username": "AA", "password": "secret"})
+    await login_boe_srm(ctx, selector=sel)
+    assert user.fills == ["AA", "AA"]
+    assert login.clicks == 2
+    assert home.visible is True

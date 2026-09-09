@@ -27,8 +27,11 @@ async def main() -> None:
     )
 
     timer_registry.register(BOE_PACK_MATCH_TARGET, pack_match_due)
-    had_listener = await timer_registry.notify(BOE_PACK_MATCH_TARGET)
-    print(f"[OK] notify 完成 had_listener={had_listener}（入口已真实跑完一轮）")
+    had_listener, summary = await timer_registry.notify(BOE_PACK_MATCH_TARGET)
+    print(
+        f"[OK] notify 完成 had_listener={had_listener} "
+        f"summary={summary or '-'}（入口已真实跑完一轮）"
+    )
 
 
 asyncio.run(main())

@@ -113,6 +113,23 @@ async def test_run_timer_now_entry_error_records_failed():
 
 
 @pytest.mark.asyncio
+async def test_run_timer_now_keeps_summary_on_success():
+    from app.services import timer_registry
+
+    async def entry() -> str:
+        return "新建 1 单（租户 1 个）"
+
+    timer_registry.register("test.run_now", entry)
+    try:
+        db = _db()
+        run = await run_svc.run_timer_now(db, _timer())
+        assert run.status == TIMER_RUN_SUCCESS
+        assert run.error == "新建 1 单（租户 1 个）"
+    finally:
+        timer_registry.clear()
+
+
+@pytest.mark.asyncio
 async def test_run_timer_now_no_listener_records_no_listener():
     from app.services import timer_registry
 

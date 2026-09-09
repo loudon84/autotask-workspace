@@ -140,9 +140,9 @@ async def run_timer_now(
 
         now = datetime.now()
         try:
-            had_listener = await timer_registry.notify(timer.target)
+            had_listener, summary = await timer_registry.notify(timer.target)
             status = "SUCCESS" if had_listener else "NO_LISTENER"
-            error = None
+            error = summary
         except Exception as exc:
             status, error = "FAILED", str(exc)[:500]
         return ApiResponse(
@@ -153,8 +153,9 @@ async def run_timer_now(
         )
     await db.commit()
     message = _RUN_MESSAGES.get(run.status, "已触发")
-    if run.status == "FAILED" and run.error:
-        message = f"执行失败：{run.error}"
+    if run.error:
+        prefix = "执行失败：" if run.status == "FAILED" else ""
+        message = f"{prefix}{run.error}"
     return ApiResponse(
         data=TimerRunItem(
             id=run.id,

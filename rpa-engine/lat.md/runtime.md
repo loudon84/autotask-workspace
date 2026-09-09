@@ -100,14 +100,15 @@ safe code `FLOW_UNHANDLED_ERROR`. Filesystem errors use `FLOW_CACHE_*` and
 
 ## BOE SRM login
 
-京东方发票箱单 Flow 用账号密码登录 `supply.boe.com`。若 CAS 出现「获取验证码」，
-当前实现抛 `BOE_OTP_REQUIRED`（客服先在 SRM 登录的旧路径）。
+京东方 SRM 登录填账密；CAS 若出现获取验证码，Engine 向 Task 取本次点击的邮件码再提交。
 
-[[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]] fills username/password
-and [[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#open_invoice_packing]] clicks 送货管理
-then 发票箱单. Cookie cache is still keyed by portal URL + username. Planned
-replacement is Task mail scene `boe_srm_otp` plus timer `boe.srm_login`.
-Until that lands, OTP still fails the Run.
+[[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]] fills username/password.
+No OTP panel means the account is already verified today — succeed and skip mail.
+OTP uses Task `worker-api/mail/otp` after snapshotting IMAP UID, then fills
+`#verificationCode`. A bounce back to the login form counts as one failed
+attempt; the same 5-minute code is reused for up to two more logins, without
+clicking 获取验证码 again. [[src/nodeskclaw_rpa_engine/runtime/boe_srm.py#open_invoice_packing]]
+clicks 送货管理 then 发票箱单. Cookie cache stays keyed by portal URL + username.
 
 ## Dry-run write guard
 

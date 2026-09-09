@@ -12,7 +12,9 @@ A PortalAccount stores SRM/portal login metadata, ownership, ERP entity
 hints, and a hardcoded customer category code used when leasing work.
 
 Credentials are injected into the worker lease (and typically `ctx.credentials`).
-ACL is ownership / managed-user / task-admin scoped on the Task service.
+Operators can see the stored password on the portal edit form (masked by
+default, one eye control to reveal). ACL is ownership / managed-user /
+task-admin scoped on the Task service.
 Category (`TIANDI` / `BOE`) is picked on the portal row; process menus bind to
 that code. Category-specific fields live in JSONB `extra` (BOE CS mailbox is
 `extra.email`); Client renders them from descriptors, not extra columns. Morning
@@ -133,6 +135,10 @@ any other timer; it stays off until an operator enables it.
 List and detail put 发票箱单流水号 first (empty until save-draft). Delivery-plan
 `header_id` is stored as `headerId` so Client can open SDMS `viewDpInfo`; the
 packing form stays the edit surface and does not hold that id.
+Packing RPA enqueue is per-portal Binding. A missing enrich Binding used to
+skip the task with no instance error; it now records `PROCESS_BINDING_MISSING`
+so the list shows why there is no task. Demo portal C000142-01 was bound first;
+the other BOE portals were bound 2026-09-09.
 
 ## SchedulerJob
 
@@ -162,13 +168,19 @@ The IMAP account is a system mailbox. Login targets come from enabled BOE
 portal rows: unique `login_account`, mailbox from `extra.email` (CS address).
 OTP matching is this-click only: `To` plus IMAP UID watermark plus 5-minute
 TTL; leftover folder mail is never reused. If CAS has no OTP after password,
-login succeeds without reading mail. Timer `boe.srm_login` is registered
-(default 07:00, off until enabled) and currently only checks portal targets;
-CAS OTP RPA is not wired. Secrets stay in Task `.env`. Design:
-`project-docs/prd/boe/AutoTask-BOE 邮件读取.md`. IMAP fetch has not landed;
-[[service/app/domain/boe_srm_otp.py#pick_fresh_otp]] is in place.
-[[rpa-engine/src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]] still
-raises `BOE_OTP_REQUIRED` when the OTP panel is visible.
+login succeeds without reading mail. A bounce back to the login page is one
+failed attempt; the same 5-minute code is reused for two more logins.
+Timer `boe.srm_login` (default 07:00, off)
+probes IMAP then dispatches thin Flow `srm_boe_login` serially; run summaries
+land in `timer_runs` without OTP digits. Daytime packing Flows share
+[[rpa-engine/src/nodeskclaw_rpa_engine/runtime/boe_srm.py#login_boe_srm]].
+IMAP connector: [[service/app/integrations/imap_mail.py#ImapMailConnector]].
+Picker: [[service/app/domain/boe_srm_otp.py#pick_fresh_otp]]. Design:
+`project-docs/prd/boe/AutoTask-BOE 邮件读取.md`.
+Thin login Flow `rpa_flow_srm_boe_login` 1.0.0 is published by
+[[rpa-engine/scripts/_publish_boe_login.py#main]] and bound on enabled BOE
+portals by [[service/scripts/boe/bind_boe_login.py#main]] (not the packing
+bind script).
 
 ## Flow Package
 

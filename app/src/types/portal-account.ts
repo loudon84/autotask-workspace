@@ -17,6 +17,7 @@ export interface PortalAccount {
   portalUrl: string;
   loginAccount: string;
   extra: Record<string, string>;
+  credentialRef: string;
   clientOpenMode: ClientOpenMode;
   clientSessionPartition: string;
   status: PortalStatus;

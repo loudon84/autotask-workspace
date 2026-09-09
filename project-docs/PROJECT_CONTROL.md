@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-08
+最后更新：2026-09-09
 
 
 ## 1. 用途
@@ -249,7 +249,19 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-09-09
+
+- **重庆箱单没任务是没绑补全 Flow**：发票箱单 RPA Binding 原先只在演示门户 C000142-01（AA）。重庆 C002755-01（AD）只有晨间登录 Binding。匹配后 `_maybe_enqueue_rpa(required=False)` 找不到 Binding 就静默不派任务，单据停在「补全」且无任务。已对全部启用京东方门户补绑 enrich/save_draft/submit 1.0.23。缺 Binding 时实例会记下 `PROCESS_BINDING_MISSING`。重庆单需在详情点「重试」才会派补全。
+
+- **京东方登录弹回登录页会重试**：提交验证码后有时回到账密页，原先立刻 `BOE_LOGIN_FAILED`。现按「1 次 + 再试 2 次」继续登；5 分钟内复用已取码，不再点获取验证码。**需重启 4610**（引擎代码，Flow 不用再发）。
+
+- **京东方邮件验证码 + 晨间登录（代码已写）**：Task IMAP 连接器读 `.env` 系统邮箱；Worker `mail/otp` 按本次点击水位取码（响应含码、日志不含）。Engine `login_boe_srm` 有验证码页则选邮箱、点获取验证码、填码；没有验证码页则直接成功。薄 Flow `rpa_flow_srm_boe_login` 1.0.0。定时器先探 IMAP 再串行派登录；执行记录「结果」列写账号摘要。默认关。白天补全/保存/提交在引擎重启后即可自动打码（门户须填 `extra.email`）。
+
+- **京东方晨间登录 Flow 已发布并绑定**：`rpa_flow_srm_boe_login` 1.0.0 已 PUBLISHED（Registry `331ea4f3-…`，checksum `6bc84e6c…`）。模板 `srm_boe_login` 已绑 3 个启用京东方门户（C000142-01 / C002755-01 / C016173-01）。发布脚本 `_publish_boe_login.py`，绑定脚本 `bind_boe_login.py`。定时器仍默认关；**需重启 4520** 后「立即执行」才有派单代码。4610 已起来并完成发布。
+
 ### 2026-09-08
+
+- **门户编辑回填密码 + 眼睛显示**：编辑门户时带出已存密码（默认掩码，点眼睛才明文）。列表/详情不明文展示。Task 列表/详情 DTO 含 `credentialRef`。客户端热更新；**需重启 4520**。
 
 - **调度中心登记京东方-SRM晨间登录**：不是 Client 重启，是 Task 启动时按 `timer_catalog.REGISTRATIONS` 插入缺失行。`boe.srm_login` 之前没进目录所以列表没有。现已登记（默认关，`0 7 * * *`）。**需重启唯一 Task 4520**。立即执行目前只核对门户去重账号，不打开 SRM（打码 RPA 未接）。
 

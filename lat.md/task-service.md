@@ -24,7 +24,7 @@ Three mounts share the same process.
    templates, bindings, tasks, process-instances, statements, runs, human-actions,
    artifacts, scheduler-jobs, timers, settings.
 2. **Worker API** (`/api/v1/autotask/worker-api/*`) — register/heartbeat, lease,
-   renew, run events/artifacts/integration-calls/finish.
+   renew, run events/artifacts/integration-calls/finish, mail OTP watermark/fetch.
 3. **MCP** (`/api/v1/autotask/mcp`) — thin tools over the same services.
 
 Envelope type is `ApiResponse`. Root `GET /health` exposes pid/version.
@@ -53,7 +53,7 @@ independent TimerScheduler.
   [[service/app/services/tiandy_timers.py#sign_poll_due|sign-poll]] /
   [[service/app/services/boe_timers.py#pack_match_due|boe pack-match]] /
   [[service/app/services/boe_timers.py#srm_login_due|boe srm-login]] entries
-  (`boe.srm_login` is registered, default off; CAS OTP RPA is not wired yet; see
+  (`boe.srm_login` probes IMAP then serial-dispatches `srm_boe_login`; see
   [[domain#MailInbox]])
 - The old `BoeMatchScheduler` loop is no longer started (replaced by the
   `boe.pack_match` timer); the file and its `autotask_settings` keys stay

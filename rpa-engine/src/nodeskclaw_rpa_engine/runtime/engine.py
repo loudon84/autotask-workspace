@@ -34,6 +34,7 @@ from nodeskclaw_rpa_engine.runtime.context import (
     RunContext,
     RuntimeEventSink,
 )
+from nodeskclaw_rpa_engine.runtime.task_otp import TaskOtpClient
 from nodeskclaw_rpa_engine.runtime.errors import (
     ErrorDecision,
     ErrorHandler,
@@ -88,6 +89,7 @@ class RpaRuntime:
         credential_resolver: CredentialResolver | None = None,
         error_handler: ErrorHandler | None = None,
         integration_call_sink_factory: IntegrationCallSinkFactory | None = None,
+        task_api: Any | None = None,
     ) -> None:
         self._settings = settings
         self._loader = loader
@@ -99,6 +101,7 @@ class RpaRuntime:
         )
         self._error_handler = error_handler or ErrorHandler()
         self._integration_call_sink_factory = integration_call_sink_factory
+        self._task_api = task_api
         self._work_root = settings.runtime_work_dir.resolve()
         self._session_cache = PortalSessionCache(
             settings.runtime_session_cache_dir.resolve()
@@ -175,6 +178,12 @@ class RpaRuntime:
                             max_bytes=self._settings.artifact_max_bytes,
                         )
                         integration_http = self._build_integration_http(command)
+                        mailbox = str(
+                            getattr(lease.config, "otp_mailbox", "") or ""
+                        ).strip()
+                        otp_client = None
+                        if self._task_api is not None and mailbox:
+                            otp_client = TaskOtpClient(self._task_api, mailbox)
                         context = RunContext.create(
                             input_data=lease.input,
                             credentials=credentials,
@@ -185,6 +194,7 @@ class RpaRuntime:
                             event_sink=sink,
                             safe_config=self._safe_config(command),
                             integration_http=integration_http,
+                            otp=otp_client,
                         )
                         execution = await self._execute_with_retries(
                             loaded.run,
@@ -564,6 +574,7 @@ class RpaRuntime:
             ("oa_base_url", "oaBaseUrl"),
             ("doc_base_url", "docBaseUrl"),
             ("erp_client_id", "erpClientId"),
+            ("otp_mailbox", "otpMailbox"),
         )
         for attr, key in mapped:
             value = str(getattr(config, attr, "") or "").strip()

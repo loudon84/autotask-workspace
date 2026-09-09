@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
@@ -220,6 +221,26 @@ class TaskWorkerApiClient:
             f"worker-api/runs/{quote(run_id, safe='')}/finish",
             json=request.model_dump(mode="json", by_alias=False, exclude_none=True),
             extra_headers=self._idempotency_headers(idempotency_key),
+        )
+
+    async def mail_otp_watermark(self) -> Any:
+        return await self._request_data("POST", "worker-api/mail/otp/watermark")
+
+    async def mail_otp_fetch(
+        self,
+        *,
+        recipient: str,
+        requested_at: datetime,
+        uid_watermark: int,
+    ) -> Any:
+        return await self._request_data(
+            "POST",
+            "worker-api/mail/otp",
+            json={
+                "recipient": recipient,
+                "requestedAt": requested_at.isoformat(),
+                "uidWatermark": uid_watermark,
+            },
         )
 
     async def close(self) -> None:

@@ -20,7 +20,8 @@ _flow_version_id: ContextVar[str | None] = ContextVar(
 
 _SENSITIVE_KEY = re.compile(
     r"password|passwd|secret|token|authorization|credential|database_url|dsn|"
-    r"api[-_]?key|access[-_]?key|private[-_]?key|cookie|session",
+    r"api[-_]?key|access[-_]?key|private[-_]?key|cookie|session|"
+    r"otp|verification.?code",
     re.IGNORECASE,
 )
 _URL_CREDENTIALS = re.compile(r"(://[^:/@\s]+:)([^@\s]+)(@)")

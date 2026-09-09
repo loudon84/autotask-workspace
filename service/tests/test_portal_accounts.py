@@ -131,7 +131,12 @@ def test_portal_account_create_requires_password():
     assert payload["items"][0]["businessEntity"] == ""
     assert payload["items"][0]["ou"] == ""
     assert payload["items"][0]["category"] == "TIANDI"
-    assert "credentialRef" not in payload["items"][0]
+    assert payload["items"][0]["credentialRef"] == ""
+    dumped = PortalAccountResponse.model_validate(
+        _portal_account(credential_ref="portal-password"),
+        from_attributes=True,
+    ).model_dump(by_alias=True)
+    assert dumped["credentialRef"] == "portal-password"
 
 
 def test_portal_account_create_accepts_business_entity_and_ou():

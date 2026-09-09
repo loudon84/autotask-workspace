@@ -160,6 +160,7 @@ export function mapPortalAccount(raw: unknown): PortalAccount {
     portalUrl: String(data.portalUrl ?? data.url ?? ""),
     loginAccount: String(data.loginAccount ?? ""),
     extra: normalizePortalExtra(data.extra),
+    credentialRef: String(data.credentialRef ?? ""),
     clientOpenMode: normalizeClientOpenMode(data.clientOpenMode),
     clientSessionPartition: String(data.clientSessionPartition ?? ""),
     status: normalizePortalStatus(data.status),

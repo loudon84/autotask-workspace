@@ -51,6 +51,7 @@ const portal: PortalAccount = {
   portalUrl: "https://supplier.example.com",
   loginAccount: "portal-user",
   extra: {},
+  credentialRef: "",
   clientOpenMode: "webcontents",
   clientSessionPartition: "persist:portal-c001",
   category: "TIANDI",
@@ -141,6 +142,25 @@ describe("PortalAccountFormDialog credentialRef", () => {
     expect(updateMutateMock.mock.calls[0]?.[0].patch).toMatchObject({
       credentialRef: "credential-updated",
     });
+  });
+
+  it("编辑时回填密码，眼睛可切换可见", async () => {
+    const user = userEvent.setup();
+    render(
+      <PortalAccountFormDialog
+        mode="edit"
+        onOpenChange={vi.fn()}
+        open
+        portal={{ ...portal, credentialRef: "portal-secret" }}
+      />
+    );
+    const input = screen.getByLabelText("门户密码");
+    expect(input).toHaveValue("portal-secret");
+    expect(input).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("button", { name: "显示密码" }));
+    expect(input).toHaveAttribute("type", "text");
+    await user.click(screen.getByRole("button", { name: "隐藏密码" }));
+    expect(input).toHaveAttribute("type", "password");
   });
 
   it("京东方显示邮箱，天地伟业不显示", () => {

@@ -8,6 +8,7 @@ from app.api import (
     dashboard,
     human_actions,
     integration,
+    mail_otp,
     mcp,
     portal_accounts,
     portal_categories,
@@ -57,4 +58,5 @@ api_router.include_router(scheduler_jobs.router, prefix="/scheduler-jobs", tags=
 api_router.include_router(timers.router, prefix="/timers", tags=["Timer"])
 
 worker_api_router.include_router(rpa_dispatch.router, tags=["RPA Worker API"])
+worker_api_router.include_router(mail_otp.router, tags=["RPA Worker Mail OTP"])
 mcp_router.include_router(mcp.router, tags=["MCP"])

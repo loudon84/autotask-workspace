@@ -107,7 +107,7 @@ class TimerScheduler:
                 )
                 await db.commit()
                 try:
-                    had_listener = await timer_registry.notify(job.target)
+                    had_listener, summary = await timer_registry.notify(job.target)
                 except Exception as exc:
                     await run_svc.record_finish(db, run, ok=False, error=str(exc)[:500])
                     await db.commit()
@@ -115,7 +115,9 @@ class TimerScheduler:
                         "定时器到期通知失败 timer=%s target=%s", job.id, job.target
                     )
                     return
-                await run_svc.record_finish(db, run, ok=True, had_listener=had_listener)
+                await run_svc.record_finish(
+                    db, run, ok=True, had_listener=had_listener, error=summary
+                )
                 await db.commit()
         except ProgrammingError:
             logger.warning("timer_runs 表不存在，本次到点不落记录（迁库待授权）")

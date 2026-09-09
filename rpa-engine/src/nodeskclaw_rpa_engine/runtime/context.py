@@ -481,6 +481,7 @@ class RunContext:
     events: RunEvents
     config: Mapping[str, Any]
     http: IntegrationHttp
+    otp: Any | None = None
 
     @classmethod
     def create(
@@ -495,6 +496,7 @@ class RunContext:
         event_sink: RuntimeEventSink,
         safe_config: Mapping[str, Any],
         integration_http: IntegrationHttp,
+        otp: Any | None = None,
     ) -> RunContext:
         return cls(
             input=MappingProxyType(copy.deepcopy(dict(input_data))),
@@ -507,4 +509,5 @@ class RunContext:
             events=RunEvents(event_sink),
             config=MappingProxyType(copy.deepcopy(dict(safe_config))),
             http=integration_http,
+            otp=otp,
         )

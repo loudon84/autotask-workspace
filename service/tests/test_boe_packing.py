@@ -240,3 +240,44 @@ def test_review_required_and_attachment_rules() -> None:
         lines,
         [{"type": "箱单", "fileName": "wrong.pdf"}, {"type": "发票", "fileName": "101SJH202609195.pdf"}],
     )
+
+
+@pytest.mark.asyncio
+async def test_enqueue_records_missing_binding(monkeypatch: pytest.MonkeyPatch) -> None:
+    instance = ProcessInstance(
+        id="inst-bind",
+        tenant_id="tenant-1",
+        process_code=PROCESS_CODE,
+        biz_key="101SJH2",
+        title="发票箱单",
+        portal_account_id="portal-2",
+        stage=ProcessStage.BOE_PACK_ENRICH.value,
+        status=ProcessInstanceStatus.ACTIVE.value,
+        summary="{}",
+        created_by="user-1",
+    )
+    db = MagicMock()
+    empty = MagicMock()
+    empty.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=empty)
+    monkeypatch.setattr(
+        svc,
+        "_create_sub_task",
+        AsyncMock(
+            side_effect=BadRequestError(
+                message="未找到模板 srm_boe_pack_enrich 在当前 Portal 的已启用 Binding",
+                message_key="errors.autotask.process_binding_missing",
+            )
+        ),
+    )
+    task = await svc._maybe_enqueue_rpa(
+        db,
+        instance,
+        template_code="srm_boe_pack_enrich",
+        title="补全",
+        actor="user-1",
+        required=False,
+    )
+    assert task is None
+    assert instance.last_error_code == "PROCESS_BINDING_MISSING"
+    assert "未配置对应流程 Binding" in (instance.last_error_message or "")

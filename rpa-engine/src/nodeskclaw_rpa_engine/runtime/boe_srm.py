@@ -1,12 +1,14 @@
 """京东方 SRM 登录与发票箱单导航。
 
 邮箱验证码设计见 project-docs/prd/boe/AutoTask-BOE 邮件读取.md。账密提交后
-若没有「获取验证码」，说明当天该账号已免验证码，直接成功、不读邮件。
-见到验证码区时读信打码尚未落地，仍抛 BOE_OTP_REQUIRED。
+若没有「获取验证码」，当天已免验证码，直接成功、不读邮件。需要码时：选邮箱
+→ 拍 IMAP UID 水位 → 点获取验证码 → Task 读信 → 填写提交。提交后若弹回
+登录页，算一次失败并再登（最多再试 2 次）；5 分钟内复用已取到的码，不再点
+获取验证码。
 
 步骤按影刀实操（project-docs/prd/boe/影刀-京东方-selectorsV2.xml）：
 登录 = 门户首页点「供应商登录」（同页跳转）→ CAS 填账号/密码 → 勾选隐私政策
-→ 点登录（input[type=submit]）。CAS 有会话时 SSO 免登直接回首页/导航页，不填表单。
+→ 点登录。CAS 有会话时 SSO 免登直接回首页/导航页，不填表单。
 登录成功的判定 = 首页/导航页元素出现（或已到 bsrm 域名），不看 ticket。
 导航 = 首页点「交货计划管理」应用卡进 bsrm → 送货管理 → 发票箱单。禁止 goto 单据 URL。
 """
@@ -14,13 +16,39 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from datetime import UTC, date, datetime
 from typing import Any
 
 from nodeskclaw_rpa_engine.runtime.errors import RpaBusinessError, RpaFatalError
 
 # @lat: [[runtime#BOE SRM login]]
 
-_OTP_MESSAGE = "出现邮箱验证码。请先在 SRM 网页登录 AA/AD 账号后再跑 AutoTask。"
+_OTP_FALLBACKS = {
+    "otp_dialog": "text=获取验证码",
+    "email_auth": "#emailAuth",
+    "get_code": "#getCodeBtn",
+    "verification_code": "#verificationCode",
+    "two_factor": "#twoFactorAuth",
+}
+_OTP_MAX_CLICKS = 3
+_LOGIN_MAX_ATTEMPTS = 3  # 首次 + 再试 2 次
+_OTP_TTL_SECONDS = 300
+_OTP_WAIT_MS = 90_000
+_OTP_POLL_MS = 4_000
+_otp_clicks: dict[str, int] = {}
+
+
+class _OtpCache:
+    __slots__ = ("code", "fetched_at")
+
+    def __init__(self, code: str, fetched_at: datetime) -> None:
+        self.code = code
+        self.fetched_at = fetched_at
+
+    def alive(self, now: datetime | None = None) -> bool:
+        moment = now or datetime.now(UTC)
+        age = (moment - self.fetched_at).total_seconds()
+        return bool(self.code) and age < _OTP_TTL_SECONDS
 
 
 def _clean(value: Any) -> str:
@@ -34,13 +62,37 @@ async def _visible(locator: Any) -> bool:
         return False
 
 
-async def _raise_if_otp(page: Any, selector: Callable[..., str]) -> None:
-    if await _visible(page.locator(selector("otp_dialog"))):
-        raise RpaBusinessError("BOE_OTP_REQUIRED", _OTP_MESSAGE)
+def _otp_sel(selector: Callable[..., str], name: str) -> str:
+    try:
+        value = selector(name)
+        if value:
+            return str(value)
+    except Exception:
+        pass
+    return _OTP_FALLBACKS[name]
+
+
+async def _otp_visible(page: Any, selector: Callable[..., str]) -> bool:
+    if await _visible(page.locator(_otp_sel(selector, "get_code"))):
+        return True
+    if await _visible(page.locator(_otp_sel(selector, "two_factor"))):
+        return True
+    return await _visible(page.locator(_otp_sel(selector, "otp_dialog")))
+
+
+def _otp_click_key(username: str) -> str:
+    return f"{username}|{date.today().isoformat()}"
+
+
+def _reserve_otp_click(username: str) -> int:
+    key = _otp_click_key(username)
+    used = _otp_clicks.get(key, 0) + 1
+    _otp_clicks[key] = used
+    return used
 
 
 async def _login_state(page: Any, selector: Callable[..., str]) -> str:
-    """登录态判定：已到 bsrm 或首页/导航元素出现 = 已登录；登录入口或 CAS 表单出现 = 未登录。"""
+    """登录态判定：已到 bsrm 或首页/导航页元素出现 = 已登录；登录入口或 CAS 表单出现 = 未登录。"""
     if "bsrm.boe.com" in str(getattr(page, "url", "") or ""):
         return "logged_in"
     if "dashboard" in str(getattr(page, "url", "") or ""):
@@ -64,36 +116,76 @@ async def _wait_login_state(page: Any, selector: Callable[..., str], rounds: int
     return state
 
 
-async def login_boe_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
+async def _submit_otp_code(
+    page: Any, selector: Callable[..., str], code: str
+) -> None:
+    await page.locator(_otp_sel(selector, "verification_code")).first.fill(code)
+    await page.locator(selector("login_button")).first.click()
+    await page.wait_for_timeout(2500)
+
+
+async def _fetch_otp_code(
+    ctx: Any, *, selector: Callable[..., str], username: str
+) -> _OtpCache:
     page = ctx.page
-    credentials = ctx.credentials if isinstance(ctx.credentials, Mapping) else {}
-    username = _clean(credentials.get("username"))
-    password = str(credentials.get("password", ""))
-    if not username or not password:
-        raise RpaFatalError("BOE_CREDENTIALS_MISSING", "京东方门户账号或密码缺失")
+    otp = ctx.otp
+    log = getattr(ctx, "log", None)
+    for _attempt in range(_OTP_MAX_CLICKS):
+        get_code = page.locator(_otp_sel(selector, "get_code"))
+        if not await _visible(get_code):
+            break
+        used = _reserve_otp_click(username)
+        if used > _OTP_MAX_CLICKS:
+            raise RpaBusinessError(
+                "BOE_OTP_RETRY_EXHAUSTED", "获取验证码次数已用完，停止以免锁号"
+            )
+        watermark = int(await otp.watermark())
+        requested_at = datetime.now(UTC)
+        await get_code.first.click()
+        if log is not None:
+            await log.info("已点击获取验证码")
+        waited = 0
+        while waited < _OTP_WAIT_MS:
+            code = await otp.fetch_code(
+                requested_at=requested_at, uid_watermark=watermark
+            )
+            if code:
+                return _OtpCache(str(code), requested_at)
+            await page.wait_for_timeout(_OTP_POLL_MS)
+            waited += _OTP_POLL_MS
+    raise RpaBusinessError("BOE_OTP_TIMEOUT", "未读到本次获取验证码的邮件")
 
-    state = await _login_state(page, selector)
-    if state == "logged_in":
-        await _raise_if_otp(page, selector)
-        return
 
-    await page.goto(ctx.portal_url, wait_until="domcontentloaded")
-    await page.wait_for_timeout(2000)
-    await _raise_if_otp(page, selector)
+async def _fill_cas_otp(
+    ctx: Any,
+    *,
+    selector: Callable[..., str],
+    username: str,
+    cache: _OtpCache | None,
+) -> _OtpCache:
+    page = ctx.page
+    config = ctx.config if isinstance(getattr(ctx, "config", None), Mapping) else {}
+    mailbox = _clean(config.get("otpMailbox"))
+    otp = getattr(ctx, "otp", None)
+    if not mailbox:
+        raise RpaBusinessError("BOE_OTP_MAILBOX_MISSING", "门户未填客服邮箱，无法读验证码")
+    if otp is None:
+        raise RpaBusinessError("BOE_OTP_CLIENT_MISSING", "当前引擎未接 Task 读信接口")
 
-    state = await _wait_login_state(page, selector, 5)
-    if state == "entry":
-        # 门户首页点「供应商登录」（同页跳转）；CAS 有会话时 SSO 免登直接回首页/导航页
-        await page.locator(selector("supplier_login_entry")).first.click()
-        state = await _wait_login_state(page, selector, 20)
-    if state == "logged_in":
-        return
-    if state != "form":
-        raise RpaBusinessError(
-            "BOE_LOGIN_PAGE_NOT_FOUND", "未找到 CAS 登录表单（#username）"
-        )
+    email_auth = page.locator(_otp_sel(selector, "email_auth"))
+    if await _visible(email_auth):
+        await email_auth.first.click()
+        await page.wait_for_timeout(500)
 
-    # CAS 表单：账号 / 密码 / 勾选隐私政策 / 点登录（input[type=submit]）
+    if cache is None or not cache.alive():
+        cache = await _fetch_otp_code(ctx, selector=selector, username=username)
+    await _submit_otp_code(page, selector, cache.code)
+    return cache
+
+
+async def _submit_password(
+    page: Any, selector: Callable[..., str], username: str, password: str
+) -> None:
     await page.locator(selector("username")).first.fill(username)
     await page.locator(selector("password")).first.fill(password)
     privacy = page.locator(selector("privacy_checkbox"))
@@ -104,10 +196,61 @@ async def login_boe_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
             await privacy.first.click(force=True)
     await page.locator(selector("login_button")).first.click()
     await page.wait_for_timeout(2500)
-    await _raise_if_otp(page, selector)
-    # 登录成功 = 首页/导航页元素出现（或已到 bsrm）
-    if await _wait_login_state(page, selector, 15) != "logged_in":
-        raise RpaBusinessError("BOE_LOGIN_FAILED", "登录后未回到首页/导航页")
+
+
+async def _open_cas_form(
+    page: Any, selector: Callable[..., str], portal_url: str, *, reload: bool
+) -> str:
+    if reload:
+        await page.goto(portal_url, wait_until="domcontentloaded")
+        await page.wait_for_timeout(2000)
+    state = await _wait_login_state(page, selector, 5)
+    if state == "entry":
+        await page.locator(selector("supplier_login_entry")).first.click()
+        state = await _wait_login_state(page, selector, 20)
+    return state
+
+
+async def login_boe_srm(ctx: Any, *, selector: Callable[..., str]) -> None:
+    page = ctx.page
+    credentials = ctx.credentials if isinstance(ctx.credentials, Mapping) else {}
+    username = _clean(credentials.get("username"))
+    password = str(credentials.get("password", ""))
+    if not username or not password:
+        raise RpaFatalError("BOE_CREDENTIALS_MISSING", "京东方门户账号或密码缺失")
+
+    state = await _login_state(page, selector)
+    if state == "logged_in":
+        return
+
+    otp_cache: _OtpCache | None = None
+    last_error = "登录后未回到首页/导航页"
+    for attempt in range(_LOGIN_MAX_ATTEMPTS):
+        state = await _open_cas_form(
+            page, selector, ctx.portal_url, reload=attempt == 0 or state == "unknown"
+        )
+        if state == "logged_in":
+            return
+        if state != "form":
+            last_error = "未找到 CAS 登录表单（#username）"
+            continue
+        await _submit_password(page, selector, username, password)
+        if await _otp_visible(page, selector):
+            otp_cache = await _fill_cas_otp(
+                ctx, selector=selector, username=username, cache=otp_cache
+            )
+            state = await _wait_login_state(page, selector, 15)
+            if state == "logged_in":
+                return
+            last_error = "提交验证码后未回到首页/导航页"
+            continue
+        state = await _wait_login_state(page, selector, 15)
+        if state == "logged_in":
+            return
+        last_error = "登录后未回到首页/导航页"
+    if last_error.startswith("未找到"):
+        raise RpaBusinessError("BOE_LOGIN_PAGE_NOT_FOUND", last_error)
+    raise RpaBusinessError("BOE_LOGIN_FAILED", last_error)
 
 
 async def open_invoice_packing(ctx: Any, *, selector: Callable[..., str]) -> Any:

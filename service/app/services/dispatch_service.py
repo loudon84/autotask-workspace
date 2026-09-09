@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.boe_packing import BUSY_LEASE_STATUSES, RPA_TEMPLATE_CODES
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.domain.portal_extra import extra_value
 from app.models.automation_task import AutomationTask
 from app.models.base import not_deleted
 from app.models.enums import (
@@ -119,6 +120,9 @@ def _build_command_snapshot(
         "ou": _optional_text(getattr(portal, "ou", None)),
         "searches": searches,
     }
+    mailbox = extra_value(portal, "email")
+    if mailbox:
+        lease_config["otpMailbox"] = mailbox
     lease_config.update(integration_lease_config())
     task_input = dict(task_input_dict(task))
     if searches is not None and "searches" not in task_input:
@@ -167,6 +171,7 @@ def _lease_config_from_snapshot(config_raw: dict[str, Any]) -> LeaseCommandConfi
         erp_client_secret=config_raw.get("erpClientSecret")
         or config_raw.get("erp_client_secret"),
         searches=config_raw.get("searches") if isinstance(config_raw.get("searches"), list) else None,
+        otp_mailbox=config_raw.get("otpMailbox") or config_raw.get("otp_mailbox"),
     )
 
 

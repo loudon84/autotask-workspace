@@ -152,6 +152,7 @@ class PortalAccountResponse(CamelModel):
     portal_url: str = Field(serialization_alias="portalUrl")
     login_account: str = Field(serialization_alias="loginAccount")
     extra: dict[str, str] = Field(default_factory=dict, serialization_alias="extra")
+    credential_ref: str = Field("", serialization_alias="credentialRef")
     client_open_mode: str = Field(serialization_alias="clientOpenMode")
     client_session_partition: str = Field(serialization_alias="clientSessionPartition")
     status: str
@@ -162,6 +163,11 @@ class PortalAccountResponse(CamelModel):
     created_by_name: str = Field("", serialization_alias="createdByName")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
+
+    @field_validator("credential_ref", mode="before")
+    @classmethod
+    def empty_credential(cls, value: Any) -> str:
+        return str(value or "")
 
 
 class PortalOwnerCandidate(CamelModel):
