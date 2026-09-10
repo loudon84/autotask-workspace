@@ -531,6 +531,7 @@ export const autotaskApi = {
       lines: Record<string, unknown>[];
       dateStart?: string;
       dateEnd?: string;
+      confirmAmountMismatch?: boolean;
     }): Promise<import("@/types/statement").StatementGenerateResult> => {
       const api = pickApi();
       if (

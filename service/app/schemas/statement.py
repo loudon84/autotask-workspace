@@ -54,6 +54,13 @@ class StatementGenerateRequest(CamelModel):
         validation_alias=AliasChoices("date_end", "dateEnd"),
         serialization_alias="dateEnd",
     )
+    confirm_amount_mismatch: bool = Field(
+        False,
+        validation_alias=AliasChoices(
+            "confirm_amount_mismatch", "confirmAmountMismatch"
+        ),
+        serialization_alias="confirmAmountMismatch",
+    )
 
 
 class StatementGenerateResponse(CamelModel):

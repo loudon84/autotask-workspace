@@ -123,6 +123,7 @@ async def generate_statement(
         actor=user.user_id,
         date_start=body.date_start,
         date_end=body.date_end,
+        confirm_amount_mismatch=body.confirm_amount_mismatch,
     )
     return ApiResponse(data=StatementGenerateResponse.model_validate(result))
 

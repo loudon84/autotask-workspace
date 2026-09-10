@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveStatementBlocker } from "@/features/statements/statement-model";
+import {
+  isStatementAmountMismatchError,
+  resolveStatementBlocker,
+} from "@/features/statements/statement-model";
 
 describe("resolveStatementBlocker", () => {
   it("hides a historical generate failure after a later generate succeeded", () => {
@@ -41,5 +44,32 @@ describe("resolveStatementBlocker", () => {
       ],
     });
     expect(blocker?.message).toBe("receipt row checkbox is not clickable");
+  });
+});
+
+describe("isStatementAmountMismatchError", () => {
+  it("detects the Task message key", () => {
+    expect(
+      isStatementAmountMismatchError({
+        message: "冲突",
+        body: { message_key: "errors.autotask.statement.amount_mismatch" },
+      })
+    ).toBe(true);
+  });
+
+  it("detects the Chinese amount mismatch message", () => {
+    expect(
+      isStatementAmountMismatchError(
+        new Error("对账金额不一致：SDMS 1 vs 勾选汇总 2，确认后仍可继续生成")
+      )
+    ).toBe(true);
+  });
+
+  it("ignores other conflicts", () => {
+    expect(
+      isStatementAmountMismatchError(
+        new Error("当天已存在相同金额的对账单")
+      )
+    ).toBe(false);
   });
 });

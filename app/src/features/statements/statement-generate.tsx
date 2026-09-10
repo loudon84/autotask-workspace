@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { DataTable } from "@/components/common/data-table";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { isTiandiCategory } from "@/features/srm-portals/portal-category";
 import {
   RECEIPT_LINE_FIELD_COLUMNS,
   formatAmount,
+  isStatementAmountMismatchError,
 } from "@/features/statements/statement-model";
 import { StatementSopProgress } from "@/features/statements/statement-sop-progress";
 import { autotaskApi } from "@/services/autotask-api";
@@ -50,6 +52,7 @@ export function StatementGeneratePage() {
   const [searching, setSearching] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [mismatch, setMismatch] = useState<string | null>(null);
+  const [confirmMismatchOpen, setConfirmMismatchOpen] = useState(false);
   const [sopStep, setSopStep] = useState<StatementSopStepId>("STMT_CREATING");
 
   useEffect(() => {
@@ -137,6 +140,7 @@ export function StatementGeneratePage() {
     }
     setSearching(true);
     setMismatch(null);
+    setConfirmMismatchOpen(false);
     try {
       const task = await autotaskApi.statements.queryReceipts({
         portalAccountId,
@@ -179,13 +183,14 @@ export function StatementGeneratePage() {
     }
   };
 
-  const generate = async () => {
+  const generate = async (confirmAmountMismatch = false) => {
     if (selectedRows.length === 0) {
       toast.error("请至少勾选一行");
       return;
     }
     setGenerating(true);
     setMismatch(null);
+    setConfirmMismatchOpen(false);
     setSopStep("STMT_SDMS_CHECK");
     try {
       const result = await autotaskApi.statements.generate({
@@ -193,6 +198,7 @@ export function StatementGeneratePage() {
         dateStart,
         dateEnd,
         lines: selectedRows,
+        confirmAmountMismatch,
       });
       toast.success(
         `已创建待生成草稿（本地汇总 ¥${result.localAmount ?? formatAmount(selectedAmount)}），正在调用 SRM`
@@ -208,6 +214,10 @@ export function StatementGeneratePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "生成失败";
       setMismatch(message);
+      if (!confirmAmountMismatch && isStatementAmountMismatchError(error)) {
+        setConfirmMismatchOpen(true);
+        return;
+      }
       toast.error(message);
     } finally {
       setGenerating(false);
@@ -281,6 +291,15 @@ export function StatementGeneratePage() {
           {generating ? "生成中…" : "生成对账单"}
         </Button>
       </div>
+
+      <ConfirmDialog
+        confirmLabel="仍要生成"
+        description={mismatch ?? "确认后仍可继续生成"}
+        onConfirm={() => void generate(true)}
+        onOpenChange={setConfirmMismatchOpen}
+        open={confirmMismatchOpen}
+        title="对账金额不一致"
+      />
     </div>
   );
 }
