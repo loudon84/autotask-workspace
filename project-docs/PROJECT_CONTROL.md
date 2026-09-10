@@ -38,7 +38,7 @@
 7. Flow 包按版本管理并存储在 MinIO/S3 中。Worker 本地目录仅作为缓存。
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行（当前 head）。正式库未迁。**
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权在测库执行。调度中心 `timers` / `timer_runs`（`c3a8f1d92e47` / `d4b2f7a91e05`，当前 head）已于 2026-09-04 经用户授权在测库执行。正式库 `rpa_autotask` 已于 2026-09-10 经用户授权 `upgrade head`：`c1d8e4f90a62` → `d4b2f7a91e05`。**
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
 ## 4. 当前状态
@@ -67,11 +67,11 @@
 | 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.20**；回签探测 **1.1.4**；下合同 **1.3.3**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。4520 / 4610 已于 2026-08-27 14:33 重启。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
 | 权限 v5.1（管人接口后补） | 登录缓存 `managed_user_ids` 只做列表/详情权限。门户选归属人现拉 `GET /members/{id}/subordinate`（Auth 按角色返回全员/自己/自己+下属），不再打 `/orgs/{org}/members`。模块管理员与超管看数仍全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
-| 调度中心 | **天地伟业定时器已登记（2026-09-04）** | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）已注册并插库，默认停用。旧 `scheduler_jobs` 六条全部停用（直接替换）。4520 已重启。正式库未迁。 |
+| 调度中心 | **天地伟业定时器已登记（2026-09-04）** | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）已注册并插库，默认停用。旧 `scheduler_jobs` 六条全部停用（直接替换）。测库 4520 已重启。正式库表已建（2026-09-10），catalog 行要等正式 Task 用新代码启动后才插入，默认停用。 |
 | 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
 | 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
 | 正式上线（空库） | **两段**：先克隆正式演练，确认后再切真上线 | `prd/AutoTask 正式上线操作清单.md`。拷测试 `.env` 改新库；阶段 A 测 SDMS/ERP + 样例扫单 + dryRun；阶段 B 再关闸/切生产/开调度。填交期/签章正式包仍未绑 |
-| 门户和流程实例优化（v5.5） | **测试库已到 head；正式库待授权** | 测库已执行 `d2e9f1a70b83` + `a1c3e5f70824`。正式晚上换正式 `.env` 后 `upgrade head` 连续两步。不删正式门户。见 PRD §5.4 / §8。 |
+| 门户和流程实例优化（v5.5） | **测库与正式库均已到 head `d4b2f7a91e05`** | 正式 `rpa_autotask` 已于 2026-09-10 迁完 `category` / 分类文档 / `timers` / `timer_runs`。门户「天地伟业-芯云」仍在，`category=TIANDI`。**需用 `.env.product` 重启正式 4520** 后新代码才读这些列。见 PRD §5.4 / §8。 |
 
 ## 5. 未决问题
 
@@ -118,8 +118,8 @@
 22. **v5.3 对账单发票上传**：发票必须落到 Task，不能传用户本机路径。Client 删除已上传文件必须删 Task。需求见 `prd/AutoTask v5.3 对账单发票上传.md`。
 23. **正式上线操作清单**：新空库先按正式演练克隆（测 SDMS/ERP、样例扫单、写步骤 dryRun），确认后再切真上线。见 `prd/AutoTask 正式上线操作清单.md`。迁库与阶段 B 关闸须口头授权。
 24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
-25. **v5.5 门户分类 + 分类文档**：测试库已到 head（`d2e9f1a70b83` + `a1c3e5f70824`）。**需重启测库 4520** 后 Client「门户分类」才能用。正式库待授权，晚上 `upgrade head` 一次加上列+表。正式库不删门户。见 PRD §8。
-26. **调度中心管理内核（2026-09-04）**：独立定时器已写。测库已执行 `c3a8f1d92e47`。catalog 登记 demo + `tiandy.scan_pending` / `tiandy.sign_poll`（默认停用）。旧 `scheduler_jobs` 六条全停，Binding 循环不再开火。正式库未迁。见 `prd/AutoTask 调度中心.md`。
+25. **v5.5 门户分类 + 分类文档**：测试库已到 head。正式库已于 2026-09-10 迁到 `d4b2f7a91e05`（含 `category` 与 `category_documents`），门户未删、回填 TIANDI。**需用 `.env.product` 重启正式 4520**。见 PRD §8。
+26. **调度中心管理内核（2026-09-04）**：独立定时器已写。测库已执行 `c3a8f1d92e47`。catalog 登记 demo + `tiandy.scan_pending` / `tiandy.sign_poll`（默认停用）。旧 `scheduler_jobs` 六条全停，Binding 循环不再开火。正式库表已于 2026-09-10 迁到 head；catalog 行等正式 Task 启动后插入。见 `prd/AutoTask 调度中心.md`。
 
 ## 7. RPA Engine 数据库准备行动计划
 
@@ -244,7 +244,9 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ### 2026-09-10
 
-- **生成对账单金额不一致改为可确认继续**：原先 SDMS 金额与勾选汇总不一致会 409 强制拦截（「请去 SDMS 修改对账单后重新发起」）。现仍提示两边金额；用户点「仍要生成」后带 `confirmAmountMismatch` 继续落草稿，summary 记 `amount_mismatch_confirmed`。未找到 SDMS 对账单仍拦截。**需重启唯一 Task 4520**；Client 热刷新即可。
+- **正式库已迁到 head（用户授权）**：`rpa_autotask` `c1d8e4f90a62` → `d4b2f7a91e05`。连续四步：`category` 回填 TIANDI、`category_documents`、`timers`、`timer_runs`。未覆盖测库 `.env`，未启动正式 4520。门户「天地伟业-芯云」仍 ENABLED，未删。**下一步：用 `.env.product` 启正式 Task。**
+
+- **生成对账单金额不一致改为可确认继续**：原先 SDMS 金额与勾选汇总不一致会 409 强制拦截（「请去 SDMS 修改对账单后重新发起」）。现仍提示两边金额；用户点「仍要生成」后带 `confirmAmountMismatch` 继续落草稿，summary 记 `amount_mismatch_confirmed`。未找到 SDMS 对账单仍拦截。Client 需重装安装包；正式 Task 迁库后再用 `.env.product` 重启。
 
 ### 2026-09-04
 
