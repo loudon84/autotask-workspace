@@ -1,8 +1,8 @@
 """天地伟业对账单业务编排。
 
 对应 project-docs/prd/AutoTask v3.0 业务需求-天地伟业对账单.md：
-- 生成前 SDMS 金额校验（无容差）
-- 校验通过即落 DRAFT（待生成草稿）；SRM 成功后改为未对账
+- 生成前 SDMS 金额校验（无容差）；不一致时需用户确认后继续
+- 校验通过或用户确认即落 DRAFT（待生成草稿）；SRM 成功后改为未对账
 - 取消对账仅本地作废
 """
 
@@ -197,6 +197,7 @@ async def generate_statement(
     date_start: str | None = None,
     date_end: str | None = None,
     today: date | None = None,
+    confirm_amount_mismatch: bool = False,
 ) -> dict[str, Any]:
     """校验 SDMS 金额后创建流程实例 + 生成对账单子任务。"""
     local_amount = sum_line_amounts(lines)
@@ -239,11 +240,13 @@ async def generate_statement(
                 "request": describe_lookup(lookup),
             },
         )
-    if sdms_amount != local_amount:
+    # @lat: [[domain#StatementBill#Statement Amount Check]]
+    amount_mismatch = sdms_amount != local_amount
+    if amount_mismatch and not confirm_amount_mismatch:
         raise ConflictError(
             message=(
                 f"对账金额不一致：SDMS {sdms_amount} vs 勾选汇总 {local_amount}，"
-                "请去 SDMS 修改对账单后重新发起"
+                "确认后仍可继续生成"
             ),
             message_key="errors.autotask.statement.amount_mismatch",
             message_params={
@@ -266,12 +269,15 @@ async def generate_statement(
 
     summary = {
         "local_amount": str(local_amount),
+        "sdms_amount": str(sdms_amount),
         "sdms_check_head_id": check_head_id,
         "sdms_check_num": check_num,
         "date_start": date_start,
         "date_end": date_end,
         "lines": lines,
     }
+    if amount_mismatch:
+        summary["amount_mismatch_confirmed"] = True
 
     if existing is not None:
         if existing.check_status != "DRAFT":

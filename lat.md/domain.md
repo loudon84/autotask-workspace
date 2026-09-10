@@ -82,6 +82,12 @@ stages: generate, invoice upload, submit review).
 Like process instances, statement stages are driven by Task APIs and subordinate
 AutomationTasks rather than by the Engine.
 
+### Statement Amount Check
+
+Generating a 天地伟业 statement compares SDMS `check_amount` to the selected receipt total with no tolerance.
+
+A mismatch is a confirmable warning, not a hard stop. Client shows both amounts; after the user confirms, Task continues and records `amount_mismatch_confirmed` on the process summary. Missing SDMS bills still block. See [[service/app/services/statement_service.py#generate_statement]].
+
 ## SchedulerJob
 
 A SchedulerJob is an independent timer: name, enabled, cron, and an opaque

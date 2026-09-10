@@ -24,6 +24,18 @@ def test_generate_request_accepts_camel_case() -> None:
     )
     assert body.portal_account_id == "pa-1"
     assert body.date_start == "2026-08-01"
+    assert body.confirm_amount_mismatch is False
+
+
+def test_generate_request_accepts_confirm_amount_mismatch() -> None:
+    body = StatementGenerateRequest.model_validate(
+        {
+            "portalAccountId": "pa-1",
+            "lines": [{"taxIncludedAmount": "1.00"}],
+            "confirmAmountMismatch": True,
+        }
+    )
+    assert body.confirm_amount_mismatch is True
 
 
 def test_query_request_accepts_snake_case() -> None:

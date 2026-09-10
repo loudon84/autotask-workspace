@@ -190,3 +190,23 @@ export function formatAmount(value: string | number | null | undefined): string 
     maximumFractionDigits: 2,
   });
 }
+
+export const STATEMENT_AMOUNT_MISMATCH_KEY =
+  "errors.autotask.statement.amount_mismatch";
+
+export function isStatementAmountMismatchError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const body = "body" in error ? error.body : undefined;
+  if (body && typeof body === "object") {
+    const row = body as { message_key?: unknown; messageKey?: unknown };
+    const key = row.message_key ?? row.messageKey;
+    if (key === STATEMENT_AMOUNT_MISMATCH_KEY) {
+      return true;
+    }
+  }
+  const message =
+    "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return message.includes("对账金额不一致");
+}

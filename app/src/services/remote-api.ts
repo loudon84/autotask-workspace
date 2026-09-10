@@ -667,6 +667,7 @@ export const remoteApi = {
     lines: Record<string, unknown>[];
     dateStart?: string;
     dateEnd?: string;
+    confirmAmountMismatch?: boolean;
   }): Promise<import("@/types/statement").StatementGenerateResult> => {
     const data = await requestAutotaskApi<unknown>({
       method: "POST",

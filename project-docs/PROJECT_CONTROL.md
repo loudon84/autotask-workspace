@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-04
+最后更新：2026-09-10
 
 ## 1. 用途
 
@@ -241,6 +241,10 @@ D:\AutoTask-Workspace\project-docs\designs\
 - [ ] 数据库执行已授权。
 
 ## 8. 每日开发日志
+
+### 2026-09-10
+
+- **生成对账单金额不一致改为可确认继续**：原先 SDMS 金额与勾选汇总不一致会 409 强制拦截（「请去 SDMS 修改对账单后重新发起」）。现仍提示两边金额；用户点「仍要生成」后带 `confirmAmountMismatch` 继续落草稿，summary 记 `amount_mismatch_confirmed`。未找到 SDMS 对账单仍拦截。**需重启唯一 Task 4520**；Client 热刷新即可。
 
 ### 2026-09-04
 

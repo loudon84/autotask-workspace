@@ -131,8 +131,68 @@ async def test_generate_blocks_when_amount_mismatch() -> None:
                 actor="u1",
             )
         assert "不一致" in exc.value.message
+        assert "确认后仍可继续生成" in exc.value.message
         assert exc.value.message_params["sdms_amount"] == "20.00"
         assert exc.value.message_params["local_amount"] == "10.00"
+
+
+@pytest.mark.asyncio
+async def test_generate_proceeds_when_amount_mismatch_confirmed() -> None:
+    db = MagicMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock(return_value=_empty_execute())
+    _assign_ids_on_flush(db)
+
+    portal = MagicMock()
+    portal.entity_type = "CUSTOMER"
+    portal.erp_entity_code = "C1"
+    portal.erp_entity_name = "客户"
+    portal.ou = "104"
+    binding = MagicMock()
+    binding.id = "b1"
+    binding.rpa_flow_id = "rpa_flow_srm_stmt_generate"
+
+    with (
+        patch(
+            "app.services.statement_service.fetch_check_amount",
+            AsyncMock(return_value=SdmsCheckLookup(Decimal("20.00"), "36599", {})),
+        ),
+        patch(
+            "app.services.statement_service.sdms_check_url",
+            return_value="http://sdms.test/sdms/ar_check/view_doc_srm",
+        ),
+        patch("app.services.statement_service._get_portal", AsyncMock(return_value=portal)),
+        patch("app.services.statement_service._find_binding", AsyncMock(return_value=binding)),
+        patch(
+            "app.services.integration_call_log_service.record_httpx_exchange",
+            new=AsyncMock(),
+        ),
+    ):
+        result = await svc.generate_statement(
+            db,
+            "t1",
+            "pa1",
+            [{"taxIncludedAmount": "10.00", "receiptNo": "WR1", "lineNo": "10"}],
+            actor="u1",
+            date_start="2026-08-01",
+            date_end="2026-08-31",
+            today=date(2026, 8, 17),
+            confirm_amount_mismatch=True,
+        )
+
+    assert result["ok"] is True
+    assert result["local_amount"] == "10.00"
+    assert result["sdms_amount"] == "20.00"
+    instances = [
+        call.args[0]
+        for call in db.add.call_args_list
+        if call.args[0].__class__.__name__ == "ProcessInstance"
+    ]
+    summary = svc.loads_json(instances[0].summary, {})
+    assert summary["amount_mismatch_confirmed"] is True
+    assert summary["sdms_amount"] == "20.00"
 
 
 @pytest.mark.asyncio
