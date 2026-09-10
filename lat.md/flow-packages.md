@@ -39,9 +39,16 @@ They must not open browsers or access Task/Engine databases directly. See
 
 ## BOE packing Flows
 
-Three packages enrich lines, save an SRM draft, and submit a change-order.
+Four packages enrich lines, save an SRM draft, submit a change-order, and
+delete a draft before CS cancel.
 
-They live under `rpa-flows/rpa_flow_srm_boe_pack_*`. Steps follow the 影刀
+They live under `rpa-flows/rpa_flow_srm_boe_pack_*`. Delete-draft 1.0.1
+(`rpa_flow_srm_boe_pack_delete_draft`) searches by 发票箱单流水号. Empty list
+or missing number is success (`alreadyMissing`). Otherwise it clicks the
+frozen-column checkbox (the main-table checkbox is covered), then 影刀
+「删除-草稿单删除」 and the 删除 confirm 「确定」, then clicks list 「搜 索」
+and waits for 「暂无数据」.
+Steps follow the 影刀
 recording (`project-docs/prd/boe/影刀-京东方-selectorsV2.xml`), verified by
 live-DOM probes (2026-09-07): login clicks 「供应商登录」on the portal SPA
 (same-tab SSO to `#/dashboard/index?ticket=…`; login success = dashboard URL
@@ -141,4 +148,5 @@ rows SRM may seed per PO. The 操作/删除 button lives on
 `.el-table__fixed-right` (1.0.10): the same button in the main body is
 `visible=false` under the freeze overlay, so clicking the main-row 删除
 times out; 箱单/发票/提运单 deletes are `disabled`, only 双签PO/协议 is
-clickable.
+clickable. List-menu 删除草稿 (1.0.1 delete-draft Flow) is a different
+control: `.avue-crud__left button.el-button--danger`.

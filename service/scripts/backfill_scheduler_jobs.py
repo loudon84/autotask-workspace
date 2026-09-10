@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""为现网扫单/回签 Binding 回填 config.schedule，并插入 scheduler_jobs。
+"""[作废] 曾为扫单/回签 Binding 回填 config.schedule 并插入 scheduler_jobs。
+
+调度中心已改独立 timers。不要再对现网执行 --apply。
+"""
 
 默认 dry-run。需先授权 alembic upgrade 建表，再加 --apply 才写库。
 """

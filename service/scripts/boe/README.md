@@ -46,13 +46,13 @@ uv run python scripts\boe\clear_boe_packing_data.py --yes 101SJH2026040195
 
 脚本：`bind_boe_pack_flows.py`
 
-真实租户下补 3 个京东方流程模板（seed JSON 里的 BOE 模板在 seed-tenant-001 下，真实租户没有），并按 `rpa-flows/<flow>/_publish_1.0.0.json` 给门户建 ENABLED Binding（enrich / save_draft / submit）。
+真实租户下补 4 个京东方流程模板（seed JSON 里的 BOE 模板在 seed-tenant-001 下，真实租户没有），并按 `rpa-flows/<flow>/_publish_<ver>.json` 给门户建 ENABLED Binding（enrich / save_draft / submit 1.0.23；delete_draft 1.0.0）。
 
-前置：先在 Engine（4610）侧发布 Flow：
+前置：先在 Engine（4610）侧发布 Flow。只加删草稿、不要重传 1.0.23：
 
 ```powershell
 cd d:\work_space260811\autotask-workspace\rpa-engine
-uv run python scripts\_publish_boe_pack_flows.py   # 上传→校验→发布，写 _publish_1.0.0.json
+uv run python scripts\_publish_boe_pack_flows.py --only-delete   # 写 _publish_1.0.0.json
 ```
 
 然后绑定：

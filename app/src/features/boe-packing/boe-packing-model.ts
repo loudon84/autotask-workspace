@@ -24,6 +24,7 @@ export const BOE_PACK_STAGE_NAME: Record<BoePackStage, string> = {
   BOE_PACK_REVIEW: "客服核验",
   BOE_PACK_SUBMITTING: "提交 SRM 单据",
   BOE_PACK_SUBMITTED: "已完成",
+  BOE_PACK_DELETING_DRAFT: "删除 SRM 草稿",
   BOE_PACK_CANCELLED: "已作废",
 };
 
@@ -35,6 +36,7 @@ export const BOE_PACK_STAGE_TABS = [
   { value: "BOE_PACK_REVIEW", label: "客服核验" },
   { value: "BOE_PACK_SUBMITTING", label: "提交 SRM 单据" },
   { value: "BOE_PACK_SUBMITTED", label: "已完成" },
+  { value: "BOE_PACK_DELETING_DRAFT", label: "删除 SRM 草稿" },
   { value: "BOE_PACK_CANCELLED", label: "已作废" },
 ] as const;
 
@@ -44,6 +46,7 @@ export const BOE_PACK_SUBTASK_NODES = [
   { taskType: "srm_boe_pack_enrich", label: "RPA 补全项目信息行" },
   { taskType: "srm_boe_pack_save_draft", label: "保存 SRM 草稿单" },
   { taskType: "srm_boe_pack_submit", label: "提交 SRM 单据" },
+  { taskType: "srm_boe_pack_delete_draft", label: "删除 SRM 草稿" },
 ];
 
 const BOE_BLOCKING_TASK_STATUSES = new Set(["FAILED", "WAITING_HUMAN"]);
@@ -114,8 +117,50 @@ export function boePackStageName(stage: string): string {
   return BOE_PACK_STAGE_NAME[stage as BoePackStage] ?? stage;
 }
 
+const BOE_PACK_IN_FLIGHT_TASK = new Set(["QUEUED", "LEASED", "RUNNING"]);
+
+export function latestBoePackTaskStatus(
+  subTasks?: Array<{ status: string; updatedAt: string }> | null
+): string | undefined {
+  if (!subTasks?.length) {
+    return undefined;
+  }
+  return [...subTasks].sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt)
+  )[0]?.status;
+}
+
+/** 实例 status 多为 ACTIVE；失败停在阶段上、RPA 在跑时要靠任务态区分。 */
+export function boePackRunStatus(input: {
+  status?: string | null;
+  lastErrorMessage?: string | null;
+  latestTaskStatus?: string | null;
+}): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
+  const status = input.status || "";
+  if (status === "COMPLETED") {
+    return { label: "已完成", variant: "default" };
+  }
+  if (status === "CANCELLED") {
+    return { label: "已作废", variant: "outline" };
+  }
+  if (status === "FAILED") {
+    return { label: "失败", variant: "destructive" };
+  }
+  const task = input.latestTaskStatus || "";
+  if (BOE_PACK_IN_FLIGHT_TASK.has(task)) {
+    return { label: "执行中", variant: "secondary" };
+  }
+  if (task === "WAITING_HUMAN") {
+    return { label: "等待人工", variant: "secondary" };
+  }
+  if (task === "FAILED" || Boolean(input.lastErrorMessage)) {
+    return { label: "失败", variant: "destructive" };
+  }
+  return { label: "进行中", variant: "secondary" };
+}
+
 export function boePackProgressIndex(stage: string): number {
-  if (stage === "BOE_PACK_CANCELLED") {
+  if (stage === "BOE_PACK_CANCELLED" || stage === "BOE_PACK_DELETING_DRAFT") {
     return -1;
   }
   const index = BOE_PACK_MAIN_STAGES.indexOf(stage as BoePackStage);
@@ -127,7 +172,8 @@ export function canRetryBoePack(stage: string): boolean {
     stage === "BOE_PACK_FETCH_WMS" ||
     stage === "BOE_PACK_ENRICH" ||
     stage === "BOE_PACK_SAVE_DRAFT" ||
-    stage === "BOE_PACK_SUBMITTING"
+    stage === "BOE_PACK_SUBMITTING" ||
+    stage === "BOE_PACK_DELETING_DRAFT"
   );
 }
 

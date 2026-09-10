@@ -11,12 +11,14 @@ EXPECTED_ORG_CODE = "101"
 ENRICH_TEMPLATE_CODE = "srm_boe_pack_enrich"
 SAVE_DRAFT_TEMPLATE_CODE = "srm_boe_pack_save_draft"
 SUBMIT_TEMPLATE_CODE = "srm_boe_pack_submit"
+DELETE_DRAFT_TEMPLATE_CODE = "srm_boe_pack_delete_draft"
 
 RPA_TEMPLATE_CODES = frozenset(
     {
         ENRICH_TEMPLATE_CODE,
         SAVE_DRAFT_TEMPLATE_CODE,
         SUBMIT_TEMPLATE_CODE,
+        DELETE_DRAFT_TEMPLATE_CODE,
     }
 )
 
@@ -41,6 +43,7 @@ STAGE_DEFINITIONS = [
     {"id": ProcessStage.BOE_PACK_REVIEW.value, "name": "客服核验", "button": "提交"},
     {"id": ProcessStage.BOE_PACK_SUBMITTING.value, "name": "提交 SRM 单据", "button": "重试"},
     {"id": ProcessStage.BOE_PACK_SUBMITTED.value, "name": "已完成", "button": None},
+    {"id": ProcessStage.BOE_PACK_DELETING_DRAFT.value, "name": "删除 SRM 草稿", "button": "重试"},
     {"id": ProcessStage.BOE_PACK_CANCELLED.value, "name": "已作废", "button": None},
 ]
 
@@ -50,6 +53,7 @@ RETRYABLE_STAGES = frozenset(
         ProcessStage.BOE_PACK_ENRICH.value,
         ProcessStage.BOE_PACK_SAVE_DRAFT.value,
         ProcessStage.BOE_PACK_SUBMITTING.value,
+        ProcessStage.BOE_PACK_DELETING_DRAFT.value,
     }
 )
 

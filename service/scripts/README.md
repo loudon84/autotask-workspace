@@ -19,15 +19,11 @@ cd d:\work_space260811\autotask-workspace\service
 
 `Application startup complete` 不够。那只说明应用初始化完了，还没占上端口。
 
-## 回填 Binding 调度任务（v5.2）
+## 回填 Binding 调度任务（v5.2，已作废）
 
 脚本：`backfill_scheduler_jobs.py`
 
-找出扫单/回签模板且 ENABLED 的 Binding：若 config 无 `schedule`，dry-run 打印将写入的 JSON；`--apply` 时写入 config 并走 `sync_scheduler_job_from_binding`。
-
-默认扫单：`cron=0 8 * * *`，`actionName=扫单`。回签：`cron=*/30 * * * *`，`actionName=回签轮询`。
-
-**必须先授权 `alembic upgrade` 建 `scheduler_jobs` 表，再 `--apply`。默认不加 `--apply`。**
+**不要再跑。** 调度中心只认独立 `timers`。本脚本会往已停用的 `scheduler_jobs` 插行，清场后进程不再读那张表开火。历史说明见 `project-docs/prd/AutoTask 调度中心-清场.md`。
 
 ```powershell
 cd d:\work_space260811\autotask-workspace\service
@@ -214,6 +210,28 @@ cd d:\work_space260811\autotask-workspace\service
 - 建议在没有正在跑的对账单任务时执行。
 
 
+
+## 清空调度中心（验证启动登记）
+
+脚本：`clear_timers.py`
+
+硬删 `timer_runs` 全部执行记录 + `timers` 全部档案（含手工改过的 cron/开关）。
+用途：清空后重启 Task 4520，验证 lifespan 的 `ensure_catalog_rows` 能把 5 条
+目录行（demo/tiandy×2/boe×2）按代码默认 cron、`enabled=false` 重新登记回来。
+
+```powershell
+cd d:\work_space260811\autotask-workspace\service
+
+# 预览 / 确认删除
+.\.venv\Scripts\python.exe scripts\clear_timers.py
+.\.venv\Scripts\python.exe scripts\clear_timers.py --yes
+
+# 删完重启，调度中心应重新出现 5 条目录行
+.\scripts\restart_task_4520.ps1
+```
+
+注意：再次重启不会覆盖手工改过的 cron/开关（登记只补缺失 target）。
+APScheduler 任务在进程内存，不落库，无需清理。
 
 ## v5.0 上线切换（环境基址，不是 Binding）
 

@@ -1,8 +1,9 @@
 """京东方发票箱单：补模板 + 绑 Binding（演示门户）。
 
 做什么：
-1. 真实租户下补 3 个流程模板（seed JSON 里只有 seed-tenant-001 的，真实租户没有）
-2. 读 rpa-flows/<flow>/_publish_1.0.0.json，给演示门户（C000142-01）建 3 条 ENABLED Binding
+1. 真实租户下补 4 个流程模板（seed JSON 里只有 seed-tenant-001 的，真实租户没有）
+2. 读 rpa-flows/<flow>/_publish_<ver>.json，给演示门户（C000142-01）建 ENABLED Binding
+   enrich/save_draft/submit 用 1.0.23；delete_draft 用 1.0.1
 
 用法：
     uv run python scripts/boe/bind_boe_pack_flows.py            # 预览，不写库
@@ -10,6 +11,7 @@
     uv run python scripts/boe/bind_boe_pack_flows.py --yes --all-portals  # 绑所有京东方门户
 
 前置：先跑 rpa-engine/scripts/_publish_boe_pack_flows.py 发布 Flow。
+     只发删除草稿：uv run python scripts/_publish_boe_pack_flows.py --only-delete
 """
 from __future__ import annotations
 
@@ -35,6 +37,7 @@ from app.services.rpa_engine_client import normalize_checksum  # noqa: E402
 
 FLOWS = Path(r"d:\work_space260811\autotask-workspace\rpa-flows")
 VERSION = "1.0.23"
+DELETE_VERSION = "1.0.1"
 DEMO_SUBCODE = "C000142-01"
 
 # (template_code, flow_id, 模板名, 描述, 步骤id/名)
@@ -60,12 +63,24 @@ TEMPLATES = [
         "打开已有 SRM 草稿做变更单提交",
         ("srm.submit", "提交单据"),
     ),
+    (
+        "srm_boe_pack_delete_draft",
+        "rpa_flow_srm_boe_pack_delete_draft",
+        "京东方-删除SRM草稿",
+        "作废前按流水号删除 SRM 草稿；没有则视为已删",
+        ("srm.delete_draft", "删除草稿"),
+    ),
 ]
 
 INPUT_SCHEMA = [
     {"name": "instanceId", "label": "流程实例", "type": "string", "required": True},
     {"name": "docNo", "label": "交货计划单号", "type": "string", "required": True},
+    {"name": "srmDraftNo", "label": "发票箱单流水号", "type": "string", "required": False},
 ]
+
+
+def _template_version(code: str) -> str:
+    return DELETE_VERSION if code == "srm_boe_pack_delete_draft" else VERSION
 
 
 def _merge_binding_config(raw: str | None, portal_url: str, template_code: str) -> str:
@@ -78,8 +93,8 @@ def _merge_binding_config(raw: str | None, portal_url: str, template_code: str) 
     return dumps_json(data)
 
 
-def _load_publish(flow_id: str) -> dict:
-    path = FLOWS / flow_id / f"_publish_{VERSION}.json"
+def _load_publish(flow_id: str, version: str = VERSION) -> dict:
+    path = FLOWS / flow_id / f"_publish_{version}.json"
     if not path.exists():
         raise SystemExit(f"未发布：{path}（先跑 _publish_boe_pack_flows.py）")
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -94,7 +109,9 @@ async def main() -> None:
     parser.add_argument("--all-portals", action="store_true", help="绑所有启用京东方门户")
     args = parser.parse_args()
 
-    publishes = {code: _load_publish(flow) for code, flow, *_ in TEMPLATES}
+    publishes = {}
+    for code, flow, *_ in TEMPLATES:
+        publishes[code] = _load_publish(flow, _template_version(code))
 
     async with async_session_factory() as db:
         portals = list(
@@ -115,6 +132,7 @@ async def main() -> None:
         tenant_id = portals[0].tenant_id
 
         for code, _flow, name, desc, step in TEMPLATES:
+            tmpl_ver = _template_version(code)
             template = (
                 await db.execute(
                     select(WorkflowTemplate).where(
@@ -136,7 +154,7 @@ async def main() -> None:
                         entity_type="CUSTOMER",
                         category="boe-packing",
                         status="ENABLED",
-                        version=VERSION,
+                        version=tmpl_ver,
                         input_schema=dumps_json(INPUT_SCHEMA),
                         business_steps=dumps_json(
                             [
@@ -187,7 +205,7 @@ async def main() -> None:
                         existing.flow_checksum_snapshot = (
                             normalize_checksum(pub["packageChecksum"]) or ""
                         )
-                        existing.workflow_template_version = VERSION
+                        existing.workflow_template_version = tmpl_ver
                         existing.status = "ENABLED"
                         existing.config = _merge_binding_config(
                             existing.config, portal.portal_url, code
@@ -203,7 +221,7 @@ async def main() -> None:
                             id=str(uuid.uuid4()),
                             portal_account_id=portal.id,
                             workflow_template_id=template.id,
-                            workflow_template_version=VERSION,
+                            workflow_template_version=tmpl_ver,
                             rpa_flow_id=pub["rpaFlowId"],
                             rpa_flow_version=pub["rpaFlowVersion"],
                             rpa_flow_version_id=pub["rpaFlowVersionId"],

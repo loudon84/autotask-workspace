@@ -50,25 +50,12 @@ class Settings(BaseSettings):
     SUCCESSOR_JOB_BATCH_SIZE: int = Field(default=10, ge=1, le=100)
     SUCCESSOR_JOB_MAX_ATTEMPTS: int = Field(default=10, ge=1, le=100)
 
-    SCAN_JOB_ENABLED: bool = False
-    SCAN_JOB_HOUR: int = Field(default=8, ge=0, le=23)
-    SCAN_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
-    SCAN_JOB_POLL_INTERVAL_SECONDS: float = Field(default=60.0, gt=0, le=3600)
-
-    SIGN_POLL_JOB_ENABLED: bool = False
-    SIGN_POLL_INTERVAL_SECONDS: float = Field(default=1800.0, gt=0, le=86400)
-
-    BOE_PACK_MATCH_JOB_ENABLED: bool = False
-    BOE_PACK_MATCH_JOB_HOUR: int = Field(default=7, ge=0, le=23)
-    BOE_PACK_MATCH_JOB_MINUTE: int = Field(default=0, ge=0, le=59)
-    BOE_DELIVERY_PLAN_PATH: str = "/aiats/ebs_sjh_header_boe"
-    BOE_WMS_PATH: str = "/aiats/wms_sjh_pl_boe"
-
     SEED_DATA_ENABLED: bool = True
     SKIP_AUTO_MIGRATE: bool = False
     SEED_DATA_DIR: str = "app/data/seed"
 
-    # 环境级外部系统基址。测试/正式只改这里，不要写进 Binding、不要写进登录页。
+    # 环境级外部系统基址。测试/正式只改域名，不要写进 Binding、不要写进登录页。
+    # 具体接口路径写死在调用模块（如 boe_smc_client），不要为每条接口加 .env 键。
     # SMC_API_BASE_URL：公司内部 SQL→JSON 接口平台（对账单查询等）。
     # SDMS_BASE_URL：SDMS 网页主机（Client 打开销售订单/对账单/交货计划查看链接）。
     # 以后 OA 可加 OA_BASE_URL，租约会透传 oaBaseUrl。

@@ -30,6 +30,23 @@ Changing test vs production hosts is an ops restart/config change. Binding keeps
 business parameters (`searches`, `dryRun`, sample PO). Portal passwords belong on
 PortalAccount, not in Client login settings or Flow code.
 
+API path suffixes are module constants, not extra `.env` keys — environments
+share the same path and only the host differs. BOE delivery-plan and WMS paths
+live in [[service/app/services/boe_smc_client.py#DELIVERY_PLAN_PATH]] and
+[[service/app/services/boe_smc_client.py#WMS_PATH]].
+
+## Open Process Instance Unique Key
+
+Idempotency is portal + process_code + biz_key among **open** rows only, not all
+historical rows.
+
+Match and scan skip when an open duplicate exists. Cancelled or soft-deleted
+rows must not occupy [[service/app/models/process_instance.py#ProcessInstance]]'s
+unique index, or the next due tick cannot INSERT and the API returns 409. The
+timer only notifies; it does not read 作废. Product rule: 已有未作废则跳过;
+after 作废 (2.1 no SRM draft, or 2.2 after delete-draft RPA) the next match
+creates a new instance. See [[domain#BoePackCancelPaths]].
+
 ## Flow Sandbox Contract
 
 Flows only automate through `RunContext`; they do not own browser lifecycle or
@@ -80,10 +97,10 @@ volume unit fixed 立方米). Phase 1 skipped AutoTask OTP; that is superseded b
 [[domain#BoeInvoicePacking]].
 
 Phase 1 is implemented: `/boe-packing` + tenant match timer on 调度中心
-(default off, hot-reload cron), three templates/Flows, Client list/detail with
-review diff, region-map API. The three Flows (`rpa_flow_srm_boe_pack_*` 1.0.3)
-are published to the Registry and bound (ENABLED) on the demo portal
-C000142-01 via `service/scripts/boe/bind_boe_pack_flows.py` (2026-09-07;
+(default off, hot-reload cron), four templates/Flows, Client list/detail with
+review diff, region-map API. The packing Flows (`rpa_flow_srm_boe_pack_*`)
+are published to the Registry and bound (ENABLED) on BOE portals
+via `service/scripts/boe/bind_boe_pack_flows.py` (2026-09-07;
 1.0.1 realigns login/navigation with the 影刀 recording after a login-step
 timeout on 1.0.0; 1.0.2 fixes create-page gating found by live-DOM probes:
 启用AI识别 defaults to 是 and locks the whole form, and 项目信息「新增」
@@ -163,8 +180,27 @@ due ticks only notify a registry.
 
 The 调度中心 UI never shows target, portal, or Binding. Empty
 [[service/app/services/timer_catalog.py#REGISTRATIONS]] is valid until a task
-registers. Binding JobScheduler may run in parallel until old jobs are moved.
-See [[domain#SchedulerJob]].
+registers. Task starts only [[service/app/services/timer_scheduler.py#TimerScheduler]];
+legacy Binding jobs and `.env` loops are removed.
+See [[domain#SchedulerJob]] and [[design-decisions#Due Time Uses APScheduler]].
+
+## Due Time Uses APScheduler
+
+Due time is APScheduler, not a handmade sleep loop — same move as Java while-loop timers to Spring scheduling. Landed 2026-09-10.
+
+Product stays [[design-decisions#Independent Timers]]; spec is
+`project-docs/prd/AutoTask 调度中心-引入APScheduler.md`.
+[[service/app/services/timer_scheduler.py#TimerScheduler]] is now only a 30s
+sync coroutine: enabled `timers` rows become `CronTrigger` jobs
+(`misfire_grace_time=120`, `max_instances=1`, `coalesce=True`), and firing still
+just notifies the registry. Sync does not `replace_existing` when cron is
+unchanged, so a 2-minute misfire window is not reset every 30s. `timers` stores crontab 5-field cron
+(dow `0`/`7`=Sunday); [[service/app/services/unix_cron.py#build_cron_trigger]]
+maps dow numbers to APScheduler weekday names before `from_crontab` — fire and
+`next_run_at` must share that shim. Unsolvable cron (e.g. `0 0 30 2 *`) is
+rejected with 422 at save time. Handmade
+[[service/app/services/cron_schedule.py#CronSchedule]] is tombstoned for legacy
+Binding JSON parsing only.
 
 ## Mail Reader Is Scene-Based
 

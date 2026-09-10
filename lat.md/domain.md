@@ -140,6 +140,33 @@ skip the task with no instance error; it now records `PROCESS_BINDING_MISSING`
 so the list shows why there is no task. Demo portal C000142-01 was bound first;
 the other BOE portals were bound 2026-09-09.
 
+List and detail show SOP 阶段 plus 运行状态 (in-flight RPA vs failed vs
+waiting for CS), matching customer-order list/detail.
+
+Matching skips an **open** instance with the same portal+交货计划号.
+Cancelled rows do not occupy the unique key, so the next timer tick (or 立即匹配)
+INSERTs a new instance. The timer does not interpret 作废. See
+[[design-decisions#Open Process Instance Unique Key]] and
+[[domain#BoePackCancelPaths]].
+
+## BoePackCancelPaths
+
+CS 作废 is local-only when there is no SRM draft number; with a draft, RPA must
+search/delete it first and only then flip the instance to CANCELLED.
+
+Discriminator is `summary.srmDraftNo`. Empty → 2.1: status CANCELLED immediately
+([[service/app/services/boe_packing_service.py#cancel_instance]]). Present →
+stage `BOE_PACK_DELETING_DRAFT` while still ACTIVE, enqueue
+`srm_boe_pack_delete_draft`; local cancel happens in `dispatch_finished` after
+SUCCESS (deleted or `alreadyMissing`). Inflight enrich/save/submit blocks
+cancel. Binding must exist on BOE portals or 2.2 cannot run. After delete,
+RPA clicks list 「搜 索」 then waits for 「暂无数据」 (1.0.1).
+
+Retry of `BOE_PACK_DELETING_DRAFT` re-enqueues the same Flow. Every run searches
+first: 「暂无数据」 is `alreadyMissing` SUCCESS, then Task CANCELLED locally. It
+must not click 删除 again when SRM already removed the draft. A previous
+`BOE_DRAFT_STILL_PRESENT` does not skip that search.
+
 ## SchedulerJob
 
 A SchedulerJob is an independent timer: name, enabled, cron, and an opaque
@@ -151,8 +178,13 @@ Tenant-level jobs that are not per-portal (BOE match delivery plan
 `boe.pack_match`, BOE SRM morning login `boe.srm_login`) are registered as
 ordinary timers too — one row per job, not per portal.
 
-The 调度中心 only maintains name/enabled/cron. What runs after notify is
+The 调度中心 only maintains name/enabled/cron. Cron is China wall time
+(`Asia/Shanghai`), not the Task host timezone. What runs after notify is
 registered by task code, not by Binding or portal. Jobs are hot-reloaded.
+Due fire is computed by APScheduler `CronTrigger`; stored cron is crontab
+5-field with dow `0`/`7`=Sunday, shimmed before use
+([[design-decisions#Due Time Uses APScheduler]]). A fire within 2 minutes of
+its slot still counts as that slot; missed slots are not replayed.
 Each due fire is recorded in `timer_runs` (triggered/finished/status/error).
 「立即执行」(`POST /timers/{id}/run`) bypasses enabled and cron entirely.
 See [[service/app/models/timer.py#Timer]] and

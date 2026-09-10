@@ -6,6 +6,7 @@ export type BoePackStage =
   | "BOE_PACK_REVIEW"
   | "BOE_PACK_SUBMITTING"
   | "BOE_PACK_SUBMITTED"
+  | "BOE_PACK_DELETING_DRAFT"
   | "BOE_PACK_CANCELLED";
 
 export type BoePackHeader = {
@@ -68,6 +69,7 @@ export type BoePackListItem = {
   customerName?: string;
   srmDraftNo?: string;
   headerId?: string;
+  latestTaskStatus?: string;
 };
 
 export type BoePackDetail = BoePackListItem & {

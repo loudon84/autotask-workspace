@@ -9,6 +9,10 @@ import httpx
 
 from app.core.config import settings
 
+# 测/正式路径相同，只换 SMC_API_BASE_URL，不要进 .env。
+DELIVERY_PLAN_PATH = "/aiats/ebs_sjh_header_boe"
+WMS_PATH = "/aiats/wms_sjh_pl_boe"
+
 
 def _text(value: Any) -> str:
     if value is None or isinstance(value, bool):
@@ -51,7 +55,7 @@ def _parse_payload(payload: Any) -> tuple[list[dict[str, Any]], str | None]:
 
 
 async def fetch_delivery_plans() -> SmcHttpResult:
-    url = _join_url(settings.SMC_API_BASE_URL, settings.BOE_DELIVERY_PLAN_PATH)
+    url = _join_url(settings.SMC_API_BASE_URL, DELIVERY_PLAN_PATH)
     if not settings.SMC_API_BASE_URL:
         return SmcHttpResult(url=url, status_code=None, body="", data=[], error="未配置 SMC_API_BASE_URL")
     try:
@@ -78,8 +82,8 @@ async def fetch_delivery_plans() -> SmcHttpResult:
 
 
 async def fetch_wms_packing(doc_no: str) -> SmcHttpResult:
-    url = _join_url(settings.SMC_API_BASE_URL, settings.BOE_WMS_PATH)
-    # 正式路径 /aiats/wms_sjh_pl_boe，参数 erpno=交货计划单号。
+    url = _join_url(settings.SMC_API_BASE_URL, WMS_PATH)
+    # 参数 erpno=交货计划单号。
     # 返回平铺行 cuspo/cusitem/qty/netweight/cubic/coo；doc_no 现已空数据。
     params = {"erpno": doc_no}
     if not settings.SMC_API_BASE_URL:

@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBoePackingList } from "@/features/boe-packing/api/use-boe-packing";
 import {
   BOE_PACK_STAGE_TABS,
+  boePackRunStatus,
   boePackStageName,
   canRetryBoePack,
 } from "@/features/boe-packing/boe-packing-model";
@@ -53,18 +54,40 @@ export function BoePackingListPage() {
         id: "stage",
         header: "阶段",
         cell: ({ row }) => (
-          <div className="space-y-1">
-            <Badge variant="outline">{boePackStageName(row.original.stage)}</Badge>
-            {row.original.lastErrorMessage ? (
-              <p
-                className="max-w-56 truncate text-destructive text-xs"
-                title={row.original.lastErrorMessage}
-              >
-                {row.original.lastErrorMessage}
-              </p>
-            ) : null}
-          </div>
+          <Badge variant="outline">{boePackStageName(row.original.stage)}</Badge>
         ),
+      },
+      {
+        id: "runStatus",
+        header: "运行状态",
+        cell: ({ row }) => {
+          const run = boePackRunStatus({
+            status: row.original.status,
+            lastErrorMessage: row.original.lastErrorMessage,
+            latestTaskStatus: row.original.latestTaskStatus,
+          });
+          return <Badge variant={run.variant}>{run.label}</Badge>;
+        },
+      },
+      {
+        id: "lastError",
+        header: "最近错误",
+        cell: ({ row }) => {
+          const { status, lastErrorMessage } = row.original;
+          if (status === "COMPLETED" || status === "CANCELLED") {
+            return "";
+          }
+          return lastErrorMessage ? (
+            <span
+              className="max-w-56 truncate text-destructive text-sm"
+              title={lastErrorMessage}
+            >
+              {lastErrorMessage}
+            </span>
+          ) : (
+            ""
+          );
+        },
       },
       {
         id: "qty",
@@ -115,7 +138,7 @@ export function BoePackingListPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        description="按交货计划建单并读取 WMS 装箱信息"
+        description="阶段是 SOP 节点；运行状态区分进行中、RPA 执行中、失败和已完成"
         title="发票箱单"
       >
         <div className="flex items-center gap-2">

@@ -776,9 +776,12 @@ async def test_trigger_archive_from_dates_complete(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
-async def test_sign_poll_scheduler_process_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.core.config import Settings
-    from app.services.sign_poll_scheduler import SignPollScheduler
+async def test_sign_poll_due_calls_run_sign_poll_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services import tiandy_timers
+
+    async def _run(_db, **kwargs):  # noqa: ANN001
+        assert kwargs["actor"] == "timer:tiandy.sign_poll"
+        return {"candidate_count": 2, "created_count": 1}
 
     class _Session:
         async def __aenter__(self):
@@ -787,18 +790,9 @@ async def test_sign_poll_scheduler_process_once(monkeypatch: pytest.MonkeyPatch)
         async def __aexit__(self, *_args):
             return None
 
-    def _factory():
-        return _Session()
-
-    async def _run(_db, **kwargs):  # noqa: ANN001
-        assert kwargs["actor"] == "sign-poll-scheduler"
-        return {"candidate_count": 2, "created_count": 1}
-
     monkeypatch.setattr(svc, "run_sign_poll_once", _run)
-
-    scheduler = SignPollScheduler(_factory, Settings(SIGN_POLL_INTERVAL_SECONDS=1800))
-    count = await scheduler.process_once()
-    assert count == 1
+    monkeypatch.setattr(tiandy_timers, "async_session_factory", lambda: _Session())
+    await tiandy_timers.sign_poll_due()
 
 
 @pytest.mark.asyncio
@@ -808,9 +802,8 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
     """定时扫单只对拥有 ENABLED srm_scan_pending_orders 绑定的门户建任务。"""
     from datetime import datetime
 
-    from app.core.config import Settings
     from app.services import scan_scheduler as sched_mod
-    from app.services.scan_scheduler import ScanScheduler
+    from app.services.scan_scheduler import run_scan_once
 
     captured_portal_ids: list[str] = []
 
@@ -847,7 +840,6 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
         captured_portal_ids.append(portal_account_id)
         return MagicMock()
 
-    # patch the name imported into the scheduler module
     monkeypatch.setattr(sched_mod, "create_scan_task", _create_scan_task)
     monkeypatch.setattr(
         sched_mod,
@@ -855,9 +847,7 @@ async def test_scan_scheduler_only_targets_portals_with_enabled_scan_binding(
         MagicMock(now=lambda: datetime(2026, 8, 19, 9, 5)),
     )
 
-    scheduler = ScanScheduler(_factory, Settings())
-    scheduler._last_run_date = None
-    count = await scheduler.process_once()
+    count = await run_scan_once(_factory, actor="timer:tiandy.scan_pending")
     assert count == 1
     assert captured_portal_ids == ["portal-bound"]
     assert any("TIANDI" in sql for sql in captured_sql)

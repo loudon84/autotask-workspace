@@ -1,4 +1,4 @@
-from sqlalchemy import Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -7,11 +7,13 @@ from app.models.base import BaseModel
 class ProcessInstance(BaseModel):
     __tablename__ = "process_instances"
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_process_instances_portal_code_biz_open",
             "portal_account_id",
             "process_code",
             "biz_key",
-            name="uq_process_instances_portal_code_biz",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL AND status <> 'CANCELLED'"),
         ),
         Index("ix_process_instances_tenant_status", "tenant_id", "status"),
         Index("ix_process_instances_tenant_stage", "tenant_id", "stage"),

@@ -48,10 +48,15 @@ async def list_boe_packing(
         accessible_portal_ids=accessible_ids,
     )
     portals = await _portals_by_id(db, {item.portal_account_id for item in instances})
+    task_status = await svc.latest_task_status_map(db, [item.id for item in instances])
     return ApiResponse(
         data=[
             BoePackingListItem.model_validate(
-                svc.to_list_item(item, portals.get(item.portal_account_id))
+                svc.to_list_item(
+                    item,
+                    portals.get(item.portal_account_id),
+                    latest_task_status=task_status.get(item.id, ""),
+                )
             )
             for item in instances
         ]

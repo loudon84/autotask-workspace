@@ -106,6 +106,9 @@ def test_plan_header_id_stays_off_editable_header() -> None:
     item = svc.to_list_item(instance)
     assert item["srm_draft_no"] == "I260908001"
     assert item["header_id"] == "81543"
+    assert item["latest_task_status"] == ""
+    running = svc.to_list_item(instance, latest_task_status="RUNNING")
+    assert running["latest_task_status"] == "RUNNING"
     blank = ProcessInstance(
         id="inst-blank",
         tenant_id="tenant-1",
@@ -281,3 +284,239 @@ async def test_enqueue_records_missing_binding(monkeypatch: pytest.MonkeyPatch) 
     assert task is None
     assert instance.last_error_code == "PROCESS_BINDING_MISSING"
     assert "未配置对应流程 Binding" in (instance.last_error_message or "")
+
+
+def test_open_packing_excludes_cancelled() -> None:
+    row = ProcessInstance(
+        id="c1",
+        tenant_id="tenant-1",
+        process_code=PROCESS_CODE,
+        biz_key="101SJH202609195",
+        title="发票箱单",
+        portal_account_id="portal-1",
+        stage=ProcessStage.BOE_PACK_CANCELLED.value,
+        status=ProcessInstanceStatus.CANCELLED.value,
+        summary="{}",
+        created_by="user-1",
+    )
+    assert svc._is_open_packing(row) is False
+    row.status = ProcessInstanceStatus.ACTIVE.value
+    assert svc._is_open_packing(row) is True
+
+
+@pytest.mark.asyncio
+async def test_match_inserts_when_cancelled_does_not_occupy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    portal = MagicMock()
+    portal.id = "portal-1"
+    smc = MagicMock()
+    smc.error = None
+    smc.data = [
+        {
+            "doc_no": "101SJH202609195",
+            "party_site_number": "C000142-01",
+            "org_code": "101",
+            "deliver_qty": "1",
+            "header_id": "81543",
+        }
+    ]
+
+    async def _wms(_db, instance, *, actor: str):
+        assert actor == "user-1"
+        return instance
+
+    monkeypatch.setattr(
+        svc.boe_smc_client, "fetch_delivery_plans", AsyncMock(return_value=smc)
+    )
+    monkeypatch.setattr(svc, "_log_smc", AsyncMock())
+    monkeypatch.setattr(svc, "_portal_by_subcode", AsyncMock(return_value=portal))
+    monkeypatch.setattr(svc, "_open_instance", AsyncMock(return_value=None))
+    monkeypatch.setattr(svc, "fetch_wms_for_instance", AsyncMock(side_effect=_wms))
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.flush = AsyncMock()
+    result = await svc.match_delivery_plans(db, "tenant-1", actor="user-1")
+    assert result["created_count"] == 1
+    db.flush.assert_awaited()
+    added = [call.args[0] for call in db.add.call_args_list]
+    assert any(isinstance(item, ProcessInstance) for item in added)
+
+
+def _packing_row(**kwargs) -> ProcessInstance:
+    data = dict(
+        id="p1",
+        tenant_id="tenant-1",
+        process_code=PROCESS_CODE,
+        biz_key="101SJH1",
+        title="发票箱单",
+        portal_account_id="portal-1",
+        stage=ProcessStage.BOE_PACK_REVIEW.value,
+        status=ProcessInstanceStatus.ACTIVE.value,
+        summary="{}",
+        created_by="user-1",
+    )
+    data.update(kwargs)
+    return ProcessInstance(**data)
+
+
+@pytest.mark.asyncio
+async def test_cancel_without_srm_draft_is_local_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _packing_row(summary="{}")
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    monkeypatch.setattr(svc, "_change_stage", MagicMock())
+    enqueue = AsyncMock()
+    monkeypatch.setattr(svc, "_maybe_enqueue_rpa", enqueue)
+    empty = MagicMock()
+    empty.scalar_one_or_none.return_value = None
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=empty)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    result = await svc.cancel_instance(db, "tenant-1", "p1", _user())
+    assert result.status == ProcessInstanceStatus.CANCELLED.value
+    enqueue.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cancel_blocked_while_save_draft_inflight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _packing_row(summary="{}")
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    busy = MagicMock()
+    busy.scalar_one_or_none.return_value = "task-1"
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=busy)
+    with pytest.raises(BadRequestError) as exc_info:
+        await svc.cancel_instance(db, "tenant-1", "p1", _user())
+    assert exc_info.value.message_key == "errors.autotask.boe_pack.cancel_busy"
+
+
+@pytest.mark.asyncio
+async def test_cancel_with_srm_draft_enqueues_delete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.boe_packing import DELETE_DRAFT_TEMPLATE_CODE
+
+    instance = _packing_row(summary='{"srmDraftNo":"I260910001"}')
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    change = MagicMock()
+    monkeypatch.setattr(svc, "_change_stage", change)
+    enqueue = AsyncMock(return_value=MagicMock())
+    monkeypatch.setattr(svc, "_maybe_enqueue_rpa", enqueue)
+    empty = MagicMock()
+    empty.scalar_one_or_none.return_value = None
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=empty)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    result = await svc.cancel_instance(db, "tenant-1", "p1", _user())
+    assert result.status == ProcessInstanceStatus.ACTIVE.value
+    enqueue.assert_awaited()
+    assert enqueue.await_args.kwargs["template_code"] == DELETE_DRAFT_TEMPLATE_CODE
+    assert change.call_args.args[2] == ProcessStage.BOE_PACK_DELETING_DRAFT
+
+
+@pytest.mark.asyncio
+async def test_dispatch_delete_draft_success_cancels_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.boe_packing import DELETE_DRAFT_TEMPLATE_CODE
+    from app.models.enums import RunStatus
+
+    instance = _packing_row(
+        stage=ProcessStage.BOE_PACK_DELETING_DRAFT.value,
+        summary='{"srmDraftNo":"I260910001"}',
+    )
+    found = MagicMock()
+    found.scalar_one_or_none.return_value = instance
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=found)
+    monkeypatch.setattr(svc, "_change_stage", MagicMock())
+    monkeypatch.setattr(svc, "_clear_instance_error", MagicMock())
+    task = MagicMock()
+    task.task_type = DELETE_DRAFT_TEMPLATE_CODE
+    task.process_instance_id = "p1"
+    task.created_by = "user-1"
+    run = MagicMock()
+    run.status = RunStatus.SUCCESS.value
+    run.output = {"alreadyMissing": True, "deleted": False}
+    run.error_message = None
+    handled = await svc.dispatch_finished(db, task, run)
+    assert handled is True
+    assert instance.status == ProcessInstanceStatus.CANCELLED.value
+
+
+@pytest.mark.asyncio
+async def test_retry_deleting_draft_after_false_failure_searches_again(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.boe_packing import DELETE_DRAFT_TEMPLATE_CODE
+
+    instance = _packing_row(
+        stage=ProcessStage.BOE_PACK_DELETING_DRAFT.value,
+        summary='{"srmDraftNo":"I260910102"}',
+        last_error_code="BOE_DRAFT_STILL_PRESENT",
+        last_error_message="删除后列表仍有流水号 I260910102",
+    )
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    enqueue = AsyncMock(return_value=MagicMock())
+    monkeypatch.setattr(svc, "_maybe_enqueue_rpa", enqueue)
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    await svc.retry_instance(db, "tenant-1", "p1", _user())
+    enqueue.assert_awaited()
+    assert enqueue.await_args.kwargs["template_code"] == DELETE_DRAFT_TEMPLATE_CODE
+    assert instance.last_error_code is None
+    assert instance.status == ProcessInstanceStatus.ACTIVE.value
+
+
+@pytest.mark.asyncio
+async def test_retry_deleting_draft_busy_does_not_skip_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _packing_row(
+        stage=ProcessStage.BOE_PACK_DELETING_DRAFT.value,
+        summary='{"srmDraftNo":"I260910102"}',
+    )
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    monkeypatch.setattr(svc, "_maybe_enqueue_rpa", AsyncMock(return_value=None))
+    db = MagicMock()
+    with pytest.raises(BadRequestError) as exc_info:
+        await svc.retry_instance(db, "tenant-1", "p1", _user())
+    assert exc_info.value.message_key == "errors.autotask.boe_pack.retry_busy"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_delete_already_missing_clears_prior_still_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domain.boe_packing import DELETE_DRAFT_TEMPLATE_CODE
+    from app.models.enums import RunStatus
+
+    instance = _packing_row(
+        stage=ProcessStage.BOE_PACK_DELETING_DRAFT.value,
+        summary='{"srmDraftNo":"I260910102"}',
+        last_error_code="BOE_DRAFT_STILL_PRESENT",
+        last_error_message="删除后列表仍有流水号 I260910102",
+    )
+    found = MagicMock()
+    found.scalar_one_or_none.return_value = instance
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=found)
+    monkeypatch.setattr(svc, "_change_stage", MagicMock())
+    task = MagicMock()
+    task.task_type = DELETE_DRAFT_TEMPLATE_CODE
+    task.process_instance_id = "p1"
+    task.created_by = "user-1"
+    run = MagicMock()
+    run.status = RunStatus.SUCCESS.value
+    run.output = {"alreadyMissing": True, "deleted": False}
+    run.error_message = None
+    await svc.dispatch_finished(db, task, run)
+    assert instance.status == ProcessInstanceStatus.CANCELLED.value
+    assert instance.last_error_code is None

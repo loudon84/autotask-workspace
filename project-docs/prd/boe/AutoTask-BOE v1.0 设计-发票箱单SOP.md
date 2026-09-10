@@ -90,7 +90,7 @@ v2.0 曾把「补全」和「保存草稿」焊在一次 Run。v2.1 拆开，因
 
 v2.1 拆开：
 
-1. **匹配交货计划成功即建单**（实例已在，头已填）。幂等键 `门户（客户子代码）+ 交货计划单号`：已有未作废实例则跳过。找不到对应子代码门户则记失败/提醒，不建单。
+1. **匹配交货计划成功即建单**（实例已在，头已填）。幂等键 `门户（客户子代码）+ 交货计划单号`，**只约束未作废实例**：已有未作废则跳过。作废后不占键，定时器/立即匹配同一入口，下次会新建。找不到对应子代码门户则记失败/提醒，不建单。
 2. **读 WMS 装箱单** 是该实例上的下一任务。接口报错 → 停在「读 WMS 装箱单」，只重试本任务，**不**再调交货计划、**不**再建一条。
 
 ### 3.1 交货计划接口 → 头
@@ -117,7 +117,7 @@ v2.1 拆开：
 
 ### 3.2 WMS 接口（参数：交货计划单号）
 
-正式：`http://api.qywx.smart-core.com.cn/aiats/wms_sjh_pl_boe`，参数 `erpno`（交货计划单号）。鉴权无认证。基址进 Task `.env` 的 `SMC_API_BASE_URL`，路径 `BOE_WMS_PATH`。`data` 是平铺行数组（`cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`），头表总体积=各行 `cubic` 之和。`doc_no` 现返回空数组，不要用。
+正式：`http://api.qywx.smart-core.com.cn/aiats/wms_sjh_pl_boe`，参数 `erpno`（交货计划单号）。鉴权无认证。基址进 Task `.env` 的 `SMC_API_BASE_URL`；路径写死在 `boe_smc_client`（测/正式相同，只换域名）。`data` 是平铺行数组（`cuspo`/`cusitem`/`qty`/`netweight`/`cubic`/`coo`），头表总体积=各行 `cubic` 之和。`doc_no` 现返回空数组，不要用。
 
 | 字段 | 含义 |
 | --- | --- |
@@ -181,17 +181,18 @@ WMS 编号与 SRM 下拉文案没有现成映射。要一张配置：`地区编�
 | ⑤ | `BOE_PACK_REVIEW` | 客服核验 | 人改单 | 不跑 RPA；进入时写基线 JSON；数量不一致硬拦提交 |
 | ⑥ | `BOE_PACK_SUBMITTING` | 提交 SRM 单据 | 变更单 RPA | 打开已有草稿，只打 diff |
 | ⑦ | `BOE_PACK_SUBMITTED` | 已完成 | — | — |
-| 旁路 | `BOE_PACK_CANCELLED` | 已作废 | 仅本地 | — |
+| 旁路 | `BOE_PACK_DELETING_DRAFT` | 删除 SRM 草稿 | 作废 2.2 RPA | 有流水号时先删 SRM 草稿；失败可重试 |
+| 旁路 | `BOE_PACK_CANCELLED` | 已作废 | 2.1 仅本地；2.2 删草稿成功后 | — |
 
 显示名在进度条、Tab、徽章上必须一致；状态码层稳定，客服文案调整不影响接口。列表主路径从「读 WMS 装箱单」起可见（匹配交货计划成功即有单）。失败/作废沿用天地伟业旁路 + 各节点「重试」按钮。
 
 ---
 
-## 5. 三次 RPA
+## 5. 四次 RPA
 
 导航约定不变：登录 → dashboard（不要存 ticket）→ **点击**送货管理 → 发票箱单。禁止 `goto` 新建/详情 URL。附件下期用 `set_input_files`，不用 pyautogui；一期不传附件。
 
-三次 RPA 的门户行仍是实例上的子代码门户，但 **浏览器会话按 SRM 用户名共享**：`V1002012AA` 下三条门户共用一份 Cookie，不必为每个子代码各登一次。全量九家只需两个账号。
+三次 RPA 的门户行仍是实例上的子代码门户，但 **浏览器会话按 SRM 用户名共享**：`V1002012AA` 下三条门户共用一份 Cookie，不必为每个子代码各登一次。全量九家只需两个账号。作废 2.2 的删除草稿是第四次 RPA，同一套登录/导航。
 
 ### 5.1 RPA 补全项目信息行 `srm_boe_pack_enrich`
 
@@ -307,6 +308,21 @@ SRM 草稿打开后附件表默认就是三行：箱单、发票、提运单，�
 
 不含文件二进制。门户上的客户名称/子代码/交易主体不进基线（只读带出）。提交 Flow 用 `diff(reviewBaseline, 当前 Client)` 得到要改的头字段、要改/增删的行。
 
+### 5.5 删除 SRM 草稿 `srm_boe_pack_delete_draft`（作废 2.2）
+
+判别：`summary.srmDraftNo` 为空走 2.1（只改本地已作废）；有流水号则先进入 `BOE_PACK_DELETING_DRAFT`（仍 ACTIVE），RPA 成功后再作废。补全/保存/提交还在跑时不许作废。
+
+```text
+登录 → 发票箱单列表展开 → 填发票箱单流水号 → 搜索
+  → 「暂无数据」或列表没有该流水号：成功 alreadyMissing，本地作废
+  → 还在：勾冻结列复选框（主表勾选被盖住）→ 菜单「删除」（影刀「删除-草稿单删除」）
+  → 确认框「确定」→ 再点列表「搜 索」刷新 → 「暂无数据」才算成功
+```
+
+选择器见 [影刀-京东方-selectorsV2.xml](./影刀-京东方-selectorsV2.xml)。Flow 包 `rpa_flow_srm_boe_pack_delete_draft` 1.0.1。
+
+重试同一阶段：再派同一条 Flow，**先搜再判断**。SRM 已是「暂无数据」（上次其实删掉了、只是校验误报）→ `alreadyMissing` 成功 → 本地作废，**不再点删除**。列表里还在才走勾选删除。
+
 ---
 
 ## 6. 字段谁说了算
@@ -390,7 +406,10 @@ RPA 补全项目信息行 → RPA 补全项目信息行 : PO+料号搜不到或�
 客服核验 → 客服核验 : 数量不一致，硬拦不发提交 RPA
 提交 SRM 单据 → 已完成 : 变更单提交成功
 提交 SRM 单据 → 客服核验 : 提交失败，可改后再提
-任意未完成 → 已作废 : 仅本地
+无流水号未完成 → 已作废 : 2.1 仅本地
+有流水号未完成 → 删除 SRM 草稿 : 2.2 先派 RPA
+删除 SRM 草稿 → 已作废 : 删掉或不存在
+删除 SRM 草稿 → 删除 SRM 草稿 : 失败可重试；重试先搜，暂无数据则作废
 已完成 → [*]
 ```
 
@@ -406,6 +425,7 @@ RPA 补全项目信息行 → RPA 补全项目信息行 : PO+料号搜不到或�
     → 保存草稿 Flow srm_boe_pack_save_draft → 流水号 + reviewBaseline
     → 客服核验（相对基线改单；数量未对齐则硬拦提交）
     → 提交 Flow srm_boe_pack_submit → diff 后点提交 → 正式单
+作废：无流水号仅本地 CANCELLED；有流水号先 Flow srm_boe_pack_delete_draft，成功后再作废
 ```
 
 `process_code`：`srm_boe_invoice_packing`。门户仍一条 = 一个子 code。交货计划/WMS 基址走 Task `.env`，不进 Flow。RPA Cookie 按 SRM 用户名，不按门户 id。

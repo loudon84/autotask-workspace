@@ -6,6 +6,8 @@ import {
   boePackReviewDiffs,
   boePackStageName,
   canSubmitBoePack,
+  canRetryBoePack,
+  boePackRunStatus,
   defaultBoePackAttachments,
   compactBoeDecimal,
   isFixedBoePackAttachment,
@@ -17,6 +19,21 @@ describe("boe packing labels", () => {
     expect(boePackStageName("BOE_PACK_FETCH_WMS")).toBe("读 WMS 装箱单");
     expect(canSubmitBoePack("BOE_PACK_REVIEW")).toBe(true);
     expect(canSubmitBoePack("BOE_PACK_SAVE_DRAFT")).toBe(false);
+    expect(canRetryBoePack("BOE_PACK_DELETING_DRAFT")).toBe(true);
+    expect(boePackStageName("BOE_PACK_DELETING_DRAFT")).toBe("删除 SRM 草稿");
+    expect(boePackRunStatus({ status: "ACTIVE" }).label).toBe("进行中");
+    expect(
+      boePackRunStatus({ status: "ACTIVE", latestTaskStatus: "RUNNING" }).label
+    ).toBe("执行中");
+    expect(
+      boePackRunStatus({
+        status: "ACTIVE",
+        lastErrorMessage: "补全失败",
+        latestTaskStatus: "FAILED",
+      }).label
+    ).toBe("失败");
+    expect(boePackRunStatus({ status: "CANCELLED" }).label).toBe("已作废");
+    expect(boePackRunStatus({ status: "COMPLETED" }).label).toBe("已完成");
     expect(BOE_PACK_VOL_UNIT).toBe("立方米");
   });
 

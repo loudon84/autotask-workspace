@@ -1,0 +1,8 @@
+{
+  "rpaFlowId": "rpa_flow_srm_boe_pack_delete_draft",
+  "rpaFlowVersion": "1.0.0",
+  "rpaFlowVersionId": "2c8508cd-48be-4b1f-990c-49f94ee5da0b",
+  "packageChecksum": "sha256:be426d39404538ce8de32908bf1739a3325e3c36d1b157f1f2fde6aee4333481",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_boe_pack_delete_draft"
+}

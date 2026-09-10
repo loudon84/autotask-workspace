@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-09
+最后更新：2026-09-10
 
 
 ## 1. 用途
@@ -40,7 +40,7 @@
 8. Flow Registry 同时支持 `GLOBAL` 平台 Flow 和 `TENANT` 组织私有 Flow。
 9. 当前测试部署使用 PostgreSQL 数据库 `nodeskclaw_task`、Engine 专属 schema `rpa_engine` 及九张 Engine 专属表。跨服务引用继续以外部字符串保存，不对 Task 专属表建立外键。
    
-    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行。BOE 地区表 `b2d4f6a81935` 测库已有。门户 JSONB `extra` 迁移 `e7c2b9d04a18` 已于 2026-09-08 经用户授权在测库执行（当前 head）。正式库未迁 extra。**
+    10. 可以准备数据库设计和 DDL；未另行授权前不创建库、不执行其它 DDL。**v5.1 迁移 `f1a9c3e74b20` 已于 2026-08-24 经用户授权执行。v5.2 迁移 `g3b8e2a91c40`（`scheduler_jobs`）同日已执行。v5.1 `is_task_admin` 迁移 `a7e4b2c81d09` 已于 2026-08-25 经用户授权执行。v5.4 `integration_call_logs` 迁移 `b8c9d0e12f51` 已于 2026-08-27 经用户授权执行。门户创建人/归属人姓名字段 `c1d8e4f90a62` 已于 2026-08-28 执行。v5.5 `portal_accounts.category` 迁移 `d2e9f1a70b83` 已于 2026-09-03 经用户授权执行。调度中心 `timers` 迁移 `c3a8f1d92e47` 已于 2026-09-04 经用户授权在测库执行。执行记录 `timer_runs` 迁移 `d4b2f7a91e05` 同日已执行。BOE 地区表 `b2d4f6a81935` 测库已有。门户 JSONB `extra` 迁移 `e7c2b9d04a18` 已于 2026-09-08 经用户授权在测库执行。流程实例开放唯一索引 `f8c2e91b4a70` 已于 2026-09-10 经用户授权在测库执行（当前测库 head）。正式库未迁 extra / 未迁本索引。**
 
 11. **正式门户演练与上线共用同一份 Flow。** 演示站 / 正式站因页面不同仍拆包。演练与真上线不拆包：Flow 只实现上线操作；样例单号、`treatAsPending`、`dryRun` 进 Binding。操作说明：`project-docs/prd/AutoTask v4.1 天地伟业正式演练与上线SOP.md`。
 
@@ -70,11 +70,11 @@
 | 天地伟业切正式演练（v4.0） | 正式门户已建；扫单 **1.1.3**（Binding 已写 `searches`）；建单 **1.2.20**；回签探测 **1.1.4**；下合同 **1.3.3**；收货查询 **1.1.3**；生成对账单 **1.1.0 dryRun=true**；扫描发票 **1.1.2**；提交审核 **1.1.5 dryRun=true**（需切 Binding；1.1.4 会拦正式站发票上传） | 扫单换样例 PO 改 Binding 第二条 `poNo`。列表筛已回签+单号后再进详情；合同入口是「查看签章」。收货查询走正式日期面板（开始 00:00:00 / 结束 23:59:59）+未提交筛选+导出 Excel。扫描选文件后必点弹窗确定。生成仍是可见+未禁用即过；提交 dryRun 为 trial click。演示 test 扫单仍 1.0.2、建单仍 1.2.11、回签仍 1.0.1、下合同仍 1.2.5、收货仍 1.0.4、生成仍 1.0.7、提交仍 1.0.7。4520 / 4610 已于 2026-08-27 14:33 重启。 |
 | 门户存密码（v5.0） | 代码已改：密码走门户；SDMS/ERP 基址走 Task `.env`；Client SDMS 链接也读 Task `SDMS_BASE_URL`；建单 `orgName` 走门户业务实体（1.2.9 未发布） | 登录页不再配 SDMS。上线改 Task `.env` 后重启 4520；填业务实体后迁库并切 1.2.9。 |
 | 权限 v5.1（管人接口后补） | 登录缓存 `managed_user_ids` 只做列表/详情权限。门户选归属人现拉 `GET /members/{id}/subordinate`（Auth 按角色返回全员/自己/自己+下属），不再打 `/orgs/{org}/members`。模块管理员与超管看数仍全放开。迁移 `a7e4b2c81d09` **已执行**（当前 head） | **需重启唯一 Task 4520** 后，用 AutoTask **重新登录**（不是只登 Auth 控制台）。 |
-| 调度中心 | **天地伟业定时器已登记（2026-09-04）** | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）已注册并插库，默认停用。旧 `scheduler_jobs` 六条全部停用（直接替换）。4520 已重启。正式库未迁。 |
+| 调度中心 | **清场已做（2026-09-09）** | 进程只留 `TimerScheduler`。打开开关仍会跑，不改 target/入口/已有开关。文档 `prd/AutoTask 调度中心-清场.md`（原文不动）。**需重启 4520**。正式库 `timers` 未迁则仍开不了。 |
 | 对账单发票上传（v5.3） | 需求已写入 PRD；代码已改：Client `multipart` 传到 Task，删除同步服务器 | PRD：`prd/AutoTask v5.3 对账单发票上传.md`。**需重启唯一 Task 4520** 并重开 Client |
 | 接口调用日志（v5.4） | **迁库已执行；正式 Binding 已切** | 运维打开失败任务看 URL/入参/出参。表 `integration_call_logs`（`b8c9d0e12f51`，当前 head）。正式演练建单 **1.2.20**、下合同 **1.3.3**。演示建单仍 1.2.11、下合同仍 1.2.5。PRD：`prd/AutoTask v5.4 接口调用日志.md`。4520 / 4610 已重启 |
 | 正式上线（空库） | **两段**：先克隆正式演练，确认后再切真上线 | `prd/AutoTask 正式上线操作清单.md`。拷测试 `.env` 改新库；阶段 A 测 SDMS/ERP + 样例扫单 + dryRun；阶段 B 再关闸/切生产/开调度。填交期/签章正式包仍未绑 |
-| 京东方发票箱单（BOE） | **一期代码已落地（2026-09-03）** | 租户级匹配 + 读 WMS + Client 列表详情；匹配定时器在调度中心维护（默认关，热加载）；三次 Flow 源码已写未发布 Registry；地区表 Alembic 已写未迁。不并入今晚 v5.5 正式迁库。设计 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md` |
+| 京东方发票箱单（BOE） | **一期已落地；作废 2.2 删草稿已升 1.0.1** | 补全/保存/提交 1.0.23 已绑。删草稿 Flow **1.0.1** 已 PUBLISHED 并升绑 C000142-01 / C002755-01 / C016173-01。重试先搜，「暂无数据」则本地作废。排重索引 `f8c2e91b4a70` **测库已迁**（正式未迁）。**需重启 4520** 后重试判断才生效。设计 `prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md` |
 
 | 门户和流程实例优化（v5.5） | **测试库已到 `a1c3e5f70824`；正式库待授权** | 测库已执行 `d2e9f1a70b83` + `a1c3e5f70824`。正式晚上换成正式 `.env` 后只升到 `a1c3e5f70824`，**禁止 `upgrade head`**（BOE 地区表 `b2d4f6a81935` 未授权）。不删正式门户。见 PRD §5.4 / §8。 |
 
@@ -125,7 +125,7 @@
 23. **正式上线操作清单**：新空库先按正式演练克隆（测 SDMS/ERP、样例扫单、写步骤 dryRun），确认后再切真上线。见 `prd/AutoTask 正式上线操作清单.md`。迁库与阶段 B 关闸须口头授权。
 24. **v5.4 接口调用日志**：代码已改，迁库待授权。任务信息和报错不变；运维从任务详情看主动 HTTP 的 URL/入参/出参。见 `prd/AutoTask v5.4 接口调用日志.md`。迁库须口头授权。
 25. **v5.5 门户分类 + 分类文档**：测试库已到 head（`d2e9f1a70b83` + `a1c3e5f70824`）。**需重启测库 4520** 后 Client「门户分类」才能用。正式库待授权，晚上 `upgrade head` 一次加上列+表。正式库不删门户。见 PRD §8。
-26. **调度中心管理内核（2026-09-04）**：独立定时器已写。测库已执行 `c3a8f1d92e47`。catalog 登记 demo + `tiandy.scan_pending` / `tiandy.sign_poll`（默认停用）。旧 `scheduler_jobs` 六条全停，Binding 循环不再开火。正式库未迁。见 `prd/AutoTask 调度中心.md`。
+26. **调度中心清场（2026-09-09）**：只留独立定时器循环。见 `prd/AutoTask 调度中心-清场.md`。**需重启 4520**。正式迁 `timers` 仍须授权。
 
 
 ## 7. RPA Engine 数据库准备行动计划
@@ -249,7 +249,31 @@ D:\AutoTask-Workspace\project-docs\designs\
 
 ## 8. 每日开发日志
 
+### 2026-09-10
+
+- **删草稿重试**：SRM 可能已经删掉，本地仍报 `BOE_DRAFT_STILL_PRESENT`。点重试会再派 1.0.1：先搜流水号，「暂无数据」→ `alreadyMissing` → 本地作废，不再点删除。删除还在跑则提示等结束。**需重启 4520** 后重试才走这条判断。
+
+- **删草稿 1.0.1**：删完列表不会自己刷新。确定后点「搜 索」，再用「暂无数据」判断成功。已 PUBLISHED（Registry `48fa75c1-…`，checksum `4336d8d8…`），3 个京东方门户 Binding 已从 1.0.0 升到 1.0.1。
+
+- **发票箱单列表/详情对齐客户订单**：补「运行状态」（进行中 / 执行中 / 失败 / 已完成 / 已作废）和「最近错误」列；详情页顶上阶段+运行状态徽章。列表会读最新子任务状态，**需重启 4520**；Client 热更新。
+
+- **发票箱单排重索引（用户授权测库）**：`alembic upgrade f8c2e91b4a70`（`e7c2b9d04a18` → `f8c2e91b4a70`）。旧全表唯一 `uq_process_instances_portal_code_biz` 已换成部分唯一 `uq_process_instances_portal_code_biz_open`（未作废、未软删才占键）。作废后再点立即匹配会新建，不再 409。测库 `192.168.102.247` / `nodeskclaw_task`。**正式库未迁。**
+
+- **发票箱单作废 2.2（已发布并绑门户）**：无 `srmDraftNo` 仍只改本地（2.1）。有流水号先派 `srm_boe_pack_delete_draft`，SRM 删掉或不存在后再 CANCELLED。`rpa_flow_srm_boe_pack_delete_draft` 1.0.0 已 PUBLISHED（Registry `2c8508cd-…`，checksum `be426d39…`）。模板已建，已绑 3 个启用京东方门户（C000142-01 / C002755-01 / C016173-01）。**需重启 4520** 后作废才走删草稿代码。
+
+- **cron 按中国时区**：调度中心 `5 9 * * *` 是北京 09:05，不是 4520 机器时区。原先 `datetime.now()` 跟主机走，库在 UTC 时上午九点不会到点。`now_china()`。**需重启 4520**。
+
+- **调度中心引入 APScheduler**：到点从手写死循环改成 APScheduler 3（`Asia/Shanghai`）。crontab 第 5 段垫片后再 `from_crontab`；`get_next_fire_time` 为 None 则保存 422；job `id=timer.id`；同一 cron 不每 30 秒 replace。**需重启 4520**。UTC 主机到点会纠正为北京。作废排重不在本次。
+
 ### 2026-09-09
+
+- **调度中心清场（不影响能不能用）**：启动只留 `TimerScheduler`；Binding 保存不再写 `scheduler_jobs`；去掉 `JobScheduler`、旧 `.env` 扫单/回签/BOE 匹配键、`/settings/schedulers`、`/scheduler-jobs`。`target`、入口、`ensure_catalog` 不覆盖开关，均未改。父文档 `prd/AutoTask 调度中心.md` 不动，子版 `prd/AutoTask 调度中心-清场.md`。**需重启 4520**。未迁库、未改默认关。
+
+- **接口路径不进 .env**：`BOE_DELIVERY_PLAN_PATH` / `BOE_WMS_PATH` 从配置拿掉，写死在 `boe_smc_client`。测/正式只换 `SMC_API_BASE_URL` 域名。**需重启 4520**。
+
+- **调度中心空表（用户要自己从头验登记）**：测库已物理清空 `timers`（5→0）、`timer_runs`（9→0）、旧表 `scheduler_jobs`（7→0）。未动任务表。未重启 4520。重启后 `ensure_catalog_rows` 会插入默认关的目录行。
+
+- **立即匹配 409 是排重和唯一索引不一致**：查询按「未作废才占键」，表唯一却含作废行，再 INSERT 就冲突。定时器不管作废内容。已改：查询 + 部分唯一索引 `uq_process_instances_portal_code_biz_open`（Alembic `f8c2e91b4a70`）。**测库已于 2026-09-10 迁完。** 正式库未迁。
 
 - **重庆箱单没任务是没绑补全 Flow**：发票箱单 RPA Binding 原先只在演示门户 C000142-01（AA）。重庆 C002755-01（AD）只有晨间登录 Binding。匹配后 `_maybe_enqueue_rpa(required=False)` 找不到 Binding 就静默不派任务，单据停在「补全」且无任务。已对全部启用京东方门户补绑 enrich/save_draft/submit 1.0.23。缺 Binding 时实例会记下 `PROCESS_BINDING_MISSING`。重庆单需在详情点「重试」才会派补全。
 

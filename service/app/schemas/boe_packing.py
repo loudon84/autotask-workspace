@@ -26,6 +26,7 @@ class BoePackingListItem(CamelModel):
     customer_name: str = Field("", serialization_alias="customerName")
     srm_draft_no: str = Field("", serialization_alias="srmDraftNo")
     header_id: str = Field("", serialization_alias="headerId")
+    latest_task_status: str = Field("", serialization_alias="latestTaskStatus")
 
 
 class BoePackingHeaderPatch(CamelModel):

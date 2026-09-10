@@ -1,10 +1,15 @@
-"""Build + publish the three BOE invoice-packing flows (enrich/save_draft/submit) 1.0.0.
+"""Build + publish BOE invoice-packing flows.
 
-Usage: uv run python scripts/_publish_boe_pack_flows.py
-Requires Engine on 127.0.0.1:4610. Writes rpa-flows/<flow>/_publish_1.0.0.json per flow.
+Usage:
+  uv run python scripts/_publish_boe_pack_flows.py                 # enrich/save/submit 1.0.23 + delete 1.0.0
+  uv run python scripts/_publish_boe_pack_flows.py --only-delete   # delete_draft 1.0.1 only
+
+Requires Engine on 127.0.0.1:4610. Writes rpa-flows/<flow>/_publish_<ver>.json per flow.
+Do not re-run the default path just to add delete_draft — that would re-upload 1.0.23.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import zipfile
 from pathlib import Path
@@ -17,18 +22,18 @@ FLOWS = Path(r"d:\work_space260811\autotask-workspace\rpa-flows")
 DIST = FLOWS / "dist"
 FILES = ("manifest.json", "selectors.json", "flow.py")
 
-BOE_FLOWS = [
-    ("rpa_flow_srm_boe_pack_enrich", "srm_boe_pack_enrich"),
-    ("rpa_flow_srm_boe_pack_save_draft", "srm_boe_pack_save_draft"),
-    ("rpa_flow_srm_boe_pack_submit", "srm_boe_pack_submit"),
+PACK_FLOWS = [
+    ("rpa_flow_srm_boe_pack_enrich", "srm_boe_pack_enrich", "1.0.23"),
+    ("rpa_flow_srm_boe_pack_save_draft", "srm_boe_pack_save_draft", "1.0.23"),
+    ("rpa_flow_srm_boe_pack_submit", "srm_boe_pack_submit", "1.0.23"),
 ]
-VERSION = "1.0.23"
+DELETE_FLOW = ("rpa_flow_srm_boe_pack_delete_draft", "srm_boe_pack_delete_draft", "1.0.1")
 
 
-def build(flow_id: str) -> Path:
-    src = FLOWS / flow_id / VERSION
+def build(flow_id: str, version: str) -> Path:
+    src = FLOWS / flow_id / version
     DIST.mkdir(parents=True, exist_ok=True)
-    zip_path = DIST / f"{flow_id}-{VERSION}.zip"
+    zip_path = DIST / f"{flow_id}-{version}.zip"
     zip_path.unlink(missing_ok=True)
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for name in FILES:
@@ -41,8 +46,8 @@ def build(flow_id: str) -> Path:
     return zip_path
 
 
-def publish_one(client: httpx.Client, flow_id: str, workflow_code: str) -> dict:
-    zip_path = build(flow_id)
+def publish_one(client: httpx.Client, flow_id: str, workflow_code: str, version: str) -> dict:
+    zip_path = build(flow_id, version)
     with zip_path.open("rb") as fh:
         resp = client.post(
             f"{ENGINE}/api/v1/flows/packages",
@@ -50,7 +55,7 @@ def publish_one(client: httpx.Client, flow_id: str, workflow_code: str) -> dict:
             files={"package": (zip_path.name, fh, "application/zip")},
             data={
                 "scope": "GLOBAL",
-                "description": f"{flow_id} {VERSION} BOE invoice packing",
+                "description": f"{flow_id} {version} BOE invoice packing",
             },
         )
     print(flow_id, "upload", resp.status_code, resp.text[:300])
@@ -67,20 +72,20 @@ def publish_one(client: httpx.Client, flow_id: str, workflow_code: str) -> dict:
     pub = client.post(
         f"{ENGINE}/api/v1/flow-versions/{version_id}/publish",
         headers={**HEADERS, "Content-Type": "application/json"},
-        json={"reason": f"publish {flow_id} {VERSION} BOE invoice packing"},
+        json={"reason": f"publish {flow_id} {version} BOE invoice packing"},
     )
     print(flow_id, "publish", pub.status_code, pub.text[:250])
     pub.raise_for_status()
     published = pub.json()
     out = {
         "rpaFlowId": flow_id,
-        "rpaFlowVersion": published.get("version") or VERSION,
+        "rpaFlowVersion": published.get("version") or version,
         "rpaFlowVersionId": published.get("rpaFlowVersionId") or version_id,
         "packageChecksum": published.get("packageChecksum") or checksum,
         "status": published.get("status"),
         "workflowCode": workflow_code,
     }
-    path = FLOWS / flow_id / f"_publish_{VERSION}.json"
+    path = FLOWS / flow_id / f"_publish_{version}.json"
     path.write_text(
         json.dumps(out, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -101,10 +106,18 @@ def publish_one(client: httpx.Client, flow_id: str, workflow_code: str) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--only-delete",
+        action="store_true",
+        help="只发布 rpa_flow_srm_boe_pack_delete_draft 1.0.1，不重传 1.0.23",
+    )
+    args = parser.parse_args()
+    targets = [DELETE_FLOW] if args.only_delete else [*PACK_FLOWS, DELETE_FLOW]
     results = []
     with httpx.Client(timeout=60.0, trust_env=False) as client:
-        for flow_id, workflow_code in BOE_FLOWS:
-            results.append(publish_one(client, flow_id, workflow_code))
+        for flow_id, workflow_code, version in targets:
+            results.append(publish_one(client, flow_id, workflow_code, version))
     print(json.dumps(results, ensure_ascii=False, indent=2))
 
 

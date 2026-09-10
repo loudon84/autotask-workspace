@@ -28,6 +28,7 @@ import {
   boePackAttachmentErrors,
   boePackRequiredErrors,
   boePackProgressIndex,
+  boePackRunStatus,
   boePackStageName,
   canEditBoePack,
   canRetryBoePack,
@@ -35,6 +36,7 @@ import {
   compactBoeDecimal,
   defaultBoePackAttachments,
   isFixedBoePackAttachment,
+  latestBoePackTaskStatus,
   normalizeBoePackAttachments,
   resolveBoePackBlocker,
 } from "@/features/boe-packing/boe-packing-model";
@@ -84,6 +86,9 @@ function StageProgress({ detail }: { detail: BoePackDetail }) {
       {detail.stage === "BOE_PACK_CANCELLED" && (
         <Badge variant="destructive">已作废</Badge>
       )}
+      {detail.stage === "BOE_PACK_DELETING_DRAFT" && (
+        <Badge variant="secondary">删除 SRM 草稿</Badge>
+      )}
     </div>
   );
 }
@@ -122,6 +127,11 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
     return <MockLoading />;
   }
 
+  const runStatus = boePackRunStatus({
+    status: data.status,
+    lastErrorMessage: data.lastErrorMessage,
+    latestTaskStatus: latestBoePackTaskStatus(data.subTasks),
+  });
   const editable = canEditBoePack(data.stage);
   const blocker = resolveBoePackBlocker({
     stage: data.stage,
@@ -233,15 +243,21 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
                 提交 SRM 单据
               </Button>
             ) : null}
-            {data.status === "ACTIVE" ? (
+            {data.status === "ACTIVE" && data.stage !== "BOE_PACK_DELETING_DRAFT" ? (
               <Button
                 disabled={acting}
                 variant="destructive"
                 onClick={() => {
-                  if (!window.confirm("确认作废？仅更新本地状态。")) {
+                  const hasDraft = Boolean((data.srmDraftNo ?? "").trim());
+                  const ok = window.confirm(
+                    hasDraft
+                      ? "确认作废？将先删除 SRM 草稿，成功后再改本地状态。"
+                      : "确认作废？尚无 SRM 草稿，只改本地状态。"
+                  );
+                  if (!ok) {
                     return;
                   }
-                  void run("已作废", () =>
+                  void run(hasDraft ? "已发起删除 SRM 草稿" : "已作废", () =>
                     autotaskApi.boePacking.cancel(instanceId)
                   );
                 }}
@@ -254,6 +270,15 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
             </Button>
           </div>
       </PageHeader>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className="text-sm" variant="default">
+          阶段：{boePackStageName(data.stage)}
+        </Badge>
+        <Badge className="text-sm" variant={runStatus.variant}>
+          运行状态：{runStatus.label}
+        </Badge>
+      </div>
 
       <Card>
         <CardHeader>

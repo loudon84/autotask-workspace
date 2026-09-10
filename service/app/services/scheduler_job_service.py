@@ -1,4 +1,7 @@
-"""Scheduler jobs keyed by Binding id. config.schedule is first-insert only."""
+"""历史 Binding 级 scheduler_jobs（已不作火源）。
+
+调度中心只认独立 `timers`。本模块仅给作废脚本 `backfill_scheduler_jobs.py` 用。
+"""
 
 from __future__ import annotations
 

@@ -105,9 +105,27 @@ async def test_ensure_catalog_inserts_once_and_does_not_override(
 
 
 def test_next_run_at_null_when_disabled():
+    from app.services.china_clock import CHINA_TZ
+
     assert timer_svc.next_run_at("0 8 * * *", False) is None
     nxt = timer_svc.next_run_at("0 8 * * *", True, datetime(2026, 8, 24, 7, 0))
-    assert nxt == datetime(2026, 8, 24, 8, 0)
+    # naive 入参按中国墙上时钟理解，返回 aware 上海时间
+    assert nxt == datetime(2026, 8, 24, 8, 0, tzinfo=CHINA_TZ)
+
+
+def test_next_run_at_null_when_cron_has_no_solution():
+    assert timer_svc.next_run_at("0 0 30 2 *", True) is None
+    assert timer_svc.next_run_at("not a cron", True) is None
+
+
+@pytest.mark.asyncio
+async def test_update_timer_rejects_impossible_cron():
+    timer = Timer(id="1", target="t1", name="n", cron="0 8 * * *", enabled=False)
+    db = MagicMock()
+    db.flush = AsyncMock()
+    with pytest.raises(UnprocessableError):
+        await timer_svc.update_timer(db, timer, cron="0 0 30 2 *")
+    db.flush.assert_not_awaited()
 
 
 def test_production_catalog_entries():

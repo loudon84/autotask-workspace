@@ -20,6 +20,7 @@ from app.domain.boe_packing import (
     RETRYABLE_STAGES,
     SAVE_DRAFT_TEMPLATE_CODE,
     SUBMIT_TEMPLATE_CODE,
+    DELETE_DRAFT_TEMPLATE_CODE,
     VOL_UNIT,
     attachment_rule_errors,
     normalize_attachments,
@@ -264,9 +265,10 @@ async def _portal_by_subcode(
     ).scalar_one_or_none()
 
 
-async def _existing_instance(
+async def _open_instance(
     db: AsyncSession, portal_id: str, doc_no: str
 ) -> ProcessInstance | None:
+    """排重只看未作废、未软删。与 uq_process_instances_portal_code_biz_open 一致。"""
     return (
         await db.execute(
             select(ProcessInstance).where(
@@ -278,6 +280,13 @@ async def _existing_instance(
             )
         )
     ).scalar_one_or_none()
+
+
+def _is_open_packing(instance: ProcessInstance) -> bool:
+    return (
+        instance.deleted_at is None
+        and instance.status != ProcessInstanceStatus.CANCELLED.value
+    )
 
 
 def _portal_fields(portal: PortalAccount) -> dict[str, str]:
@@ -349,7 +358,12 @@ async def get_packing_instance(
     return instance
 
 
-def to_list_item(instance: ProcessInstance, portal: PortalAccount | None = None) -> dict[str, Any]:
+def to_list_item(
+    instance: ProcessInstance,
+    portal: PortalAccount | None = None,
+    *,
+    latest_task_status: str = "",
+) -> dict[str, Any]:
     summary = _summary(instance)
     header = summary.get("header") if isinstance(summary.get("header"), dict) else {}
     return {
@@ -372,7 +386,30 @@ def to_list_item(instance: ProcessInstance, portal: PortalAccount | None = None)
         "customer_name": (portal.erp_entity_name if portal else ""),
         "srm_draft_no": str(summary.get("srmDraftNo") or "").strip(),
         "header_id": str(summary.get("headerId") or "").strip(),
+        "latest_task_status": latest_task_status,
     }
+
+
+async def latest_task_status_map(
+    db: AsyncSession, instance_ids: list[str]
+) -> dict[str, str]:
+    if not instance_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(AutomationTask.process_instance_id, AutomationTask.status)
+            .where(
+                AutomationTask.process_instance_id.in_(instance_ids),
+                not_deleted(AutomationTask),
+            )
+            .distinct(AutomationTask.process_instance_id)
+            .order_by(
+                AutomationTask.process_instance_id,
+                AutomationTask.updated_at.desc(),
+            )
+        )
+    ).all()
+    return {str(item_id): str(status) for item_id, status in rows if item_id}
 
 
 async def to_detail(
@@ -553,6 +590,7 @@ async def _maybe_enqueue_rpa(
         task_input = {
             "instanceId": instance.id,
             "docNo": instance.biz_key,
+            "srmDraftNo": str(_summary(instance).get("srmDraftNo") or "").strip(),
             "summary": _summary(instance),
         }
         return await _create_sub_task(
@@ -603,6 +641,7 @@ async def match_delivery_plans(
         }
 
     matched_at = _now()
+    seen: set[tuple[str, str]] = set()
     for row in result.data:
         doc_no = str(row.get("doc_no") or "").strip()
         subcode = str(row.get("party_site_number") or "").strip()
@@ -614,8 +653,13 @@ async def match_delivery_plans(
             missing_portal.append(subcode)
             skipped.append({"docNo": doc_no, "reason": f"no_portal:{subcode}"})
             continue
+        batch_key = (portal.id, doc_no)
+        if batch_key in seen:
+            skipped.append({"docNo": doc_no, "reason": "duplicate_in_batch"})
+            continue
+        seen.add(batch_key)
         header_id = plan_header_id(row)
-        existing = await _existing_instance(db, portal.id, doc_no)
+        existing = await _open_instance(db, portal.id, doc_no)
         if existing is not None:
             if header_id:
                 existing_summary = _summary(existing)
@@ -671,6 +715,33 @@ async def match_delivery_plans(
     }
 
 
+async def _retry_delete_draft(
+    db: AsyncSession,
+    instance: ProcessInstance,
+    *,
+    actor: str,
+) -> ProcessInstance:
+    """上次可能已经把 SRM 草稿删掉了，只是校验误报。重试必须再搜一遍，不能直接当失败。"""
+    draft_no = str(_summary(instance).get("srmDraftNo") or "").strip()
+    _clear_instance_error(instance)
+    task = await _maybe_enqueue_rpa(
+        db,
+        instance,
+        template_code=DELETE_DRAFT_TEMPLATE_CODE,
+        title=f"删除 SRM 草稿 - {draft_no or instance.biz_key}",
+        actor=actor,
+        required=True,
+    )
+    if task is None:
+        raise BadRequestError(
+            message="删除草稿仍在执行，请等当前任务结束再重试",
+            message_key="errors.autotask.boe_pack.retry_busy",
+        )
+    await db.commit()
+    await db.refresh(instance)
+    return instance
+
+
 async def retry_instance(
     db: AsyncSession,
     tenant_id: str,
@@ -686,6 +757,8 @@ async def retry_instance(
         )
     if instance.stage == ProcessStage.BOE_PACK_FETCH_WMS.value:
         return await fetch_wms_for_instance(db, instance, actor=actor)
+    if instance.stage == ProcessStage.BOE_PACK_DELETING_DRAFT.value:
+        return await _retry_delete_draft(db, instance, actor=actor)
     template = {
         ProcessStage.BOE_PACK_ENRICH.value: (ENRICH_TEMPLATE_CODE, f"RPA 补全项目信息行 - {instance.biz_key}"),
         ProcessStage.BOE_PACK_SAVE_DRAFT.value: (SAVE_DRAFT_TEMPLATE_CODE, f"保存 SRM 草稿单 - {instance.biz_key}"),
@@ -717,13 +790,57 @@ async def cancel_instance(
             message_key="errors.autotask.boe_pack.cancel_invalid",
         )
     actor = user.user_id
-    instance.status = ProcessInstanceStatus.CANCELLED.value
+    if instance.stage == ProcessStage.BOE_PACK_DELETING_DRAFT.value:
+        return await _retry_delete_draft(db, instance, actor=actor)
+
+    inflight_other = (
+        await db.execute(
+            select(AutomationTask.id).where(
+                AutomationTask.process_instance_id == instance.id,
+                AutomationTask.task_type.in_(
+                    (ENRICH_TEMPLATE_CODE, SAVE_DRAFT_TEMPLATE_CODE, SUBMIT_TEMPLATE_CODE)
+                ),
+                AutomationTask.status.in_(tuple(IN_FLIGHT_TASK_STATUSES)),
+                not_deleted(AutomationTask),
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if inflight_other is not None:
+        raise BadRequestError(
+            message="请等待当前 RPA 结束再作废",
+            message_key="errors.autotask.boe_pack.cancel_busy",
+        )
+
+    # @lat: [[domain#BoePackCancelPaths]]
+    draft_no = str(_summary(instance).get("srmDraftNo") or "").strip()
+    if not draft_no:
+        instance.status = ProcessInstanceStatus.CANCELLED.value
+        _change_stage(
+            db,
+            instance,
+            ProcessStage.BOE_PACK_CANCELLED,
+            actor=actor,
+            note="客服作废（尚无 SRM 草稿）",
+        )
+        await db.commit()
+        await db.refresh(instance)
+        return instance
+
     _change_stage(
         db,
         instance,
-        ProcessStage.BOE_PACK_CANCELLED,
+        ProcessStage.BOE_PACK_DELETING_DRAFT,
         actor=actor,
-        note="客服作废",
+        note="作废：先删 SRM 草稿",
+    )
+    _clear_instance_error(instance)
+    await _maybe_enqueue_rpa(
+        db,
+        instance,
+        template_code=DELETE_DRAFT_TEMPLATE_CODE,
+        title=f"删除 SRM 草稿 - {draft_no}",
+        actor=actor,
+        required=True,
     )
     await db.commit()
     await db.refresh(instance)
@@ -917,6 +1034,14 @@ async def dispatch_finished(db: AsyncSession, task: AutomationTask, run: RpaRun)
     succeeded = run.status == RunStatus.SUCCESS.value
     actor = task.created_by
 
+    if instance.status == ProcessInstanceStatus.CANCELLED.value:
+        return True
+    if (
+        instance.stage == ProcessStage.BOE_PACK_DELETING_DRAFT.value
+        and task.task_type != DELETE_DRAFT_TEMPLATE_CODE
+    ):
+        return True
+
     if task.task_type == ENRICH_TEMPLATE_CODE:
         if succeeded:
             _merge_enrich_output(summary, output)
@@ -1006,5 +1131,31 @@ async def dispatch_finished(db: AsyncSession, task: AutomationTask, run: RpaRun)
                 error_message=str(output.get("errorMessage") or run.error_message or "提交失败"),
             )
         _save_summary(instance, summary)
+        return True
+
+    if task.task_type == DELETE_DRAFT_TEMPLATE_CODE:
+        if succeeded:
+            already_missing = bool(output.get("alreadyMissing"))
+            instance.status = ProcessInstanceStatus.CANCELLED.value
+            _clear_instance_error(instance)
+            _change_stage(
+                db,
+                instance,
+                ProcessStage.BOE_PACK_CANCELLED,
+                actor=actor,
+                note=(
+                    "SRM 已无该流水号，本地已作废"
+                    if already_missing
+                    else "SRM 草稿已删除，本地已作废"
+                ),
+            )
+        else:
+            _set_instance_error(
+                instance,
+                error_code=str(output.get("errorCode") or "BOE_DELETE_DRAFT_FAILED"),
+                error_message=str(
+                    output.get("errorMessage") or run.error_message or "删除 SRM 草稿失败"
+                ),
+            )
         return True
     return True

@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import NotFoundError, UnprocessableError
 from app.models.base import not_deleted
 from app.models.timer import Timer
-from app.services.cron_schedule import CronParseError, CronSchedule
+from app.services.china_clock import CHINA_TZ
 from app.services.timer_catalog import REGISTRATIONS, TimerRegistration
+from app.services.unix_cron import build_cron_trigger
 
 
 async def get_timer(db: AsyncSession, timer_id: str) -> Timer:
@@ -38,12 +39,20 @@ async def get_timer_by_target(db: AsyncSession, target: str) -> Timer | None:
 def next_run_at(
     cron: str, enabled: bool, now: datetime | None = None
 ) -> datetime | None:
+    """下次触发（aware 上海时间）。disabled / cron 非法 / 无解（如 2 月 30 日）返回 None。
+
+    now 传 naive 时按中国墙上时钟理解，与历史行为一致。
+    """
     if not enabled:
         return None
     try:
-        return CronSchedule.parse(cron).next_after(now or datetime.now())
-    except CronParseError:
+        trigger = build_cron_trigger(cron)
+    except ValueError:
         return None
+    reference = now or datetime.now(CHINA_TZ)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=CHINA_TZ)
+    return trigger.get_next_fire_time(None, reference)
 
 
 async def list_timers(
@@ -70,12 +79,18 @@ async def update_timer(
     if cron is not None:
         cron_text = cron.strip()
         try:
-            CronSchedule.parse(cron_text).next_after(datetime.now())
-        except CronParseError as exc:
+            trigger = build_cron_trigger(cron_text)
+        except ValueError as exc:
             raise UnprocessableError(
                 message=f"非法 cron：{exc}",
                 message_key="errors.autotask.invalid_schedule",
             ) from exc
+        # 结构合法不等于有解（如 0 0 30 2 *），需实际探一次下次触发
+        if trigger.get_next_fire_time(None, datetime.now(CHINA_TZ)) is None:
+            raise UnprocessableError(
+                message="非法 cron：在可搜索范围内无有效触发时刻（如 2 月 30 日）",
+                message_key="errors.autotask.invalid_schedule",
+            )
         timer.cron = cron_text
     if name is not None:
         trimmed = name.strip()

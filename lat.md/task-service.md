@@ -22,7 +22,7 @@ Three mounts share the same process.
 
 1. **Client API** (`/api/v1/autotask/*`) — JWT user calls for dashboard, portals,
    templates, bindings, tasks, process-instances, statements, runs, human-actions,
-   artifacts, scheduler-jobs, timers, settings.
+   artifacts, timers.
 2. **Worker API** (`/api/v1/autotask/worker-api/*`) — register/heartbeat, lease,
    renew, run events/artifacts/integration-calls/finish, mail OTP watermark/fetch.
 3. **MCP** (`/api/v1/autotask/mcp`) — thin tools over the same services.
@@ -42,30 +42,28 @@ follow-on bindings after SUCCESS.
 ## Schedulers
 
 
-Background work includes Binding JobScheduler (legacy, still running) plus the
-independent TimerScheduler.
+Background work is one [[service/app/services/timer_scheduler.py#TimerScheduler]]
+sync loop feeding APScheduler CronTrigger jobs; due time comes from the library,
+not a handmade tick.
+
+Binding `JobScheduler` and the old `.env` / `autotask_settings` loops are gone
+(`project-docs/prd/AutoTask 调度中心-清场.md`); the library landed per
+`project-docs/prd/AutoTask 调度中心-引入APScheduler.md`. Crontab dow `0`/`7`
+=Sunday is shimmed by [[service/app/services/unix_cron.py#to_apscheduler_crontab]]
+before `from_crontab`.
 
 - Independent timers: [[service/app/models/timer.py#Timer]], `/timers` API,
   [[service/app/services/timer_registry.py#notify]]
 - Catalog upsert on boot: [[service/app/services/timer_service.py#ensure_catalog_rows]];
-  [[service/app/services/timer_catalog.py#REGISTRATIONS]] holds demo plus
+  existing rows keep their enabled/cron. [[service/app/services/timer_catalog.py#REGISTRATIONS]]
+  holds demo plus
   [[service/app/services/tiandy_timers.py#scan_pending_due|tiandy scan]] /
   [[service/app/services/tiandy_timers.py#sign_poll_due|sign-poll]] /
   [[service/app/services/boe_timers.py#pack_match_due|boe pack-match]] /
-  [[service/app/services/boe_timers.py#srm_login_due|boe srm-login]] entries
-  (`boe.srm_login` probes IMAP then serial-dispatches `srm_boe_login`; see
-  [[domain#MailInbox]])
-- The old `BoeMatchScheduler` loop is no longer started (replaced by the
-  `boe.pack_match` timer); the file and its `autotask_settings` keys stay
-  dormant until removal is verified, same as legacy scan/sign-poll loops
-- Legacy Binding `scheduler_jobs` rows are all disabled (replaced by timers);
-  JobScheduler loop still runs but fires nothing
-- Every due fire lands in `timer_runs` (`/timers/{id}/runs`); if the table is
-  not migrated yet the tick still notifies and just skips recording
-- `POST /timers/{id}/run` fires immediately regardless of enabled/cron and
-  still records the run; the 调度中心 list and detail pages expose it as
-  「立即执行」
-
+  [[service/app/services/boe_timers.py#srm_login_due|boe srm-login]]
+- Scan work stays in [[service/app/services/scan_scheduler.py#run_scan_once]]
+- Every due fire lands in `timer_runs`; missing table still notifies
+- `POST /timers/{id}/run` bypasses enabled/cron
 - Optional successor processor remains env-gated (`SUCCESSOR_JOB_*`)
 
 ## Persistence

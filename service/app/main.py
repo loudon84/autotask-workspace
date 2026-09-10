@@ -98,16 +98,7 @@ async def lifespan(app: FastAPI):
         logger.info("SUCCESSOR_JOB_ENABLED=false，后继任务作业处理器保持关闭")
     app.state.successor_job_processor = successor_processor
 
-    # Binding 级调度器常驻启动；开关与 cron 在 scheduler_jobs 表，每个 tick 热加载。
     from app.core.deps import async_session_factory
-    from app.services.job_scheduler import JobScheduler
-
-    job_scheduler = JobScheduler(async_session_factory)
-    await job_scheduler.start()
-    logger.info("Binding 调度器已启动（scheduler_jobs 热更新）")
-    app.state.job_scheduler = job_scheduler
-
-
     from app.services.timer_scheduler import TimerScheduler
     from app.services import timer_registry
     from app.services import timer_service as timer_svc
@@ -141,7 +132,7 @@ async def lifespan(app: FastAPI):
 
     timer_scheduler = TimerScheduler(async_session_factory)
     await timer_scheduler.start()
-    logger.info("独立定时器调度器已启动")
+    logger.info("独立定时器调度器已启动（APScheduler）")
     app.state.timer_scheduler = timer_scheduler
 
     try:
@@ -149,7 +140,6 @@ async def lifespan(app: FastAPI):
     finally:
         if timer_scheduler is not None:
             await timer_scheduler.stop()
-        await job_scheduler.stop()
         if successor_processor is not None:
             await successor_processor.stop()
         await engine.dispose()

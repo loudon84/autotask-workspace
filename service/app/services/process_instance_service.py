@@ -858,7 +858,7 @@ async def run_sign_poll_once(
                 await db.rollback()
         except Exception:
             await db.rollback()
-            # 与 SignPollScheduler 一致：单条失败继续下一条
+            # 单条失败继续下一条
             continue
     return {"candidate_count": len(instances), "created_count": created}
 
