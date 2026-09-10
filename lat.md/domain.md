@@ -129,7 +129,14 @@ region-map table is missing, `list_maps` answers empty via a SAVEPOINT
 (`db.begin_nested()`) — it must never `db.rollback()` the shared session, or it
 silently discards the caller's pending work (e.g. the just-created match
 instance), which once surfaced as "Instance is not persistent within this
-Session" on the post-commit `db.refresh()`. The match timer is the independent
+Session" on the post-commit `db.refresh()`. Unmapped WMS `coo` stays on
+`BOE_PACK_FETCH_WMS` (`BOE_WMS_REGION_UNMAPPED`); CS maintains the map and
+retries — enrich does not start
+([[service/app/domain/boe_packing.py#unmapped_region_codes]]). Missing net-weight unit defaults to 千克.
+Retry is shown only after lastError or a FAILED task, never while RPA is
+in flight. List 流水号 links to detail or shows `—`. Process-instance
+sub-tasks open a task drawer instead of leaving the page.
+The match timer is the independent
 timer `boe.pack_match` (see [[domain#SchedulerJob]]), maintained on 调度中心 like
 any other timer; it stays off until an operator enables it.
 List and detail put 发票箱单流水号 first (empty until save-draft). Delivery-plan

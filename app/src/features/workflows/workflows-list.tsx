@@ -23,7 +23,7 @@ const columns: ColumnDef<WorkflowTemplate>[] = [
     header: "模板名称",
     cell: ({ row }) => (
       <Link
-        className="font-medium hover:underline"
+        className="font-medium underline underline-offset-4"
         params={{ workflowId: row.original.id }}
         to="/workflows/$workflowId"
       >

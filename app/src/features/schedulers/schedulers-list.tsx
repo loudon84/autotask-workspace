@@ -64,7 +64,7 @@ export function SchedulersListPage() {
         header: "名称",
         cell: ({ row }) => (
           <Link
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary underline underline-offset-4"
             params={{ jobId: row.original.id }}
             to="/schedulers/$jobId"
           >

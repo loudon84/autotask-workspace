@@ -140,7 +140,7 @@ function buildColumns(
       header: "门户名称",
       cell: ({ row }) => (
         <Link
-          className="inline-block max-w-[9rem] truncate hover:underline"
+          className="inline-block max-w-[9rem] truncate underline underline-offset-4"
           params={{ portalId: row.original.id }}
           title={row.original.portalName}
           to="/srm-portals/$portalId"

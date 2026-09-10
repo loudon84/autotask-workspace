@@ -6,6 +6,7 @@ from app.models.enums import ProcessStage
 PROCESS_CODE = "srm_boe_invoice_packing"
 
 VOL_UNIT = "立方米"
+NET_WEIGHT_UNIT = "千克"
 EXPECTED_ORG_CODE = "101"
 
 ENRICH_TEMPLATE_CODE = "srm_boe_pack_enrich"
@@ -93,6 +94,25 @@ ATTACH_PDF_SUFFIXES = {".pdf"}
 
 def _text(value: object) -> str:
     return str(value or "").strip()
+
+
+def unmapped_region_codes(lines: list, maps: dict[str, str]) -> list[str]:
+    """WMS 地区编号必须在对照表里有 SRM 显示名，否则不能进补全。"""
+    missing: list[str] = []
+    seen: set[str] = set()
+    for line in lines or []:
+        if not isinstance(line, dict):
+            continue
+        code = _text(line.get("regionCode"))
+        name = (maps.get(code) or "").strip() if code else ""
+        if name:
+            continue
+        label = code or "(空)"
+        if label in seen:
+            continue
+        seen.add(label)
+        missing.append(label)
+    return missing
 
 
 def _file_stem(name: str) -> str:

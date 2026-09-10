@@ -52,7 +52,7 @@ function buildTaskColumns(onUpdate: () => void): ColumnDef<AutomationTask>[] {
       header: "任务标题",
       cell: ({ row }) => (
         <Link
-          className="hover:underline"
+          className="underline underline-offset-4"
           params={{ taskId: row.original.id }}
           to="/tasks/$taskId"
         >

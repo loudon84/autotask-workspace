@@ -22,9 +22,11 @@ from app.domain.boe_packing import (
     SUBMIT_TEMPLATE_CODE,
     DELETE_DRAFT_TEMPLATE_CODE,
     VOL_UNIT,
+    NET_WEIGHT_UNIT,
     attachment_rule_errors,
     normalize_attachments,
     review_required_errors,
+    unmapped_region_codes,
 )
 from sqlalchemy.exc import ProgrammingError
 
@@ -222,7 +224,10 @@ def _lines_from_wms(payload: Any) -> tuple[str, list[dict[str, Any]]]:
                         item, "netweight", "net_weight", "net_Weight", "netWeight"
                     )
                 ),
-                "netWeightUnit": "",
+                "netWeightUnit": _pick_field(
+                    item, "netweightunit", "net_weight_unit", "weight_unit", "netWeightUnit"
+                )
+                or NET_WEIGHT_UNIT,
                 "regionCode": _pick_field(item, "coo", "region", "regionCode"),
                 "regionSrmName": "",
                 "lineItem": "",
@@ -533,8 +538,9 @@ async def fetch_wms_for_instance(
     except ProgrammingError:
         maps = {}
     for line in lines:
-        code = str(line.get("regionCode") or "")
+        code = str(line.get("regionCode") or "").strip()
         line["regionSrmName"] = maps.get(code, "")
+    missing = unmapped_region_codes(lines, maps)
     header = dict(summary.get("header") or {})
     header["totalVol"] = total_vol
     header["volUnit"] = VOL_UNIT
@@ -544,6 +550,19 @@ async def fetch_wms_for_instance(
     instance.line_total = len(lines)
     instance.line_done = 0
     _save_summary(instance, summary)
+    if missing:
+        _set_instance_error(
+            instance,
+            error_code="BOE_WMS_REGION_UNMAPPED",
+            error_message=(
+                "WMS 地区编号未维护："
+                + "、".join(missing)
+                + "。请在地区对照中维护后再重试读 WMS。"
+            ),
+        )
+        await db.commit()
+        await db.refresh(instance)
+        return instance
     _clear_instance_error(instance)
     _change_stage(
         db,
@@ -764,7 +783,7 @@ async def retry_instance(
         ProcessStage.BOE_PACK_SAVE_DRAFT.value: (SAVE_DRAFT_TEMPLATE_CODE, f"保存 SRM 草稿单 - {instance.biz_key}"),
         ProcessStage.BOE_PACK_SUBMITTING.value: (SUBMIT_TEMPLATE_CODE, f"提交 SRM 单据 - {instance.biz_key}"),
     }[instance.stage]
-    await _maybe_enqueue_rpa(
+    task = await _maybe_enqueue_rpa(
         db,
         instance,
         template_code=template[0],
@@ -772,6 +791,11 @@ async def retry_instance(
         actor=actor,
         required=True,
     )
+    if task is None:
+        raise BadRequestError(
+            message="当前任务仍在执行，请等结束后再重试",
+            message_key="errors.autotask.boe_pack.retry_busy",
+        )
     await db.commit()
     await db.refresh(instance)
     return instance

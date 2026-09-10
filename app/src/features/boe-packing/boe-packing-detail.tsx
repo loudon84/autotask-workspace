@@ -24,6 +24,7 @@ import {
   BOE_PACK_ATTACH_TYPES,
   BOE_PACK_MAIN_STAGES,
   BOE_PACK_SUBTASK_NODES,
+  BOE_PACK_NET_WEIGHT_UNIT,
   BOE_PACK_VOL_UNIT,
   boePackAttachmentErrors,
   boePackRequiredErrors,
@@ -171,7 +172,11 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
     <div className="space-y-4">
       <PageHeader description={data.bizKey} title="发票箱单详情">
         <div className="flex flex-wrap gap-2">
-            {canRetryBoePack(data.stage) ? (
+            {canRetryBoePack({
+              stage: data.stage,
+              lastErrorMessage: data.lastErrorMessage,
+              latestTaskStatus: latestBoePackTaskStatus(data.subTasks),
+            }) ? (
               <Button
                 disabled={acting}
                 onClick={() =>
@@ -287,7 +292,7 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
         <CardContent className="space-y-3">
           <StageProgress detail={data} />
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-5">
-            <ReadField label="发票箱单流水号" value={data.srmDraftNo ?? ""} />
+            <ReadField label="发票箱单流水号" value={(data.srmDraftNo ?? "").trim() || "—"} />
             <ReadField label="客户名称" value={display(header.customerName)} />
             <ReadField label="客户子代码" value={display(header.customerSubcode)} />
             <ReadField label="交易主体" value={display(header.businessEntity)} />
@@ -385,7 +390,7 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-muted-foreground text-xs">
-            客户 PO、客户料号固定在左侧，其余列可左右拖动。本次开票数、净重可改；净重单位 / 行项目 / 订单数量 / 订单单位 / 剩余开票数由 RPA 从 SRM 带回。
+            客户 PO、客户料号固定在左侧，其余列可左右拖动。本次开票数、净重可改；净重单位取不到时固定「千克」。行项目 / 订单数量 / 订单单位 / 剩余开票数由 RPA 从 SRM 带回。
           </p>
           <Table className="min-w-[1180px]">
               <TableHeader>
@@ -456,7 +461,9 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
                         display(line.netWeight)
                       )}
                     </TableCell>
-                    <TableCell>{display(line.netWeightUnit)}</TableCell>
+                    <TableCell>
+                      {(line.netWeightUnit || "").trim() || BOE_PACK_NET_WEIGHT_UNIT}
+                    </TableCell>
                     <TableCell className={!line.regionSrmName ? "text-destructive" : ""}>
                       {display(line.regionCode)}
                     </TableCell>

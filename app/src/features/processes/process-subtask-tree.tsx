@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -6,6 +6,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { TaskDetailPage } from "@/features/tasks/task-detail";
 import type { ProcessSubTask } from "@/types/process-instance";
 import { formatBeijingDateTime } from "@/utils/date-time";
 
@@ -21,16 +28,22 @@ function sortByCreatedDesc(a: ProcessSubTask, b: ProcessSubTask): number {
   return b.createdAt.localeCompare(a.createdAt);
 }
 
-function TaskLeaf({ task }: { task: ProcessSubTask }) {
+function TaskLeaf({
+  task,
+  onOpen,
+}: {
+  task: ProcessSubTask;
+  onOpen: (taskId: string) => void;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2 py-1 text-sm">
-      <Link
-        className="font-medium hover:underline"
-        params={{ taskId: task.id }}
-        to="/tasks/$taskId"
+      <button
+        className="font-medium text-left text-primary underline underline-offset-4"
+        type="button"
+        onClick={() => onOpen(task.id)}
       >
         {task.title}
-      </Link>
+      </button>
       <Badge variant="outline">{task.status}</Badge>
       <span className="text-muted-foreground">
         {formatBeijingDateTime(task.createdAt)}
@@ -39,7 +52,13 @@ function TaskLeaf({ task }: { task: ProcessSubTask }) {
   );
 }
 
-function HistoryBlock({ history }: { history: ProcessSubTask[] }) {
+function HistoryBlock({
+  history,
+  onOpen,
+}: {
+  history: ProcessSubTask[];
+  onOpen: (taskId: string) => void;
+}) {
   if (history.length === 0) {
     return null;
   }
@@ -51,7 +70,7 @@ function HistoryBlock({ history }: { history: ProcessSubTask[] }) {
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-1 pt-1">
         {history.map((task) => (
-          <TaskLeaf key={task.id} task={task} />
+          <TaskLeaf key={task.id} onOpen={onOpen} task={task} />
         ))}
       </CollapsibleContent>
     </Collapsible>
@@ -61,9 +80,11 @@ function HistoryBlock({ history }: { history: ProcessSubTask[] }) {
 function NodeGroup({
   label,
   tasks,
+  onOpen,
 }: {
   label: string;
   tasks: ProcessSubTask[];
+  onOpen: (taskId: string) => void;
 }) {
   const ordered = [...tasks].sort(sortByCreatedDesc);
   const [latest, ...history] = ordered;
@@ -73,13 +94,19 @@ function NodeGroup({
   return (
     <div className="space-y-1 rounded-md border p-3">
       <div className="font-medium text-sm">{label}</div>
-      <TaskLeaf task={latest} />
-      <HistoryBlock history={history} />
+      <TaskLeaf onOpen={onOpen} task={latest} />
+      <HistoryBlock history={history} onOpen={onOpen} />
     </div>
   );
 }
 
-function FillLineGroup({ tasks }: { tasks: ProcessSubTask[] }) {
+function FillLineGroup({
+  tasks,
+  onOpen,
+}: {
+  tasks: ProcessSubTask[];
+  onOpen: (taskId: string) => void;
+}) {
   const byLine = new Map<string, ProcessSubTask[]>();
   for (const task of tasks) {
     const key = task.lineNumber?.trim() || "未知行";
@@ -102,8 +129,8 @@ function FillLineGroup({ tasks }: { tasks: ProcessSubTask[] }) {
         return (
           <div className="ml-1 space-y-1 border-muted border-l pl-3" key={lineKey}>
             <div className="text-muted-foreground text-xs">行 {lineKey}</div>
-            <TaskLeaf task={latest} />
-            <HistoryBlock history={history} />
+            <TaskLeaf onOpen={onOpen} task={latest} />
+            <HistoryBlock history={history} onOpen={onOpen} />
           </div>
         );
       })}
@@ -118,6 +145,8 @@ export function ProcessSubTaskTree({
   tasks: ProcessSubTask[];
   nodeOrder?: { taskType: string; label: string }[];
 }) {
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+
   if (tasks.length === 0) {
     return (
       <p className="text-center text-muted-foreground text-sm">暂无子任务</p>
@@ -126,22 +155,45 @@ export function ProcessSubTaskTree({
 
   const knownTypes = new Set(nodeOrder.map((item) => item.taskType));
   const otherTasks = tasks.filter((task) => !knownTypes.has(task.taskType));
+  const open = (taskId: string) => setOpenTaskId(taskId);
 
   return (
-    <div className="space-y-3">
-      {nodeOrder.map(({ taskType, label }) => {
-        const group = tasks.filter((task) => task.taskType === taskType);
-        if (group.length === 0) {
-          return null;
-        }
-        if (taskType === "srm_fill_line_delivery_date") {
-          return <FillLineGroup key={taskType} tasks={group} />;
-        }
-        return <NodeGroup key={taskType} label={label} tasks={group} />;
-      })}
-      {otherTasks.length > 0 && (
-        <NodeGroup label="其他子任务" tasks={otherTasks} />
-      )}
-    </div>
+    <>
+      <div className="space-y-3">
+        {nodeOrder.map(({ taskType, label }) => {
+          const group = tasks.filter((task) => task.taskType === taskType);
+          if (group.length === 0) {
+            return null;
+          }
+          if (taskType === "srm_fill_line_delivery_date") {
+            return <FillLineGroup key={taskType} onOpen={open} tasks={group} />;
+          }
+          return (
+            <NodeGroup key={taskType} label={label} onOpen={open} tasks={group} />
+          );
+        })}
+        {otherTasks.length > 0 && (
+          <NodeGroup label="其他子任务" onOpen={open} tasks={otherTasks} />
+        )}
+      </div>
+      <Sheet
+        open={Boolean(openTaskId)}
+        onOpenChange={(next) => {
+          if (!next) {
+            setOpenTaskId(null);
+          }
+        }}
+      >
+        <SheetContent
+          className="w-full overflow-y-auto p-6 data-[side=right]:sm:max-w-3xl sm:max-w-3xl"
+          side="right"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>任务详情</SheetTitle>
+          </SheetHeader>
+          {openTaskId ? <TaskDetailPage key={openTaskId} taskId={openTaskId} /> : null}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

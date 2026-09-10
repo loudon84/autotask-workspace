@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BOE_PACK_VOL_UNIT,
+  BOE_PACK_NET_WEIGHT_UNIT,
   boePackAttachmentErrors,
   boePackRequiredErrors,
   boePackReviewDiffs,
@@ -19,7 +20,20 @@ describe("boe packing labels", () => {
     expect(boePackStageName("BOE_PACK_FETCH_WMS")).toBe("读 WMS 装箱单");
     expect(canSubmitBoePack("BOE_PACK_REVIEW")).toBe(true);
     expect(canSubmitBoePack("BOE_PACK_SAVE_DRAFT")).toBe(false);
-    expect(canRetryBoePack("BOE_PACK_DELETING_DRAFT")).toBe(true);
+    expect(canRetryBoePack({ stage: "BOE_PACK_DELETING_DRAFT" })).toBe(false);
+    expect(
+      canRetryBoePack({
+        stage: "BOE_PACK_DELETING_DRAFT",
+        lastErrorMessage: "删除失败",
+      })
+    ).toBe(true);
+    expect(
+      canRetryBoePack({
+        stage: "BOE_PACK_ENRICH",
+        latestTaskStatus: "RUNNING",
+        lastErrorMessage: "旧错误",
+      })
+    ).toBe(false);
     expect(boePackStageName("BOE_PACK_DELETING_DRAFT")).toBe("删除 SRM 草稿");
     expect(boePackRunStatus({ status: "ACTIVE" }).label).toBe("进行中");
     expect(
@@ -35,6 +49,7 @@ describe("boe packing labels", () => {
     expect(boePackRunStatus({ status: "CANCELLED" }).label).toBe("已作废");
     expect(boePackRunStatus({ status: "COMPLETED" }).label).toBe("已完成");
     expect(BOE_PACK_VOL_UNIT).toBe("立方米");
+    expect(BOE_PACK_NET_WEIGHT_UNIT).toBe("千克");
   });
 
   it("diffs review baseline against current header and lines", () => {

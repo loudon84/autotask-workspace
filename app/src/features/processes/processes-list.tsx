@@ -154,7 +154,7 @@ export function ProcessesListPage() {
         meta: { sticky: "left" },
         cell: ({ row }) => (
           <Link
-            className="font-medium hover:underline"
+            className="font-medium underline underline-offset-4"
             params={{ instanceId: row.original.id }}
             to="/processes/$instanceId"
           >

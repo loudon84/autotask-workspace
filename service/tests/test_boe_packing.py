@@ -6,12 +6,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.core.exceptions import BadRequestError
-from app.domain.boe_packing import PROCESS_CODE
+from app.domain.boe_packing import (
+    PROCESS_CODE,
+    attachment_rule_errors,
+    review_required_errors,
+    unmapped_region_codes,
+)
 from app.models.enums import ProcessInstanceStatus, ProcessStage
 from app.models.process_instance import ProcessInstance
 from app.models.user_cache import UserCache
 from app.services import boe_packing_service as svc
-from app.domain.boe_packing import attachment_rule_errors, review_required_errors
 from app.services.boe_packing_service import _header_from_plan, _lines_from_wms, _qty_mismatch, compact_decimal, plan_header_id, qty_is_aligned
 
 
@@ -69,6 +73,7 @@ def test_qty_mismatch_and_header_mapping() -> None:
     assert lines[0]["deliveryQty"] == "100"
     assert lines[0]["netWeight"] == "0.45"
     assert lines[0]["regionCode"] == "TAIWAN,CHINA"
+    assert lines[0]["netWeightUnit"] == "千克"
     mismatch, planned, actual = _qty_mismatch(5000, lines)
     assert mismatch is True
     assert planned == "5000"
@@ -153,6 +158,7 @@ def test_lines_from_wms_doc_wrapper_shape() -> None:
     assert lines[0]["deliveryQty"] == "4920"
     assert lines[0]["netWeight"] == "2.93"
     assert lines[0]["regionCode"] == "China_tw"
+    assert lines[0]["netWeightUnit"] == "千克"
     assert total == "0.655"
 
 
@@ -520,3 +526,49 @@ async def test_dispatch_delete_already_missing_clears_prior_still_present(
     await svc.dispatch_finished(db, task, run)
     assert instance.status == ProcessInstanceStatus.CANCELLED.value
     assert instance.last_error_code is None
+
+
+def test_unmapped_region_codes_lists_missing_and_empty() -> None:
+    assert unmapped_region_codes(
+        [{"regionCode": "China_tw"}, {"regionCode": "China_tw"}],
+        {"China_tw": "中国台湾"},
+    ) == []
+    assert unmapped_region_codes(
+        [{"regionCode": "NOMAP"}, {"regionCode": ""}],
+        {"China_tw": "中国台湾"},
+    ) == ["NOMAP", "(空)"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_wms_unmapped_region_stays_and_does_not_enrich(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _packing_row(stage=ProcessStage.BOE_PACK_FETCH_WMS.value)
+    wms = MagicMock()
+    wms.error = None
+    wms.data = [
+        {
+            "cuspo": "P1",
+            "cusitem": "M1",
+            "qty": 1,
+            "netweight": 1,
+            "cubic": 0.1,
+            "coo": "NOMAP",
+        }
+    ]
+    wms.url = "http://wms"
+    wms.status_code = 200
+    monkeypatch.setattr(svc.boe_smc_client, "fetch_wms_packing", AsyncMock(return_value=wms))
+    monkeypatch.setattr(svc, "_log_smc", AsyncMock())
+    monkeypatch.setattr(
+        svc.region_code_map_service, "mapping_dict", AsyncMock(return_value={})
+    )
+    enqueue = AsyncMock()
+    monkeypatch.setattr(svc, "_maybe_enqueue_rpa", enqueue)
+    db = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    result = await svc.fetch_wms_for_instance(db, instance, actor="user-1")
+    assert result.stage == ProcessStage.BOE_PACK_FETCH_WMS.value
+    assert result.last_error_code == "BOE_WMS_REGION_UNMAPPED"
+    enqueue.assert_not_awaited()

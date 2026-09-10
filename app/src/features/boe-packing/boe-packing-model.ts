@@ -41,6 +41,7 @@ export const BOE_PACK_STAGE_TABS = [
 ] as const;
 
 export const BOE_PACK_VOL_UNIT = "立方米";
+export const BOE_PACK_NET_WEIGHT_UNIT = "千克";
 
 export const BOE_PACK_SUBTASK_NODES = [
   { taskType: "srm_boe_pack_enrich", label: "RPA 补全项目信息行" },
@@ -167,14 +168,25 @@ export function boePackProgressIndex(stage: string): number {
   return index < 0 ? 0 : index;
 }
 
-export function canRetryBoePack(stage: string): boolean {
-  return (
-    stage === "BOE_PACK_FETCH_WMS" ||
-    stage === "BOE_PACK_ENRICH" ||
-    stage === "BOE_PACK_SAVE_DRAFT" ||
-    stage === "BOE_PACK_SUBMITTING" ||
-    stage === "BOE_PACK_DELETING_DRAFT"
-  );
+export function canRetryBoePack(input: {
+  stage: string;
+  lastErrorMessage?: string | null;
+  latestTaskStatus?: string | null;
+}): boolean {
+  const retryable =
+    input.stage === "BOE_PACK_FETCH_WMS" ||
+    input.stage === "BOE_PACK_ENRICH" ||
+    input.stage === "BOE_PACK_SAVE_DRAFT" ||
+    input.stage === "BOE_PACK_SUBMITTING" ||
+    input.stage === "BOE_PACK_DELETING_DRAFT";
+  if (!retryable) {
+    return false;
+  }
+  const task = input.latestTaskStatus || "";
+  if (BOE_PACK_IN_FLIGHT_TASK.has(task)) {
+    return false;
+  }
+  return Boolean(input.lastErrorMessage) || task === "FAILED";
 }
 
 export function canEditBoePack(stage: string): boolean {

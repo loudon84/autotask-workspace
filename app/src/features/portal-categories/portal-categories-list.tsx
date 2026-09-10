@@ -18,7 +18,7 @@ export function PortalCategoriesListPage() {
         header: "分类",
         cell: ({ row }) => (
           <Link
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary underline underline-offset-4"
             params={{ category: row.original.code }}
             to="/portal-categories/$category"
           >

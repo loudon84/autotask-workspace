@@ -78,7 +78,7 @@ export function TasksListPage() {
       header: "任务标题",
       cell: ({ row }) => (
         <Link
-          className="font-medium hover:underline"
+          className="font-medium underline underline-offset-4"
           params={{ taskId: row.original.id }}
           to="/tasks/$taskId"
         >

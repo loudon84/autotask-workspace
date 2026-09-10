@@ -34,7 +34,21 @@ export function BoePackingListPage() {
       {
         accessorKey: "srmDraftNo",
         header: "发票箱单流水号",
-        cell: ({ row }) => row.original.srmDraftNo ?? "",
+        cell: ({ row }) => {
+          const draftNo = (row.original.srmDraftNo ?? "").trim();
+          if (!draftNo) {
+            return "—";
+          }
+          return (
+            <Link
+              className="text-primary underline underline-offset-4"
+              params={{ instanceId: row.original.id }}
+              to="/process-instances/invoice-packing/$instanceId"
+            >
+              {draftNo}
+            </Link>
+          );
+        },
       },
       {
         id: "docNo",
@@ -118,21 +132,42 @@ export function BoePackingListPage() {
                 详情
               </Link>
             </Button>
-            {canRetryBoePack(row.original.stage) ? (
-              <Button asChild size="sm">
-                <Link
-                  params={{ instanceId: row.original.id }}
-                  to="/process-instances/invoice-packing/$instanceId"
-                >
-                  重试
-                </Link>
+            {canRetryBoePack({
+              stage: row.original.stage,
+              lastErrorMessage: row.original.lastErrorMessage,
+              latestTaskStatus: row.original.latestTaskStatus,
+            }) ? (
+              <Button
+                disabled={acting}
+                size="sm"
+                onClick={() => {
+                  void (async () => {
+                    setActing(true);
+                    try {
+                      await autotaskApi.boePacking.retry(row.original.id);
+                      toast.success("已重试");
+                      await queryClient.invalidateQueries({
+                        queryKey: queryKeys.boePacking.all,
+                      });
+                      await refetch();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : "重试失败"
+                      );
+                    } finally {
+                      setActing(false);
+                    }
+                  })();
+                }}
+              >
+                重试
               </Button>
             ) : null}
           </div>
         ),
       },
     ],
-    []
+    [acting, queryClient, refetch]
   );
 
   return (
