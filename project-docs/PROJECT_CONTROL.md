@@ -45,7 +45,7 @@
 | Task Alembic（天地伟业线） | `d4b2f7a91e05`（v3 测库可能更前，勿混） | **`d4b2f7a91e05`**（2026-09-10 已迁） |
 | Task 配置 | `.env` | `.env.product`（`SKIP_AUTO_MIGRATE=1`） |
 | 门户 | 天地伟业-芯云-正式演练 | 天地伟业-芯云（`https://supplier.tiandy.com`） |
-| 生成/提交 dryRun | 生成 `1.1.0` / 提交 `1.1.5` 为 true | **已去掉；点生成会写正式 SRM** |
+| 生成/提交 dryRun | 生成 **1.1.3** `dryRun=true`（本机 4610 已起、Worker 关；本机 4520 未起）/ 提交 `1.1.5` 测库为 true | 生成 **1.1.3**、**无 dryRun**；点生成会写正式 SRM |
 | 扫单/回签定时器 | 已登记，默认停用 | 表已建；catalog 行要等用 `.env.product` **重启正式 4520** 后插入，默认停用 |
 
 不要用正式 `.env.product` 覆盖测库 `.env`。本地 `restart_task_4520.ps1` 杀的是本机，不是 247。
@@ -57,6 +57,7 @@
 | 正式库迁移 | 已到 `d4b2f7a91e05`（category 回填 TIANDI、分类文档、`timers`、`timer_runs`）。门户「天地伟业-芯云」仍 ENABLED。 |
 | 正式 Task 进程 | **需用 `.env.product` 重启 247 的 4520**。迁库前已在跑的进程不会补 catalog；调度中心可能仍是空表。 |
 | 天地伟业定时器 | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）默认停用。测库已登记。未授权不要在正式打开。 |
+| 对账单生成 | **1.1.3** 已发正式 Engine 并绑「天地伟业-芯云」（无 dryRun）。测库「天地伟业-芯云-正式演练」已绑本机 4610 的 **1.1.3**（`dryRun=true`）。同 ZIP、不同 `versionId`。本机 Engine 现为发包装包模式（Worker 关，因 4520 未起）；要本地真跑需先起本机 Task，再开 Worker 重启 Engine。 |
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。需新安装包；在线更新服务器目录尚未配好。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
 | 在线更新 | Client 已接 electron-updater；发版脚本已有。服务器 `/data/smc-release/autotask/` 与端到端验证未做。 |
@@ -77,9 +78,9 @@
 
 ## 7. 后续行动
 
-1. 用 `.env.product` 重启正式 247:4520，确认 `timers` 出现 3 行且全是停用，再决定是否启用。
+1. 正式「天地伟业-芯云」下一笔生成走 1.1.3（每页 100 + 表头勾选，超过 100 翻页）。会**真写 SRM**。已退回待生成的那笔可重新生成。
 2. 金额确认：打新 Client 安装包，并部署对应 Task；不要只发一端。
-3. 未明确要跑正式 SRM 前，不要打开正式扫单/回签定时器，不要在正式门户点生成/提交。
+3. 未明确要跑定时扫单/回签前，不要打开正式定时器。
 4. 需要填交期/签章时再发正式包并切 Binding。
 5. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
 6. 在线更新：配服务器目录与 promote，再做一次安装包升级验证。

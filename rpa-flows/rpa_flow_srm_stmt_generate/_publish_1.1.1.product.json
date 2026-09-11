@@ -1,0 +1,9 @@
+{
+  "rpaFlowId": "rpa_flow_srm_stmt_generate",
+  "rpaFlowVersion": "1.1.1",
+  "rpaFlowVersionId": "b16ead16-a4ab-4b68-a002-ed3bcd5f3b9b",
+  "packageChecksum": "sha256:bf21a0e61db6824321df499c88f02ebc61424c549b61bf79993adc5074dc0874",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_stmt_generate",
+  "engine": "http://192.168.102.247:4610"
+}

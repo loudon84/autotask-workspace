@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<repository xmlns:x="rpa://selector/core" xmlns:regex="rpa://selector/operator/regex" xmlns:wildcard="rpa://selector/operator/wildcard" xmlns:contains="rpa://selector/operator/contains" xmlns:notContains="rpa://selector/operator/notContains" xmlns:startsWith="rpa://selector/operator/startsWith" xmlns:notStartsWith="rpa://selector/operator/notStartsWith" xmlns:endsWith="rpa://selector/operator/endsWith" xmlns:notEndsWith="rpa://selector/operator/notEndsWith" xmlns:notEquals="rpa://selector/operator/notEquals" xmlns:greaterThan="rpa://selector/operator/greaterThan" xmlns:greaterThanOrEqual="rpa://selector/operator/greaterThanOrEqual" xmlns:lessThan="rpa://selector/operator/lessThan" xmlns:lessThanOrEqual="rpa://selector/operator/lessThanOrEqual">
+  <group id="7be45a0c-4169-471c-b0e8-2bd8cc4f6d4a" name="收货列表 - 天地伟业供应商平台" type="Web" processName="chrome" icon=".dev\icon\e9b42bd9-48e5-4f86-881f-15749a3eb294.png" criteria="https://supplier.tiandy.com" selectorOringin="Inspect">
+    <selector id="ca1f2349-f09a-4b44-9118-e11d30566b63" name="行内元素_el-checkbox__inner" type="simple" framework="chrome" selectorOringin="Inspect" processName="chrome" productName="Google Chrome" winTitle="收货列表 - 天地伟业供应商平台" screenshot=".dev\screenshot\195366dd-3a3c-4ffd-8610-7bfbffccf0d4.jpg" version="2">
+      <web x:name="div" x:selected="false">
+        <optional id="app" index-of-type="0" index="4" />
+      </web>
+      <web x:name="section" x:selected="false">
+        <optional class="el-container layout-container flex-center" index-of-type="0" index="0" />
+      </web>
+      <web x:name="section" x:selected="false">
+        <optional class="el-container layout-mian-height-50" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="flex-center layout-backtop" index-of-type="0" index="1" />
+      </web>
+      <web x:name="main" x:selected="false">
+        <optional class="el-main layout-main" index-of-type="0" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="layout-scrollbar el-scrollbar" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__wrap el-scrollbar__wrap--hidden-default" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-scrollbar__view" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="h100" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="divBox relative" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card box-card box-body mt14 is-never-shadow" index-of-type="1" index="1" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-card__body" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table el-table-container mt20 el-table--fit el-table--border el-table--scrollable-x el-table--enable-row-hover el-table--enable-row-transition el-table--small" index-of-type="0" index="2" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="el-table__header-wrapper" index-of-type="1" index="1" />
+      </web>
+      <web x:name="table">
+        <optional class="el-table__header" index-of-type="0" index="0" />
+      </web>
+      <web x:name="thead" x:selected="false">
+        <optional index-of-type="0" index="1" />
+      </web>
+      <web x:name="tr">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <web x:name="th">
+        <optional class="el-table_2_column_11 el-table-column--selection is-leaf el-table__cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="div" x:selected="false">
+        <optional class="cell" index-of-type="0" index="0" />
+      </web>
+      <web x:name="label" x:selected="false">
+        <optional class="el-checkbox" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" x:selected="false">
+        <optional class="el-checkbox__input" index-of-type="0" index="0" />
+      </web>
+      <web x:name="span" contains:class="el-checkbox__inner">
+        <optional index-of-type="0" index="0" />
+      </web>
+      <xpath enable="true">
+        <segment value="//table//tr/th//span[contains(@class, &quot;el-checkbox__inner&quot;)]" />
+      </xpath>
+      <semantic status="disabled" image="https://winrobot-pub-a.oss-cn-hangzhou.aliyuncs.com/989051194882396160/file/client/element/537e741c671fa39f05421a8404cea2ee0f2645bbdb0c50626a56ace30f96d2ff_semantic_False.png" rectangle="[163,552,9,21]" desc="" />
+    </selector>
+  </group>
+</repository>

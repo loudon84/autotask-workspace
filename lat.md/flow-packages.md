@@ -24,6 +24,12 @@ Demo portals often use `data-rpa=*`; official Element UI portals use Chinese
 text/CSS selectors and ship as separate versions. Formal drill and production
 share one official Flow; Binding carries sample PO / dryRun knobs.
 
+Official statement generate `1.1.3` sets page size to 100, clicks the header
+checkbox, and pages only when 「共 N 条」is over 100. It checks that total
+against Client `lines` length and does not tick rows. `dryRun` still skips
+生成对账单. See
+[[rpa-flows/rpa_flow_srm_stmt_generate/1.1.3/flow.py#ReceiptListAdapter#select_all_and_assert_count]].
+
 ## Tooling
 
 Build and local run helpers import Engine validators/runtime from sibling
