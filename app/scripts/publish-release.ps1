@@ -1,4 +1,5 @@
 # AutoTask 在线更新发版：上传暂存目录到 release.superic.com 并切换 stable 软链
+# 已确认开发机不能直连服务器。日常发版不要跑本脚本，用 build-release.ps1 打包后把文件夹交给同事。
 # 用法：powershell -File scripts/publish-release.ps1 [-Version 0.1.2]
 # 环境变量（默认值按 smc 服务器约定）：
 #   AUTOTASK_RELEASE_HOST    默认 release.superic.com

@@ -36,6 +36,7 @@
 8. **正式门户演练与上线共用同一份 Flow。** 样例单号、`treatAsPending`、`dryRun` 进 Binding。SOP：`project-docs/prd/tiandy/` 下 v4.1 / 正式上线清单。
 9. 换人/换门户不改 Task `.env` 和 Flow 源码：密码在门户；ERP/SDMS 基址在 Task 配置。
 10. 调度中心用独立 `timers` / `timer_runs`，不再靠 Binding 循环开火。天地伟业入口默认**停用**；打开即对着已绑门户跑，正式站会写真实 SRM。
+11. **Client 在线更新抄 SMC `work`，只加第二份目录 `autotask`。** 打包后把版本目录（或 zip）交给同事；服务器上按 `work` 同样结构放。不另搞发版流程。
 
 ## 4. 环境对照
 
@@ -58,9 +59,9 @@
 | 正式 Task 进程 | **需用 `.env.product` 重启 247 的 4520**。迁库前已在跑的进程不会补 catalog；调度中心可能仍是空表。 |
 | 天地伟业定时器 | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）默认停用。测库已登记。未授权不要在正式打开。 |
 | 对账单生成 | **1.1.3** 已发正式 Engine 并绑「天地伟业-芯云」（无 dryRun）。测库「天地伟业-芯云-正式演练」已绑本机 4610 的 **1.1.3**（`dryRun=true`）。同 ZIP、不同 `versionId`。本机 Engine 现为发包装包模式（Worker 关，因 4520 未起）；要本地真跑需先起本机 Task，再开 Worker 重启 Engine。 |
-| 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。需新安装包；在线更新服务器目录尚未配好。 |
+| 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
-| 在线更新 | Client 已接 electron-updater；发版脚本已有。服务器 `/data/smc-release/autotask/` 与端到端验证未做。 |
+| 在线更新 | 抄 SMC `work`：并列第二份 `/data/smc-release/autotask/`。**0.1.2 zip 已打好**：`app/release/autotask/AutoTask-0.1.2-release.zip`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题
@@ -74,7 +75,7 @@
 7. 演示验证码 OCR 达不到无人值守，必须留 `WAITING_HUMAN`。
 8. ERP 订单没有稳定幂等键；Worker 在提交后崩溃时结果不确定。
 9. 填交期/签章正式包未绑；正式链路这两步仍缺。
-10. 在线更新：本机到 `release.superic.com:443` 不通（内网 `192.168.102.104`）；服务器目录与 SSH 权限未配。
+10. 在线更新：抄 SMC。线上只要能打开 `https://release.superic.com/autotask/stable/latest.yml`（对照已有的 `/work/stable/latest.yml`）就算放对了。
 
 ## 7. 后续行动
 
@@ -83,7 +84,7 @@
 3. 未明确要跑定时扫单/回签前，不要打开正式定时器。
 4. 需要填交期/签章时再发正式包并切 Binding。
 5. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
-6. 在线更新：配服务器目录与 promote，再做一次安装包升级验证。
+6. 把 `app/release/autotask/AutoTask-0.1.2-release.zip` 交给同事，按 SMC `work` 同样方式放到 `autotask/`。已装旧包的用户这一次仍要手动装。
 7. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
 
 ## 8. 记录维护规则

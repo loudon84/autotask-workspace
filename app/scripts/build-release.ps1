@@ -1,4 +1,4 @@
-# AutoTask 在线更新发版：打包 → 校验 → 暂存到 release/autotask/<版本>/
+﻿# AutoTask 在线更新发版：打包 → 校验 → 暂存到 release/autotask/<版本>/
 # 用法：powershell -File scripts/build-release.ps1
 # 可选环境变量：AUTOTASK_UPDATE_URL（覆盖烧进安装包的更新地址，默认 https://release.superic.com/autotask/stable/）
 $ErrorActionPreference = "Stop"
@@ -54,7 +54,4 @@ $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
 
 Write-Host ""
 Write-Host "==> 完成。产物已暂存到 $stage"
-Write-Host "    手动发布："
-Write-Host "    1. 把整个 $version 文件夹拷到服务器 /data/smc-release/autotask/staging/$version-manual/"
-Write-Host "    2. 服务器上执行: bash /data/smc-release/autotask/promote-autotask-release.sh $version $version-manual"
-Write-Host "    3. 验证: https://release.superic.com/autotask/stable/latest.yml 版本应为 $version"
+Write-Host "    把整个 $version 文件夹交给同事（每次新版本交最新包即可）"
