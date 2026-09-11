@@ -11,7 +11,7 @@
 ## Shared Instructions
 
 - Follow the workspace instructions in `D:\AutoTask-Workspace\AGENTS.md`.
-- Read and update `D:\AutoTask-Workspace\project-docs\PROJECT_CONTROL.md` as required by the workspace instructions.
+- Read and update `project-docs/PROJECT_CONTROL.md` as required by the workspace instructions (living status only; no daily session logs).
 - Keep Chinese documentation and JSON data in UTF-8 without BOM.
 - Do not execute database creation, DDL, migrations, seeds, or database writes without explicit authorization.
 
