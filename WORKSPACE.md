@@ -15,7 +15,7 @@ This directory is the root workspace for AutoTask product development. Open this
 
 ## Working Rules
 
-1. Read `project-docs\PROJECT_CONTROL.md` before project work.
+1. Read `project-docs/PROJECT_CONTROL.md` before project work. Update status, decisions, blockers, and next actions only; do not append daily session logs (archive: `project-docs/PROJECT_CONTROL_HISTORY.md`).
 2. Respect project ownership boundaries; do not mix Engine or Flow source into the Client repository.
 3. Keep all text files UTF-8 and keep secrets out of source and development records.
 4. Database preparation is allowed, but database execution remains blocked until explicitly authorized.

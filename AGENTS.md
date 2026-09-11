@@ -3,8 +3,8 @@
 ## Required Startup Context
 
 - This workspace contains multiple AutoTask projects. Treat each project directory as an independent ownership boundary.
-- Before project work, read `D:\AutoTask-Workspace\project-docs\PROJECT_CONTROL.md`, including the latest `Daily Development Log` entry.
-- Update the control file after verified work changes project status, decisions, blockers, paths, or next actions.
+- Before project work, read `project-docs/PROJECT_CONTROL.md` (living status, decisions, blockers, next actions). Do **not** read or append the daily diary; that archive is `project-docs/PROJECT_CONTROL_HISTORY.md`.
+- After verified work, update only those living sections that actually changed. Do **not** append `### YYYY-MM-DD` session logs unless the user asks to archive a note.
 - Never record passwords, tokens, database credentials, private keys, or signed object-storage URLs.
 
 ## Project Map
