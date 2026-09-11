@@ -91,6 +91,8 @@ dist/
 
 # Electron-Forge
 out/
+# NSIS 发版产物（exe / zip / latest.yml），交给同事上 release，不进 git
+release/
 /test-results/
 /playwright-report/
 /blob-report/
