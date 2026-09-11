@@ -1,0 +1,283 @@
+import importlib.util
+import json
+import sys
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+from nodeskclaw_rpa_engine.runtime import RpaBusinessError, RpaFatalError
+
+FLOW_DIR = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "srm_stmt_generate_flow_1_1_3",
+    FLOW_DIR / "flow.py",
+)
+flow_module = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = flow_module
+SPEC.loader.exec_module(flow_module)
+
+generate_result = flow_module.generate_result
+parse_lines = flow_module.parse_lines
+parse_pagination_total = flow_module.parse_pagination_total
+resolve_check_amount = flow_module.resolve_check_amount
+SELECTORS = json.loads((FLOW_DIR / "selectors.json").read_text(encoding="utf-8"))
+
+
+class FakeLocator:
+    def __init__(self, page=None, selector="", *, visible=False, src=None, disabled=False):
+        self.page = page
+        self.selector = selector
+        self.visible = visible
+        self.src = src
+        self.disabled = disabled
+
+    @property
+    def first(self):
+        return self
+
+    async def is_visible(self):
+        return self.visible
+
+    async def is_disabled(self):
+        return self.disabled
+
+    async def wait_for(self, *, state="visible", timeout=0):
+        if state == "visible" and not self.visible:
+            raise TimeoutError("not visible")
+        if state == "hidden" and self.visible:
+            raise TimeoutError("still visible")
+
+    async def get_attribute(self, name):
+        if name == "class":
+            return "el-button is-disabled" if self.disabled else "el-button"
+        return self.src
+
+    async def count(self):
+        return 1 if self.visible else 0
+
+    def locator(self, selector):
+        child = FakeLocator(
+            self.page,
+            f"{self.selector} {selector}".strip(),
+            visible=self.visible,
+            disabled=self.disabled,
+        )
+        return child
+
+    def filter(self, **kwargs):
+        return self
+
+    async def inner_text(self):
+        return getattr(self, "text", "") or ""
+
+    async def click(self, timeout=0):
+        if self.page is not None:
+            self.page.clicks.append(self.selector)
+            if "btn-next" in self.selector:
+                self.disabled = True
+
+
+class FakePage:
+    def __init__(self, locators, evaluate_results=None):
+        self._locators = locators
+        self._evaluate_results = list(evaluate_results or [])
+        self.gotos = []
+        self.fills = []
+        self.clicks = []
+        self.evaluates = []
+
+    async def goto(self, url, wait_until=None):
+        self.gotos.append(url)
+
+    def locator(self, selector):
+        existing = self._locators.get(selector)
+        if existing is not None:
+            existing.page = self
+            existing.selector = selector
+            return existing
+        return FakeLocator(self, selector)
+
+    async def wait_for_timeout(self, ms):
+        return
+
+    async def evaluate(self, script, arg=None):
+        self.evaluates.append(script)
+        if not self._evaluate_results:
+            return None
+        return self._evaluate_results.pop(0)
+
+
+class RecordingEvents:
+    def __init__(self):
+        self.items = []
+
+    async def emit(self, type, message="", payload=None):
+        self.items.append({"type": type, "message": message, "payload": payload or {}})
+
+
+def _adapter(page):
+    return flow_module.ReceiptListAdapter(
+        SimpleNamespace(
+            artifacts=SimpleNamespace(screenshot=AsyncMock()),
+            events=RecordingEvents(),
+            page=page,
+            portal_url="https://supplier.tiandy.com/",
+            selectors=SELECTORS,
+        )
+    )
+
+
+class ParseLinesTests(unittest.TestCase):
+    def test_parse_lines(self):
+        lines = parse_lines(
+            [
+                {"receiptNo": "WR1", "lineNo": "10"},
+                {"收货单号": "WR2", "收货单行号": "20"},
+            ]
+        )
+        self.assertEqual(
+            lines,
+            [
+                {"receiptNo": "WR1", "lineNo": "10", "orderNo": ""},
+                {"receiptNo": "WR2", "lineNo": "20", "orderNo": ""},
+            ],
+        )
+
+    def test_empty_raises(self):
+        with self.assertRaises(RpaFatalError):
+            parse_lines([])
+
+    def test_resolve_amount_from_local(self):
+        self.assertEqual(resolve_check_amount({"localAmount": "10.1"}, []), "10.10")
+
+    def test_parse_pagination_total(self):
+        self.assertEqual(parse_pagination_total("共 26 条"), 26)
+        self.assertEqual(parse_pagination_total("共 100 条"), 100)
+        self.assertIsNone(parse_pagination_total(""))
+
+
+class GenerateResultTests(unittest.TestCase):
+    def test_dry_run_does_not_commit(self):
+        payload = generate_result(
+            dry_run=True,
+            check_amount="12.50",
+            check_date="2026-08-21",
+            line_count=3,
+        )
+        self.assertFalse(payload["committed"])
+        self.assertTrue(payload["dryRun"])
+        self.assertEqual(payload["blockedAction"], "generate_statement")
+        self.assertTrue(payload["generateButtonFound"])
+
+    def test_live_run_commits(self):
+        payload = generate_result(
+            dry_run=False,
+            check_amount="12.50",
+            check_date="2026-08-21",
+            line_count=3,
+        )
+        self.assertTrue(payload["committed"])
+        self.assertFalse(payload["dryRun"])
+        self.assertNotIn("blockedAction", payload)
+
+
+class LoginReuseTests(unittest.IsolatedAsyncioTestCase):
+    async def test_reuses_an_authenticated_browser_session(self):
+        page = FakePage(
+            {
+                SELECTORS["login_success"]: FakeLocator(visible=True),
+                SELECTORS["captcha_image"]: FakeLocator(visible=False),
+            }
+        )
+        adapter = flow_module.ReceiptListAdapter(
+            SimpleNamespace(
+                credentials={"username": "portal-user", "password": "secret"},
+                events=RecordingEvents(),
+                page=page,
+                portal_url="https://supplier.tiandy.com/",
+                selectors=SELECTORS,
+            )
+        )
+        await adapter.login()
+        self.assertEqual(page.gotos, [])
+        self.assertEqual(page.fills, [])
+
+
+class SelectAllCountTests(unittest.IsolatedAsyncioTestCase):
+    async def test_select_all_when_total_matches_without_paging(self):
+        page = FakePage({}, evaluate_results=["共 26 条", "ok"])
+        await _adapter(page).select_all_and_assert_count(26)
+        self.assertEqual(len(page.evaluates), 2)
+        self.assertEqual(page.clicks, [])
+
+    async def test_rejects_total_mismatch_without_select_all(self):
+        page = FakePage({}, evaluate_results=["共 26 条"])
+        with self.assertRaises(RpaBusinessError) as raised:
+            await _adapter(page).select_all_and_assert_count(8)
+        self.assertEqual(raised.exception.code, "SRM_STMT_GENERATE_COUNT_MISMATCH")
+        self.assertEqual(len(page.evaluates), 1)
+
+    async def test_rejects_select_all_missing(self):
+        page = FakePage({}, evaluate_results=["共 26 条", "checkbox-missing"])
+        with self.assertRaises(RpaBusinessError) as raised:
+            await _adapter(page).select_all_and_assert_count(26)
+        self.assertEqual(raised.exception.code, "SRM_STMT_GENERATE_SELECT_ALL_MISSING")
+
+    async def test_pages_when_total_exceeds_100(self):
+        next_btn = FakeLocator(visible=True, disabled=False)
+        page = FakePage(
+            {SELECTORS["next_page"]: next_btn},
+            evaluate_results=["共 150 条", "ok", "ok"],
+        )
+        await _adapter(page).select_all_and_assert_count(150)
+        self.assertEqual(len(page.evaluates), 3)
+        self.assertTrue(any("btn-next" in item for item in page.clicks))
+        self.assertTrue(next_btn.disabled)
+
+
+class LocateGenerateButtonTests(unittest.IsolatedAsyncioTestCase):
+    async def test_returns_visible_enabled_button_without_clicking(self):
+        page = FakePage(
+            {
+                SELECTORS["generate_button"]: FakeLocator(visible=True, disabled=False),
+            }
+        )
+        button = await _adapter(page).locate_generate_button()
+        self.assertTrue(button.visible)
+        self.assertEqual(page.clicks, [])
+
+
+class OfficialPackageGuardTests(unittest.TestCase):
+    def test_manifest_is_1_1_3(self):
+        manifest = json.loads((FLOW_DIR / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["version"], "1.1.3")
+
+    def test_selectors_have_no_data_rpa(self):
+        raw = (FLOW_DIR / "selectors.json").read_text(encoding="utf-8")
+        self.assertNotIn("data-rpa", raw)
+
+    def test_flow_has_no_data_rpa(self):
+        raw = (FLOW_DIR / "flow.py").read_text(encoding="utf-8")
+        self.assertNotIn("data-rpa", raw)
+
+    def test_clicks_header_checkbox_not_rows(self):
+        raw = (FLOW_DIR / "flow.py").read_text(encoding="utf-8")
+        self.assertIn("#/order/receivingList", raw)
+        self.assertIn("is_dry_run", raw)
+        self.assertIn("install_write_guard", raw)
+        self.assertIn("CLICK_SELECT_ALL_JS", raw)
+        self.assertIn(".el-table__header-wrapper thead th.el-table-column--selection .el-checkbox__inner", raw)
+        self.assertNotIn("CLICK_RECEIPT_CHECKBOX_JS", raw)
+        self.assertNotIn("=== '全选'", raw)
+        self.assertIn(".el-table__header-wrapper", SELECTORS["select_all"])
+        self.assertIn("th.el-table-column--selection", SELECTORS["select_all"])
+        self.assertNotIn("has-text('全选')", SELECTORS["select_all"])
+        self.assertIn("PAGE_SIZE", raw)
+        self.assertIn("page_sizes", SELECTORS)
+        self.assertIn("next_page", SELECTORS)
+        self.assertIn("page_size_100", SELECTORS)
+
+
+if __name__ == "__main__":
+    unittest.main()

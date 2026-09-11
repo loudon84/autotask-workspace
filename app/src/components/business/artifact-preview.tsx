@@ -44,7 +44,7 @@ const typeLabels: Record<ArtifactType, string> = {
 };
 
 export function isDownloadableArtifact(artifact: Artifact) {
-  return artifact.type === "screenshot" || artifact.type === "download";
+  return true;
 }
 
 export function ArtifactDownloadButton({
@@ -207,6 +207,11 @@ export function ArtifactPreview({
             <p className="text-muted-foreground text-xs">
               {typeLabels[artifact.type]} · {artifact.sizeText}
             </p>
+            {artifact.type === "trace" ? (
+              <p className="text-muted-foreground text-xs">
+                含页面敏感数据，下载后用 Playwright Trace Viewer 打开
+              </p>
+            ) : null}
           </div>
         </div>
         {allowDownload && isDownloadableArtifact(artifact) ? (

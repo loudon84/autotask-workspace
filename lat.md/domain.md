@@ -94,6 +94,12 @@ Generating a 天地伟业 statement compares SDMS `check_amount` to the selected
 
 A mismatch is a confirmable warning, not a hard stop. Client shows both amounts; after the user confirms, Task continues and records `amount_mismatch_confirmed` on the process summary. Missing SDMS bills still block. See [[service/app/services/statement_service.py#generate_statement]].
 
+### Statement Generate Select All
+
+Official generate 1.1.3 sets the receipt list to 100 rows per page, then clicks the header checkbox.
+
+It checks 「共 N 条」against Client line count only. Totals at or below 100 stay on one page; totals above 100 click next and header-select each page. It does not tick rows or read 「已选择」. `dryRun` still locates 生成对账单 without clicking. See [[rpa-flows/rpa_flow_srm_stmt_generate/1.1.3/flow.py#ReceiptListAdapter#select_all_and_assert_count]].
+
 ## BoeInvoicePacking
 
 A BOE packing list is one process instance: match delivery plan, read WMS
