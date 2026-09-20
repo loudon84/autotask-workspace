@@ -2,8 +2,8 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 版本 | v1（2026-09-04） |
-| 状态 | **客户端与发版脚本已落地（2026-09-04）；服务器侧 `/autotask/` 目录待配，端到端未验证。** |
+| 版本 | v1.1（2026-09-11） |
+| 状态 | **抄 SMC `work`。我们是并列第二份 `autotask`。** 0.1.2 zip 已打好，交给同事按 `work` 同样方式放。 |
 | 参考实现 | `D:\work_space260811\smc-copilot` 的 `apps/work`（SMC-Copilot 桌面端，已在生产使用同一套机制） |
 | 原则 | 用户打开 AutoTask，有新版就弹窗提示，点了才下载、下完点了才安装。不再每次发安装包让人手动装。 |
 
@@ -15,7 +15,7 @@
 
 现在每次发版：打包 → 把安装包发给用户 → 用户手动安装。门户、调度中心这类页面改动也要走这一趟，慢且容易有人不更新。
 
-目标：客户端自己检查更新、自己下载、用户确认后安装。发版变成「跑一次发布脚本」。
+目标：客户端自己检查更新。发版抄 SMC：他是 1（`work`），我们是 2（`autotask`），目录和验证一样，只换名字。
 
 ---
 
@@ -36,9 +36,27 @@
 
 客户端看到的地址：`https://release.superic.com/autotask/stable/latest.yml`。
 
-发布 = SCP 上传到 staging → 服务器上跑 promote 脚本 → 原子切换 `stable` 软链。回滚 = 软链指回旧版本目录（不影响已经更新完的客户端）。
+发布不走 nginx 上传。他项目已经是 1：
 
-nginx 按整个根目录服务，加 `autotask/` 目录**不需要改 nginx 配置**。
+```text
+/data/smc-release/work/releases/<版本>/
+/data/smc-release/work/stable → 当前版
+https://release.superic.com/work/stable/latest.yml
+```
+
+我们加入就是 2，结构照抄，只换目录名和安装包文件名：
+
+```text
+/data/smc-release/autotask/releases/<版本>/
+/data/smc-release/autotask/stable → 当前版
+https://release.superic.com/autotask/stable/latest.yml
+```
+
+nginx 不用改。验证也抄他的：能打开 `.../autotask/stable/latest.yml`，且 `version` / `path` 对得上，和现在打开 `.../work/stable/latest.yml` 一样就算成。
+
+每次发版：我们打好版本目录（或 zip）交给同事；他按放 `work` 的方式放 `autotask`。
+
+安装包文件名他那边写死 `smc-copilot-<版本>-setup.exe`，我们这边对应是 `AutoTask-Studio-<版本>-setup.exe`。不要解压 exe。
 
 ---
 
@@ -71,34 +89,17 @@ nginx 按整个根目录服务，加 `autotask/` 目录**不需要改 nginx 配�
 
 ## 5. 发版流程（以后每次发版）
 
-SSH 不通，走**手动搬运**：
+和 SMC 发 `work` 一样，只是产物在 `autotask`。
 
-1. 改 `app/package.json` 版本号（如 0.1.1 → 0.1.2）。
-2. `npm run release:build`：打出 NSIS 安装包 + `latest.yml` + `.blockmap`，校验后暂存到 `app\release\autotask\<版本>\`。
-3. 把整个版本文件夹**手动拷到服务器**（远程桌面 / 共享盘 / U 盘均可）：
-   放到 `/data/smc-release/autotask/staging/<版本>-manual/`。
-4. 服务器上执行一条命令（移入 releases、校验 sha256、原子切 stable 软链）：
+1. 改 `app/package.json` 版本号。
+2. `npm run release:build`。
+3. 把 `app/release/autotask/<版本>/`（或打好的 zip）交给同事，按 `work` 同样方式放到 `autotask/`。
 
-   ```bash
-   bash /data/smc-release/autotask/promote-autotask-release.sh <版本> <版本>-manual
-   ```
+目录里是：`AutoTask-Studio-<版本>-setup.exe`、同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`。
 
-5. 验证：`https://release.superic.com/autotask/stable/latest.yml` 里的版本号正确。
-6. 完。客户端下一轮检查（最迟 6 小时，重启则 15 秒）就会看到新版。
+## 6. 服务器侧
 
-（若以后开通了 SSH 免密，`npm run release:publish` 可自动完成 3-5 步。）
-
----
-
-## 6. 服务器侧一次性配置
-
-需要有 release.superic.com SSH 权限的人执行一次：
-
-1. 建目录 `/data/smc-release/autotask/{staging,releases}`。
-2. 放两个脚本：`promote-autotask-release.sh`、`rollback-autotask-stable.sh`（照抄 smc 的改 `work` → `autotask`）。
-3. 验证：`https://release.superic.com/autotask/` 路径可 GET（放一个测试文件）。
-
-nginx 不用动。
+第一次在 `/data/smc-release/` 下建 `autotask/`，结构抄 `work/`（`staging/`、`releases/`、`stable` 软链）。以后每个新版本往 `releases/<版本>/` 放一份，再把 `stable` 指过去。nginx 不用改。
 
 ---
 
@@ -118,18 +119,16 @@ SMC-Copilot 的安装包有 Authenticode 签名。AutoTask 目前没签名——
 
 ## 9. 开放问题
 
-| 问题 | 选项 |
+| 问题 | 结论 |
 | --- | --- |
-| 服务器侧谁配 | 有 SSH 权限的人直接配 / 找运维加目录 / 先写脚本之后执行 |
+| 服务器谁操作 | **已定**：每次新版本把最新包交给同事。我们不登 release、不指定他用哪条脚本。 |
 | 灰度 | 一期不做（全量 stable）；以后要灰度可加 beta 通道 |
-| 签名 | 一期跳过 / 一期就做 |
+| 签名 | 一期跳过 |
 
 ---
 
 ## 10. 实施步骤
 
-1. 服务器侧：建 `autotask/` 目录 + promote/rollback 脚本（§6，一次性）。
-2. 客户端：装 electron-updater、改 maker publish 配置、安装包名带版本、updater 主进程模块、更新弹窗 UI（§4）。
-3. 发布脚本：build/validate/publish 三个脚本（§5）。
-4. 自测：本机装 0.1.2 → 发一个 0.1.3 到自己的 stable → 验证弹窗、下载、安装全流程。
-5. 随下一版天地伟业发布一起出包，用户最后一次手动装，之后都在线更新。
+1. ~~客户端接入 electron-updater、弹窗、带版本号安装包、`release:build`。~~ 已完成。
+2. 下次发 Client：bump 版本，`npm run release:build`，把 `app/release/autotask/<版本>/` 交给同事。
+3. 已装旧包的用户手动装这一次；之后打开客户端即可在线更新。
