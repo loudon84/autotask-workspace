@@ -8,6 +8,7 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 
 const config: ForgeConfig = {
+  outDir: "out-pkg",
   packagerConfig: {
     asar: true,
     executableName: "AutoTaskStudio",

@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { MakerBase, type MakerOptions } from "@electron-forge/maker-base";
 import type { ForgePlatform } from "@electron-forge/shared-types";
@@ -18,6 +19,17 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
     const outDir = path.resolve(makeDir, "nsis", targetArch);
     await this.ensureDirectory(outDir);
 
+    const updateUrl =
+      process.env.AUTOTASK_UPDATE_URL ??
+      "https://release.superic.com/autotask/stable/";
+    const resourcesDir = path.join(dir, "resources");
+    await mkdir(resourcesDir, { recursive: true });
+    await writeFile(
+      path.join(resourcesDir, "app-update.yml"),
+      `provider: generic\nurl: ${updateUrl}\nupdaterCacheDirName: AutoTask-updater\n`,
+      "utf8"
+    );
+
     return buildForge(
       { dir },
       {
@@ -25,6 +37,7 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
         config: {
           appId: "com.smc.autotask",
           productName: "AutoTask",
+          executableName: "AutoTaskStudio",
           // 在线更新：generic 静态源。地址打包时烧进 app-update.yml 并生成 latest.yml。
           // 可用 AUTOTASK_UPDATE_URL 覆盖（例如指向测试目录）。
           publish: {
@@ -41,7 +54,8 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
           nsis: {
             oneClick: false,
             perMachine: true,
-            allowToChangeInstallationDirectory: true,
+            // 为 true 时，electron-builder 会在路径里再拼一层 APP_FILENAME（AutoTaskStudio）。
+            allowToChangeInstallationDirectory: false,
             include: path.resolve(
               import.meta.dirname,
               "../installer/install-dir.nsh"

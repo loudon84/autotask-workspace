@@ -19,7 +19,9 @@ import { AppUpdateProvider } from "@/features/app-update/app-update-provider";
 function setState(state: AppUpdateState) {
   mockUseAppUpdate.mockReturnValue({
     state,
+    check: vi.fn(),
     download: mockDownload,
+    downloadAndInstall: mockDownload,
     install: mockInstall,
   });
 }
@@ -42,12 +44,13 @@ describe("在线更新弹窗", () => {
     expect(screen.queryByText(/已就绪/)).not.toBeInTheDocument();
   });
 
-  it("有新版时弹窗，点下载触发 download", async () => {
+  it("有新版时弹窗，点立即更新触发 downloadAndInstall", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     setState({ status: "available", version: "0.1.2" });
     render(<AppUpdateProvider />);
     await screen.findByText("发现新版本 0.1.2");
-    await user.click(screen.getByRole("button", { name: "下载更新" }));
+    expect(screen.getByText("是否立即更新？")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "立即更新" }));
     expect(mockDownload).toHaveBeenCalledTimes(1);
   });
 
@@ -68,6 +71,7 @@ describe("在线更新弹窗", () => {
     render(<AppUpdateProvider />);
     await screen.findByText("正在下载 0.1.2");
     expect(screen.getByText("42%")).toBeInTheDocument();
+    expect(screen.getByText("请稍候。")).toBeInTheDocument();
   });
 
   it("下载完成弹安装窗，点现在安装触发 install", async () => {
@@ -77,5 +81,12 @@ describe("在线更新弹窗", () => {
     await screen.findByText("新版本 0.1.2 已就绪");
     await user.click(screen.getByRole("button", { name: "现在安装" }));
     expect(mockInstall).toHaveBeenCalledTimes(1);
+  });
+
+  it("失败时弹出错误说明", async () => {
+    setState({ status: "error", message: "quitAndInstall failed" });
+    render(<AppUpdateProvider />);
+    await screen.findByText("更新失败");
+    expect(screen.getByText("quitAndInstall failed")).toBeInTheDocument();
   });
 });

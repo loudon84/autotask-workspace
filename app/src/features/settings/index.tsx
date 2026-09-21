@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AboutPane } from "@/features/settings/about-pane";
 import {
   useSettings,
   useUpdateSettings,
@@ -26,7 +27,7 @@ import type { AppSettings } from "@/types/settings";
 import type { ThemeMode } from "@/types/theme-mode";
 
 export function SettingsPage() {
-  const [tab, setTab] = useState("basic");
+  const [tab, setTab] = useState("about");
 
   const {
     data: settings,
@@ -37,45 +38,6 @@ export function SettingsPage() {
     refetch,
   } = useSettings();
   const updateMutation = useUpdateSettings();
-
-  if (isLoading) {
-    return <MockLoading />;
-  }
-
-  if (isError || !settings) {
-    return (
-      <div className="space-y-4">
-        <PageHeader
-          description="本地 Task 尚未提供系统设置接口"
-          title="系统设置"
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">系统设置暂不可用</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-muted-foreground text-sm">
-              当前服务没有提供 GET
-              /api/v1/autotask/settings，无法读取或保存服务器设置。 请等待 Task
-              接口接入后重新检查。
-            </p>
-            {error instanceof Error && (
-              <p className="text-destructive text-xs">{error.message}</p>
-            )}
-            <Button
-              disabled={isFetching}
-              onClick={() => {
-                refetch();
-              }}
-              variant="outline"
-            >
-              {isFetching ? "检查中..." : "重新检查"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const update = (patch: Partial<AppSettings>) => {
     updateMutation.mutate(patch, {
@@ -102,7 +64,8 @@ export function SettingsPage() {
       <PageHeader description="本地原型配置" title="系统设置" />
 
       <Tabs onValueChange={setTab} value={tab}>
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="about">关于</TabsTrigger>
           <TabsTrigger value="basic">基础设置</TabsTrigger>
           <TabsTrigger value="web-workspace">Web 工作区</TabsTrigger>
           <TabsTrigger value="worker">Worker 设置</TabsTrigger>
@@ -111,6 +74,43 @@ export function SettingsPage() {
           <TabsTrigger value="mock">Mock 数据设置</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="about">
+          <AboutPane />
+        </TabsContent>
+
+        {isLoading ? (
+          <TabsContent value="basic">
+            <MockLoading />
+          </TabsContent>
+        ) : isError || !settings ? (
+          <TabsContent value="basic">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">系统设置暂不可用</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-muted-foreground text-sm">
+                  当前服务没有提供 GET
+                  /api/v1/autotask/settings，无法读取或保存服务器设置。 请等待 Task
+                  接口接入后重新检查。
+                </p>
+                {error instanceof Error && (
+                  <p className="text-destructive text-xs">{error.message}</p>
+                )}
+                <Button
+                  disabled={isFetching}
+                  onClick={() => {
+                    refetch();
+                  }}
+                  variant="outline"
+                >
+                  {isFetching ? "检查中..." : "重新检查"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : (
+          <>
         <TabsContent value="basic">
           <SettingsCard title="基础设置">
             <Field label="日志级别">
@@ -256,6 +256,8 @@ export function SettingsPage() {
             </p>
           </SettingsCard>
         </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );

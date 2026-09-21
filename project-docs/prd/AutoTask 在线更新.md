@@ -2,134 +2,112 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 版本 | v1（2026-09-04） |
-| 状态 | **客户端与发版脚本已落地（2026-09-04）；服务器侧 `/autotask/` 目录待配，端到端未验证。** |
-| 参考实现 | `D:\work_space260811\smc-copilot` 的 `apps/work`（SMC-Copilot 桌面端，已在生产使用同一套机制） |
-| 原则 | 用户打开 AutoTask，有新版就弹窗提示，点了才下载、下完点了才安装。不再每次发安装包让人手动装。 |
+| 版本 | v1.2（2026-09-21） |
+| 状态 | **已落地。** 与 SMC-Copilot 并列第二份目录 `autotask`。Feed：`https://release.superic.com/autotask/stable/` |
+| 参考实现 | `smc-copilot` 的 `apps/work`（同一台 `release.superic.com`，目录是 `work`） |
+| 原则 | 打开 AutoTask 有新版就弹窗；用户点了才下载、装。开发模式不检查。 |
 
-本文不记录密码。
+本文不记录密码。实现锚点见 `lat.md/client.md` 的 Online Updates。
 
 ---
 
 ## 1. 解决什么
 
-现在每次发版：打包 → 把安装包发给用户 → 用户手动安装。门户、调度中心这类页面改动也要走这一趟，慢且容易有人不更新。
+发版不再靠每次把安装包发给用户手动装。客户端自己查 `latest.yml`，用户确认后下载并安装。
 
-目标：客户端自己检查更新、自己下载、用户确认后安装。发版变成「跑一次发布脚本」。
+发版结构抄 SMC：他是 1（`work`），我们是 2（`autotask`），目录和验证一样，只换名字和安装包文件名。
 
 ---
 
-## 2. release.superic.com 是什么
+## 2. release.superic.com
 
-一台已经在跑的静态文件服务器（nginx，只读，只支持 GET/HEAD，无鉴权、无上传 API）。SMC-Copilot 的在线更新已经在用它。
-
-按产品分目录：
+静态 HTTPS（nginx，只读 GET/HEAD，无鉴权、无上传 API）。SMC-Copilot 用 `/work/stable/`，AutoTask 用 `/autotask/stable/`。
 
 ```text
 /data/smc-release/
-├── work/                      ← SMC-Copilot 在用
-│   ├── staging/<版本-时间戳>/   ← 上传暂存
-│   ├── releases/<版本>/        ← 正式版本目录，写入后不可变
-│   └── stable -> releases/<版本>  ← 软链，客户端喂这个路径
-└── autotask/                  ← 我们要加的，结构同上
+├── work/                      ← SMC-Copilot
+│   ├── staging/
+│   ├── releases/<版本>/
+│   └── stable -> releases/<版本>
+└── autotask/                  ← AutoTask，结构相同
+    ├── staging/
+    ├── releases/<版本>/
+    └── stable -> releases/<版本>
 ```
 
-客户端看到的地址：`https://release.superic.com/autotask/stable/latest.yml`。
+客户端地址：`https://release.superic.com/autotask/stable/latest.yml`。
 
-发布 = SCP 上传到 staging → 服务器上跑 promote 脚本 → 原子切换 `stable` 软链。回滚 = 软链指回旧版本目录（不影响已经更新完的客户端）。
+安装包文件名：`AutoTask-Studio-<版本>-setup.exe`（不要解压 exe）。另有同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`。
 
-nginx 按整个根目录服务，加 `autotask/` 目录**不需要改 nginx 配置**。
-
----
-
-## 3. 总体方案
-
-- 客户端用 **electron-updater**（generic provider），喂 `https://release.superic.com/autotask/stable/`。
-- 更新地址在**打包时烧进安装包**（`app-update.yml`），运行时不改。
-- 交互与 SMC-Copilot 一致：**用户确认式**。启动后自动检查 → 有新版弹窗（可稍后）→ 用户点下载 → 进度条 → 下完提示「现在安装 / 稍后」。不静默下载、不退出时强装。
-- 只有 Windows 打包版（NSIS，非绿色版）启用更新；开发模式不检查。
+验证：能打开 `latest.yml`，且 `version` / `path` / `sha512` 与 exe 一致。
 
 ---
 
-## 4. 客户端要改什么（`app/`）
+## 3. 总体方案（与实现一致）
 
-| 项 | 现状 | 改成 |
-| --- | --- | --- |
-| 更新库 | 没有 electron-updater；`update-electron-app` 是指向模板仓库的死代码（从没被调用） | 装 `electron-updater`，删掉死代码 |
-| 打包 publish 配置 | 自定义 NSIS maker（`forge/maker-nsis-install-dir.ts`）里 `publish: null`，不生成 `latest.yml` | `publish: { provider: "generic", url: "https://release.superic.com/autotask/stable/", channel: "latest" }` |
-| 安装包文件名 | 固定 `AutoTask-Studio.exe`，不带版本号 | 带版本号，如 `AutoTask-Studio-0.1.2-setup.exe`（否则缓存和回滚会乱） |
-| 主进程更新逻辑 | 无 | 新增 updater 模块：启动 15 秒后首次检查，之后每 6 小时一次；检查/下载/安装三个动作经 IPC 暴露给界面 |
-| 更新 UI | 无 | 三个弹窗：有新版（下载/稍后）、下载进度、可安装（现在装/稍后）；参考 smc `apps/work/src/renderer/src/update/` |
-
-参考代码（smc 侧，照抄改路径）：
-
-- 主进程：`smc-copilot/apps/work/src/main/app/updater.ts`
-- 弹窗：`smc-copilot/apps/work/src/renderer/src/update/`（AppUpdateProvider + 三个 Dialog）
-- 打包配置：`smc-copilot/apps/work/electron-builder.yml` 的 `publish` 段
+- **electron-updater** generic provider，地址 `https://release.superic.com/autotask/stable/`。打包写入 `resources/app-update.yml`，运行时再 `setFeedURL`。可用 `AUTOTASK_UPDATE_URL` 覆盖，但必须仍是 `https://release.superic.com/autotask/` 下的路径。
+- 仅 **Windows NSIS 安装版** 检查更新。`npm start` 开发模式不检查。
+- 启动约 15 秒首查，之后每 6 小时。`autoDownload=false`，不退出时强装。
+- 有新版弹窗：**发现新版本 x / 是否立即更新？** 「稍后」或「立即更新」（立即更新 = 下载完再装）。
+- 下载中：**正在下载 / 请稍候。** 带百分比，可后台下载。
+- 下完：**已就绪 / 安装时将关闭 AutoTask。** 「现在安装」或「稍后」。
+- 系统设置默认打开 **关于**：当前版本、「检查更新」；用户菜单也有「关于与更新」。
+- 安装程序参数：`--updated --force-run`，**不用 `/S`**（要显示安装进度）。`--updated` 跳过选目录和“正在运行”页。
+- 日志：`<userData>/logs/updater.log`。
 
 ---
 
-## 5. 发版流程（以后每次发版）
+## 4. 安装目录与安装包落点
 
-SSH 不通，走**手动搬运**：
-
-1. 改 `app/package.json` 版本号（如 0.1.1 → 0.1.2）。
-2. `npm run release:build`：打出 NSIS 安装包 + `latest.yml` + `.blockmap`，校验后暂存到 `app\release\autotask\<版本>\`。
-3. 把整个版本文件夹**手动拷到服务器**（远程桌面 / 共享盘 / U 盘均可）：
-   放到 `/data/smc-release/autotask/staging/<版本>-manual/`。
-4. 服务器上执行一条命令（移入 releases、校验 sha256、原子切 stable 软链）：
-
-   ```bash
-   bash /data/smc-release/autotask/promote-autotask-release.sh <版本> <版本>-manual
-   ```
-
-5. 验证：`https://release.superic.com/autotask/stable/latest.yml` 里的版本号正确。
-6. 完。客户端下一轮检查（最迟 6 小时，重启则 15 秒）就会看到新版。
-
-（若以后开通了 SSH 免密，`npm run release:publish` 可自动完成 3-5 步。）
-
----
-
-## 6. 服务器侧一次性配置
-
-需要有 release.superic.com SSH 权限的人执行一次：
-
-1. 建目录 `/data/smc-release/autotask/{staging,releases}`。
-2. 放两个脚本：`promote-autotask-release.sh`、`rollback-autotask-stable.sh`（照抄 smc 的改 `work` → `autotask`）。
-3. 验证：`https://release.superic.com/autotask/` 路径可 GET（放一个测试文件）。
-
-nginx 不用动。
-
----
-
-## 7. 版本与通道
-
-- 版本号：`app/package.json` 的 semver，手动 bump。
-- 通道：只有 **stable** 一个。electron-updater 的 channel 固定 `latest`（读 `latest.yml`）。
-- 版本目录不可变：发出去的 `releases/<版本>` 永不覆盖，出问题用回滚脚本切软链。
-
----
-
-## 8. 签名（可选，不阻塞）
-
-SMC-Copilot 的安装包有 Authenticode 签名。AutoTask 目前没签名——electron-updater 不要求签名也能更新，但用户安装/更新时 Windows SmartScreen 可能拦。建议后续补签名，一期不做。
-
----
-
-## 9. 开放问题
-
-| 问题 | 选项 |
+| 路径 | 用途 |
 | --- | --- |
-| 服务器侧谁配 | 有 SSH 权限的人直接配 / 找运维加目录 / 先写脚本之后执行 |
-| 灰度 | 一期不做（全量 stable）；以后要灰度可加 beta 通道 |
-| 签名 | 一期跳过 / 一期就做 |
+| `D:\Programs\SMC\AutoTask` | `$INSTDIR`。程序文件。快捷方式指向 `AutoTaskStudio.exe`。**禁止**把正在运行的 setup 放在这里面：NSIS 重装会清掉整个目录。 |
+| `D:\Programs\SMC\updates\AutoTask` | AutoTask 在线更新安装包。其它桌面端用 `updates\<产品>`，互不影响。 |
+| `D:\Programs\SMC\` 根目录 | 杀毒若拦子目录时的兜底。只处理 `AutoTask-Studio-*-setup.exe`，不动 SMC-DESP 等其它文件。 |
+
+不要从 `%LocalAppData%\AutoTask-updater` 直接启动安装包。不要用 `elevate.exe` 拉起。
+
+从 AutoTask 进程里启动的 setup 与客户端同属一个 Windows 作业对象。NSIS `customInit` 先经 **explorer** 再启动一份（`/autotask-detached`），关掉 AutoTask 不会把安装程序一起杀掉。只有 setup **已经拉起成功** 才 `app.quit()`；拷贝或启动失败则保持当前版本可用。
+
+装完后只删除其它 `AutoTask-Studio-*-setup.exe`，留下刚启动的那一份。
 
 ---
 
-## 10. 实施步骤
+## 5. 打包与安装程序
 
-1. 服务器侧：建 `autotask/` 目录 + promote/rollback 脚本（§6，一次性）。
-2. 客户端：装 electron-updater、改 maker publish 配置、安装包名带版本、updater 主进程模块、更新弹窗 UI（§4）。
-3. 发布脚本：build/validate/publish 三个脚本（§5）。
-4. 自测：本机装 0.1.2 → 发一个 0.1.3 到自己的 stable → 验证弹窗、下载、安装全流程。
-5. 随下一版天地伟业发布一起出包，用户最后一次手动装，之后都在线更新。
+- 产物：`AutoTask-Studio-<version>-setup.exe`。
+- NSIS：`productName` AutoTask，`executableName` AutoTaskStudio，`perMachine`，不允许改安装目录（避免再拼一层 `AutoTaskStudio` 文件夹）。
+- `npm run release:build`：读取当时已保存的 `package.json` 版本，make，校验 `latest.yml` 的 version/sha512，拷到 `app/release/autotask/<版本>/`。
+- 把该目录放到 `/data/smc-release/autotask/`，操作方式与 `work` 相同，再把 `stable` 指到该版本。
+- `npm run release:publish` 需要本机 ssh/scp 能连发布服务器；不能直连时只跑 `release:build`。
+
+---
+
+## 6. 版本与通道
+
+- 版本号：`app/package.json` 的 semver，手动 bump 并保存后再打包。
+- 通道：只有 **stable**。electron-updater channel 为 `latest`（读 `latest.yml`）。
+- 客户端只在 feed 上的版本 **高于** 本机版本时弹「发现新版本」。本机已是最新则不弹，设置里检查会显示「已是最新版本」。
+- `releases/<版本>` 发出后不要覆盖；回滚切 `stable` 软链。
+
+---
+
+## 7. 签名
+
+electron-builder 打包时会调用 signtool。是否被 SmartScreen / 企业策略信任以现场为准。不另做一套发版签名流程。
+
+---
+
+## 8. 与代码的对应
+
+| 能力 | 位置 |
+| --- | --- |
+| 状态机、检查/下载/安装 | `app/src/main/app-updater.ts` |
+| 安装包落点、禁止 `$INSTDIR` | `app/src/main/pending-nsis-setup.ts` |
+| NSIS 参数与 explorer 再启动 | `app/src/main/delayed-setup-launch.ts`、`app/installer/install-dir.nsh` |
+| 弹窗 | `app/src/features/app-update/` |
+| 关于与检查更新 | `app/src/features/settings/about-pane.tsx` |
+| 打包 feed | `app/forge/maker-nsis-install-dir.ts` |
+| 发版脚本 | `app/scripts/build-release.ps1` |
+
+架构说明：`lat.md/client.md` Online Updates。

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -21,45 +20,47 @@ import { Progress } from "@/components/ui/progress";
 import { useAppUpdate } from "./use-app-update";
 
 /**
- * 在线更新弹窗：有新版 → 用户点下载 → 进度 → 下完点安装。
- * 「稍后」只关掉本次弹窗，下次状态变化（如下载完成）还会再弹。
+ * 在线更新弹窗：有新版 → 点立即更新则下载并安装；也可稍后，下完再点现在安装。
  */
 export function AppUpdateProvider() {
-  const { state, download, install } = useAppUpdate();
+  const { state, downloadAndInstall, install } = useAppUpdate();
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
   const [hideProgress, setHideProgress] = useState(false);
 
-  // 新版本出现时重置「稍后」记忆
   useEffect(() => {
-    if (state.status === "available" && state.version !== dismissedVersion) {
+    if (state.status === "downloading" || state.status === "downloaded") {
       setDismissedVersion(null);
+      if (state.status === "downloading") {
+        setHideProgress(false);
+      }
     }
-  }, [state.status, state.version, dismissedVersion]);
+  }, [state.status]);
 
   const dismissed = state.version != null && state.version === dismissedVersion;
 
   return (
     <>
-      <AlertDialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDismissedVersion(state.version ?? null);
-          }
-        }}
-        open={state.status === "available" && !dismissed}
-      >
+      <AlertDialog open={state.status === "available" && !dismissed}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>发现新版本 {state.version}</AlertDialogTitle>
-            <AlertDialogDescription>
-              下载后随时可以安装，不影响现在使用。
-            </AlertDialogDescription>
+            <AlertDialogDescription>是否立即更新？</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>稍后</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void download()}>
-              下载更新
-            </AlertDialogAction>
+            <Button
+              variant="outline"
+              onClick={() => setDismissedVersion(state.version ?? null)}
+            >
+              稍后
+            </Button>
+            <Button
+              onClick={(event) => {
+                event.preventDefault();
+                void downloadAndInstall();
+              }}
+            >
+              立即更新
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -75,7 +76,7 @@ export function AppUpdateProvider() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>正在下载 {state.version}</DialogTitle>
-            <DialogDescription>下载完成后会提示安装。</DialogDescription>
+            <DialogDescription>请稍候。</DialogDescription>
           </DialogHeader>
           <Progress value={state.percent ?? 0} />
           <p className="text-muted-foreground text-right text-sm">
@@ -89,24 +90,41 @@ export function AppUpdateProvider() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDismissedVersion(state.version ?? null);
-          }
-        }}
-        open={state.status === "downloaded" && !dismissed}
-      >
+      <AlertDialog open={state.status === "downloaded" && !dismissed}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>新版本 {state.version} 已就绪</AlertDialogTitle>
+            <AlertDialogDescription>安装时将关闭 AutoTask。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDismissedVersion(state.version ?? null)}
+            >
+              稍后
+            </Button>
+            <Button
+              onClick={(event) => {
+                event.preventDefault();
+                void install();
+              }}
+            >
+              现在安装
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={state.status === "error"}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>更新失败</AlertDialogTitle>
             <AlertDialogDescription>
-              安装会自动重启 AutoTask，未保存的工作请先处理。
+              {state.message ?? "检查或安装更新时出错。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>稍后</AlertDialogCancel>
-            <AlertDialogAction onClick={install}>现在安装</AlertDialogAction>
+            <AlertDialogAction>确定</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

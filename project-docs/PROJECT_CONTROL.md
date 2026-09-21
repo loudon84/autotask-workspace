@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-11
+最后更新：2026-09-21
 
 ## 1. 用途
 
@@ -20,7 +20,7 @@
 | RPA Engine | `rpa-engine/` | 测试基线可运行 |
 | RPA Flow | `rpa-flows/` | 允许扫描的代码根 |
 | RPA authoring | `rpa-authoring/` | 登录演示已完成 |
-| Auth | `http://192.168.102.247:4510` | 测试服务器可达；**不在**本工作区代码扫描根内 |
+| Auth | `http://192.168.102.247:4510` | 测试服务器；**当前 4510 端口未监听**（桌面登录会失败）。不在本工作区代码扫描根内 |
 
 天地伟业线：`develop/v2.0` / `master`。京东方线：`develop/v3.0`。两边共用这份活页；合分支时只同步仍有效的状态，不要把 [`PROJECT_CONTROL_HISTORY.md`](./PROJECT_CONTROL_HISTORY.md) 全文并回来。
 
@@ -36,6 +36,7 @@
 8. **正式门户演练与上线共用同一份 Flow。** 样例单号、`treatAsPending`、`dryRun` 进 Binding。天地伟业 SOP：`project-docs/prd/tiandy/` 下 v4.1 / 正式上线清单。
 9. 换人/换门户不改 Task `.env` 和 Flow 源码：密码在门户；ERP/SDMS 基址在 Task 配置。
 10. 调度中心用独立 `timers` / `timer_runs`，进程只留 `TimerScheduler`（2026-09-09 清场）。天地伟业入口默认**停用**；打开即对着已绑门户跑，正式站会写真实 SRM。
+11. **Client 在线更新抄 SMC `work`，只加第二份目录 `autotask`。** Feed：`https://release.superic.com/autotask/stable/`。安装包落在 `D:\Programs\SMC\updates\AutoTask`（不在 `$INSTDIR`）。产物放到 `/data/smc-release/autotask/`，结构同 `work`。规格：`project-docs/prd/AutoTask 在线更新.md`。
 
 ## 4. 环境对照
 
@@ -58,10 +59,10 @@
 | 正式 Task 进程 | **需用 `.env.product` 重启 247 的 4520**。迁库前已在跑的进程不会补 catalog；调度中心可能仍是空表。 |
 | 天地伟业定时器 | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）默认停用。测库已登记。未授权不要在正式打开。 |
 | 对账单生成 | **1.1.3** 已发正式 Engine 并绑「天地伟业-芯云」（无 dryRun）。测库「天地伟业-芯云-正式演练」已绑本机 4610 的 **1.1.3**（`dryRun=true`）。同 ZIP、不同 `versionId`。本机 Engine 现为发包装包模式（Worker 关，因 4520 未起）；要本地真跑需先起本机 Task，再开 Worker 重启 Engine。 |
-| 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。需新安装包；在线更新服务器目录尚未配好。 |
+| 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 京东方发票箱单 | 一期已落地；09-10 体验：流水号可进详情、失败才显示重试、子任务抽屉、净重默认千克、WMS 地区未维护则停本阶段、删草稿 1.0.1。排重索引仅测库。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。**需重启测库 4520**。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
-| 在线更新 | Client 已接 electron-updater；发版脚本已有。服务器 `/data/smc-release/autotask/` 与端到端验证未做。 |
+| 在线更新 | **已通。** Feed `autotask/stable`。安装包目录 `D:\Programs\SMC\updates\AutoTask`。系统设置「关于」可看版本、检查更新。源码以 `app/package.json` 为准。规格已与实现对齐：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题
@@ -75,7 +76,7 @@
 7. 演示验证码 OCR 达不到无人值守，必须留 `WAITING_HUMAN`。
 8. ERP 订单没有稳定幂等键；Worker 在提交后崩溃时结果不确定。
 9. 填交期/签章正式包未绑；正式链路这两步仍缺。
-10. 在线更新：本机到 `release.superic.com:443` 不通（内网 `192.168.102.104`）；服务器目录与 SSH 权限未配。
+10. 桌面登录：247 **4510 Auth 未监听**；4520 Task、4610 Engine 正常。登录只打 Auth `/account-login`，需把 Auth 服务拉起来。
 
 ## 7. 后续行动
 
@@ -84,9 +85,9 @@
 3. 未明确要跑定时扫单/回签前，不要打开正式定时器。
 4. 需要填交期/签章时再发正式包并切 Binding。
 5. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
-6. 在线更新：配服务器目录与 promote，再做一次安装包升级验证。
-7. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
-8. 京东方测库 4520 重启后验收箱单一期体验改动。
+5. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
+6. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
+7. 京东方测库 4520 重启后验收箱单一期体验改动。
 
 ## 8. 记录维护规则
 

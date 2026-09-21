@@ -33,10 +33,15 @@ export function useAppUpdate() {
     };
   }, []);
 
+  const check = useCallback(() => ipc.client.appUpdate.check(), []);
   const download = useCallback(() => ipc.client.appUpdate.download(), []);
+  const downloadAndInstall = useCallback(
+    () => ipc.client.appUpdate.downloadAndInstall(),
+    []
+  );
   const install = useCallback(() => {
     void ipc.client.appUpdate.install();
   }, []);
 
-  return { state, download, install };
+  return { state, check, download, downloadAndInstall, install };
 }

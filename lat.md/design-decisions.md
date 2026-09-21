@@ -227,6 +227,14 @@ the account is already verified today — succeed and do not read mail. Accounts
 run serially so two Get-Code clicks do not overlap. See
 [[service/app/domain/boe_srm_otp.py#pick_fresh_otp]].
 
+## Windows Online Update Feed
+
+AutoTask is the second product on `release.superic.com` beside SMC-Copilot `work`.
+
+The feed is `https://release.superic.com/autotask/stable/`. The running setup.exe
+must stay outside `$INSTDIR` (`D:\Programs\SMC\updates\AutoTask`). See
+[[client#Online Updates]].
+
 ## Database Hold Point
 
 DDL and designs may be prepared; executing create/migrate/seed requires explicit
