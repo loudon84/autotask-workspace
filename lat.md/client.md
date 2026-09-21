@@ -26,18 +26,55 @@ HumanAction work.
 Packaged Windows builds self-update from `https://release.superic.com/autotask/stable/`
 via electron-updater (generic provider, no auth).
 
-- Main-side state machine: [[app/src/main/app-updater.ts#AppUpdater]] — check
-  15s after boot then every 6h; `autoDownload=false`, user confirms download
-  and install. Dev / unpackaged / non-Windows never check.
-- The feed URL is baked at build time by the NSIS maker's `publish` config
-  ([[app/forge/maker-nsis-install-dir.ts#MakerNsisInstallDir]]); override with
-  `AUTOTASK_UPDATE_URL`. Installer artifact name carries the version.
-- Renderer dialogs live in `src/features/app-update/` (available → downloading
-  → downloaded); state pushes over `APP_UPDATE_STATE_CHANGED` via preload.
-- Release flow copies SMC `work`: bump version, `npm run release:build`, hand
-  the version folder to the operator, who places it under
-  `/data/smc-release/autotask/` the same way as `work`. Feed is
-  `https://release.superic.com/autotask/stable/`.
+Product record: `project-docs/prd/AutoTask 在线更新.md`. SMC-Copilot uses the
+same host under `/work/stable/`; AutoTask is `/autotask/stable/`.
+
+### Check and install
+
+The updater checks 15s after boot then every 6h; `autoDownload=false`. Only
+Windows NSIS installs check; `npm start` does not.
+
+- State machine: [[app/src/main/app-updater.ts#AppUpdater]]. User clicks 立即更新
+  to download then install ([[app/src/main/app-updater.ts#AppUpdater#downloadAndInstall]]).
+  Spawn `--updated --force-run`
+  ([[app/src/main/delayed-setup-launch.ts#nsisUpdateStartCommand]]), then
+  `app.quit()`. No `/S`. `--updated` skips the directory page and the running-app
+  prompt. NSIS `customInit` relaunches via Explorer (`/autotask-detached`) so
+  closing AutoTask cannot kill the setup. Copy or spawn failure does not quit.
+  Never launch from AppData. Never `elevate.exe`. Logs:
+  `<userData>/logs/updater.log`.
+- Feed is baked into `resources/app-update.yml` by
+  [[app/forge/maker-nsis-install-dir.ts#MakerNsisInstallDir]] and set at runtime.
+  Override with `AUTOTASK_UPDATE_URL` (must stay under
+  `https://release.superic.com/autotask/`). Artifact name carries the version.
+  Shortcuts target `AutoTaskStudio.exe`; install dir stays
+  `D:\Programs\SMC\AutoTask` (`allowToChangeInstallationDirectory: false`).
+- `npm run release:build` stages `app/release/autotask/<version>/`. Place that
+  directory under `/data/smc-release/autotask/` the same way as `work`.
+
+### Staging outside the install directory
+
+NSIS replaces `D:\Programs\SMC\AutoTask`, so a running setup.exe must not live
+under that folder.
+
+Stage to `D:\Programs\SMC\updates\AutoTask`
+([[app/src/main/pending-nsis-setup.ts#WINDOWS_SMC_UPDATES_DIR]]). Other desktop
+apps use `updates\<product>`. If that folder is blocked, fall back to the SMC
+root. After a successful launch, delete other `AutoTask-Studio-*-setup.exe`
+files only ([[app/src/main/pending-nsis-setup.ts#removeStaleAutoTaskSetups]]).
+Startup creates the updates folder
+([[app/src/main/pending-nsis-setup.ts#ensureAutoTaskUpdatesDir]]).
+
+### User-facing update UI
+
+Dialogs stay short. Settings 「关于」shows the running version and 检查更新.
+
+[[app/src/features/app-update/app-update-provider.tsx#AppUpdateProvider]]:
+available 「是否立即更新？」; downloading 「请稍候。」; downloaded
+「安装时将关闭 AutoTask。」 Settings default tab and the user menu open
+[[app/src/features/settings/about-pane.tsx#AboutPane]]. Packaged builds only
+can check; already-latest shows 「已是最新版本」. State pushes over
+`APP_UPDATE_STATE_CHANGED` via preload.
 
 ## Data Access
 

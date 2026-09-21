@@ -19,7 +19,10 @@ Write-Host "==> electron-forge make (nsis)"
 npm run make
 if ($LASTEXITCODE -ne 0) { throw "make 失败" }
 
-$makeDir = Join-Path $appRoot "out\make\nsis\x64"
+$makeDir = Join-Path $appRoot "out-pkg\make\nsis\x64"
+if (-not (Test-Path $makeDir)) {
+    $makeDir = Join-Path $appRoot "out\make\nsis\x64"
+}
 $exe = Join-Path $makeDir "AutoTask-Studio-$version-setup.exe"
 $blockmap = "$exe.blockmap"
 $latestYml = Join-Path $makeDir "latest.yml"
@@ -53,5 +56,6 @@ $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
 "$hash  $(Split-Path $exe -Leaf)" | Out-File -Encoding ascii (Join-Path $stage "SHA256SUMS.txt")
 
 Write-Host ""
-Write-Host "==> 完成。产物已暂存到 $stage"
-Write-Host "    把整个 $version 文件夹交给同事（每次新版本交最新包即可）"
+Write-Host "==> 完成"
+Write-Host "    产物: $stage"
+Write-Host "    更新源: $updateUrl"

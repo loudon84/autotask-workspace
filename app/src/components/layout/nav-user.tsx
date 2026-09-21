@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import { ChevronsUpDown, Info, LogOut, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -82,6 +82,12 @@ export function NavUser({ user }: { user: NavUserType }) {
               <Link to="/settings">
                 <Settings />
                 系统设置
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/settings">
+                <Info />
+                关于与更新
               </Link>
             </DropdownMenuItem>
             {isRemote && (

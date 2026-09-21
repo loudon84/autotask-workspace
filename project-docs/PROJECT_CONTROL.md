@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-09-11
+最后更新：2026-09-21
 
 ## 1. 用途
 
@@ -20,7 +20,7 @@
 | RPA Engine | `rpa-engine/` | 测试基线可运行 |
 | RPA Flow | `rpa-flows/` | 允许扫描的代码根 |
 | RPA authoring | `rpa-authoring/` | 登录演示已完成 |
-| Auth | `http://192.168.102.247:4510` | 测试服务器可达；**不在**本工作区代码扫描根内 |
+| Auth | `http://192.168.102.247:4510` | 测试服务器；**当前 4510 端口未监听**（桌面登录会失败）。不在本工作区代码扫描根内 |
 
 天地伟业线在 `develop/v2.0`（可再合 `master`）。京东方线在 `develop/v3.0`。本活页以天地伟业为准；合 v3 时只同步仍有效的状态，不要把归档流水拷回来。
 
@@ -36,7 +36,7 @@
 8. **正式门户演练与上线共用同一份 Flow。** 样例单号、`treatAsPending`、`dryRun` 进 Binding。SOP：`project-docs/prd/tiandy/` 下 v4.1 / 正式上线清单。
 9. 换人/换门户不改 Task `.env` 和 Flow 源码：密码在门户；ERP/SDMS 基址在 Task 配置。
 10. 调度中心用独立 `timers` / `timer_runs`，不再靠 Binding 循环开火。天地伟业入口默认**停用**；打开即对着已绑门户跑，正式站会写真实 SRM。
-11. **Client 在线更新抄 SMC `work`，只加第二份目录 `autotask`。** 打包后把版本目录（或 zip）交给同事；服务器上按 `work` 同样结构放。不另搞发版流程。
+11. **Client 在线更新抄 SMC `work`，只加第二份目录 `autotask`。** Feed：`https://release.superic.com/autotask/stable/`。安装包落在 `D:\Programs\SMC\updates\AutoTask`（不在 `$INSTDIR`）。产物放到 `/data/smc-release/autotask/`，结构同 `work`。规格：`project-docs/prd/AutoTask 在线更新.md`。
 
 ## 4. 环境对照
 
@@ -61,7 +61,7 @@
 | 对账单生成 | **1.1.3** 已发正式 Engine 并绑「天地伟业-芯云」（无 dryRun）。测库「天地伟业-芯云-正式演练」已绑本机 4610 的 **1.1.3**（`dryRun=true`）。同 ZIP、不同 `versionId`。本机 Engine 现为发包装包模式（Worker 关，因 4520 未起）；要本地真跑需先起本机 Task，再开 Worker 重启 Engine。 |
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
-| 在线更新 | 抄 SMC `work`：并列第二份 `/data/smc-release/autotask/`。**0.1.2 zip 已打好**：`app/release/autotask/AutoTask-0.1.2-release.zip`。 |
+| 在线更新 | **已通。** Feed `autotask/stable`。安装包目录 `D:\Programs\SMC\updates\AutoTask`。系统设置「关于」可看版本、检查更新。源码以 `app/package.json` 为准。规格已与实现对齐：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题
@@ -75,7 +75,7 @@
 7. 演示验证码 OCR 达不到无人值守，必须留 `WAITING_HUMAN`。
 8. ERP 订单没有稳定幂等键；Worker 在提交后崩溃时结果不确定。
 9. 填交期/签章正式包未绑；正式链路这两步仍缺。
-10. 在线更新：抄 SMC。线上只要能打开 `https://release.superic.com/autotask/stable/latest.yml`（对照已有的 `/work/stable/latest.yml`）就算放对了。
+10. 桌面登录：247 **4510 Auth 未监听**；4520 Task、4610 Engine 正常。登录只打 Auth `/account-login`，需把 Auth 服务拉起来。
 
 ## 7. 后续行动
 
@@ -84,8 +84,7 @@
 3. 未明确要跑定时扫单/回签前，不要打开正式定时器。
 4. 需要填交期/签章时再发正式包并切 Binding。
 5. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
-6. 把 `app/release/autotask/AutoTask-0.1.2-release.zip` 交给同事，按 SMC `work` 同样方式放到 `autotask/`。已装旧包的用户这一次仍要手动装。
-7. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
+6. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
 
 ## 8. 记录维护规则
 

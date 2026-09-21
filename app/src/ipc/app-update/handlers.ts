@@ -7,6 +7,6 @@ export const check = os.handler(() => appUpdater.check());
 
 export const download = os.handler(() => appUpdater.download());
 
-export const install = os.handler(() => {
-  appUpdater.install();
-});
+export const downloadAndInstall = os.handler(() => appUpdater.downloadAndInstall());
+
+export const install = os.handler(() => appUpdater.install());

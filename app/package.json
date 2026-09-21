@@ -1,7 +1,7 @@
 {
   "name": "AutoTask-studio",
   "productName": "AutoTask Studio",
-  "version": "0.1.2",
+  "version": "0.1.25",
   "description": "AutoTask Studio - SRM Automation Desktop Workbench",
   "main": ".vite/build/main.js",
   "private": true,
@@ -19,6 +19,7 @@
     "fix": "ultracite fix",
     "bump-ui": "tsx ./scripts/bump-ui.ts",
     "test": "vitest run",
+    "test:update-stage": "powershell -ExecutionPolicy Bypass -File scripts/verify-update-stage.ps1",
     "test:watch": "vitest watch",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
