@@ -33,7 +33,8 @@ if (-not (Test-Path $stage)) {
     throw "Missing stage dir $stage. Run release:build first."
 }
 
-# 可追溯门禁（对齐 Work）：manifest 必须存在且版本匹配，gitCommit 非空
+# Traceability gate (aligned with Work): manifest must exist, version must match, gitCommit non-empty.
+# NOTE: keep this file pure ASCII - Windows PowerShell 5.1 misreads UTF-8-no-BOM Chinese and breaks parsing.
 $manifestPath = Join-Path $stage "release-manifest.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) {
     throw "Missing release-manifest.json in $stage. Run release:build first."
@@ -46,7 +47,7 @@ if (-not $manifest.gitCommit) {
     throw "release-manifest.json missing gitCommit"
 }
 if ($manifest.gitDirty -eq $true) {
-    Write-Warning "release-manifest.json gitDirty=true：本版含未提交改动，追溯时注意"
+    Write-Warning "release-manifest.json gitDirty=true: this build contains uncommitted changes"
 }
 
 $stagingId = "$Version-$(Get-Date -Format yyyyMMddHHmmss)"
