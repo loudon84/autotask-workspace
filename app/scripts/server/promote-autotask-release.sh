@@ -36,12 +36,23 @@ if [ ! -d "${STAGING_DIR}" ]; then
 fi
 
 # --- AutoTask 完整性门禁（替代 Work 的签名门禁） ---
-for f in "${INSTALLER}" "${INSTALLER}.blockmap" "latest.yml" "SHA256SUMS.txt"; do
+for f in "${INSTALLER}" "${INSTALLER}.blockmap" "latest.yml" "SHA256SUMS.txt" "release-manifest.json"; do
   if [ ! -f "${STAGING_DIR}/${f}" ]; then
     echo "PROMOTION_FAILED: MISSING_ARTIFACT ${f}" >&2
     exit 1
   fi
 done
+
+# 可追溯门禁：manifest 版本必须匹配，且带有效 gitCommit（对齐 Work 的 git 身份要求）
+MANIFEST_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${STAGING_DIR}/release-manifest.json" | head -n 1)"
+if [ "${MANIFEST_VERSION}" != "${VERSION}" ]; then
+  echo "PROMOTION_FAILED: MANIFEST_VERSION_MISMATCH" >&2
+  exit 1
+fi
+if ! grep -q '"gitCommit"[[:space:]]*:[[:space:]]*"[0-9a-f]\{7,\}"' "${STAGING_DIR}/release-manifest.json"; then
+  echo "PROMOTION_FAILED: MANIFEST_NO_GIT_COMMIT" >&2
+  exit 1
+fi
 
 if ! ( cd "${STAGING_DIR}" && sha256sum -c SHA256SUMS.txt ); then
   echo "PROMOTION_FAILED: SHA256_MISMATCH" >&2

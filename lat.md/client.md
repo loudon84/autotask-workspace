@@ -49,8 +49,13 @@ Windows NSIS installs check; `npm start` does not.
   `https://release.superic.com/autotask/`). Artifact name carries the version.
   Shortcuts target `AutoTaskStudio.exe`; install dir stays
   `D:\Programs\SMC\AutoTask` (`allowToChangeInstallationDirectory: false`).
-- `npm run release:build` stages `app/release/autotask/<version>/` (exe,
-  blockmap, `latest.yml`, `SHA256SUMS.txt` for all three). `release:publish`
+- `npm run release:build` refuses a dirty working tree (override
+  `AUTOTASK_RELEASE_ALLOW_DIRTY=1` for debug only), then stages
+  `app/release/autotask/<version>/` (exe, blockmap, `latest.yml`,
+  `SHA256SUMS.txt` for all three, plus `release-manifest.json` schema
+  `autotask.release.v1` carrying version/gitCommit/gitBranch/gitDirty/sha256 —
+  Work's traceability manifest minus the signing fields, so any live build maps
+  back to an exact commit). `release:publish`
   scps into `staging`, then server `app/scripts/server/promote-autotask-release.sh`
   moves to `releases/<version>` and flips `stable`. Ops uses `SMC_RELEASE_HOST` /
   `SMC_RELEASE_USER` / `SMC_RELEASE_ROOT=/data/smc-release` (product dir
@@ -59,7 +64,9 @@ Windows NSIS installs check; `npm start` does not.
   and are not loaded. No Authenticode or publisher gate. Promote mirrors Work's
   `promote-work-release.sh` (same `PROMOTION_FAILED: CODE` errors, relative
   `stable` symlink, `mkdir -p releases`); the signing gate is replaced by
-  artifact + SHA256SUMS + latest.yml sha512 checks. `releases/<version>` is
+  artifact + SHA256SUMS + latest.yml sha512 + manifest version/gitCommit
+  checks (`MANIFEST_VERSION_MISMATCH` / `MANIFEST_NO_GIT_COMMIT`).
+  `releases/<version>` is
   immutable (`RELEASE_ALREADY_EXISTS`). Publishers use per-person SSH key auth;
   password logins get throttled (`Connection closed`). Installer publisher
   metadata is `SMC` via package.json `author` (`win.publisherName` is

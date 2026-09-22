@@ -33,6 +33,22 @@ if (-not (Test-Path $stage)) {
     throw "Missing stage dir $stage. Run release:build first."
 }
 
+# 可追溯门禁（对齐 Work）：manifest 必须存在且版本匹配，gitCommit 非空
+$manifestPath = Join-Path $stage "release-manifest.json"
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+    throw "Missing release-manifest.json in $stage. Run release:build first."
+}
+$manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+if ($manifest.version -ne $Version) {
+    throw "release-manifest.json version mismatch: $($manifest.version) != $Version"
+}
+if (-not $manifest.gitCommit) {
+    throw "release-manifest.json missing gitCommit"
+}
+if ($manifest.gitDirty -eq $true) {
+    Write-Warning "release-manifest.json gitDirty=true：本版含未提交改动，追溯时注意"
+}
+
 $stagingId = "$Version-$(Get-Date -Format yyyyMMddHHmmss)"
 $remote = "${user}@${sshHost}"
 $publicFeed = "https://release.superic.com/autotask/stable/"
