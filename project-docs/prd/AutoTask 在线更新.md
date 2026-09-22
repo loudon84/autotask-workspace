@@ -48,9 +48,9 @@
 
 客户端地址：`https://release.superic.com/autotask/stable/latest.yml`。
 
-安装包文件名：`AutoTask-Studio-<版本>-setup.exe`（不要解压 exe）。另有同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`（exe / blockmap / latest.yml 的 sha256）。
+安装包文件名：`AutoTask-Studio-<版本>-setup.exe`（不要解压 exe）。另有同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`（exe / blockmap / latest.yml 的 sha256）、`release-manifest.json`（schema `autotask.release.v1`：version / gitCommit / gitBranch / gitDirty / updateUrl / installer / sha256 / createdAt）。
 
-promote 校验：文件齐全、`sha256sum -c`、`latest.yml` 的 version/path/sha512 与 exe 一致。不验 Authenticode。
+promote 校验：文件齐全、`sha256sum -c`、`latest.yml` 的 version/path/sha512 与 exe 一致、`release-manifest.json` 的 version 匹配且 gitCommit 为有效提交哈希。不验 Authenticode。
 
 ---
 
@@ -88,10 +88,10 @@ promote 校验：文件齐全、`sha256sum -c`、`latest.yml` 的 version/path/s
 
 - 产物：`AutoTask-Studio-<version>-setup.exe`。
 - NSIS：`productName` AutoTask，`executableName` AutoTaskStudio，`perMachine`，不允许改安装目录（避免再拼一层 `AutoTaskStudio` 文件夹）。发布者显示取自 `package.json` 的 `author: SMC`（electron-builder 的 `win.publisherName` 仅用于签名证书匹配，不设）。
-- `npm run release:build`：读取当时已保存的 `package.json` 版本，make，校验 `latest.yml` 的 version/sha512，拷到 `app/release/autotask/<版本>/`，写出完整 `SHA256SUMS.txt`。
+- `npm run release:build`：读取当时已保存的 `package.json` 版本，**先过 git 身份门禁**（工作区有未提交改动则拒绝，调试可用 `AUTOTASK_RELEASE_ALLOW_DIRTY=1` 强制），make，校验 `latest.yml` 的 version/sha512，拷到 `app/release/autotask/<版本>/`，写出完整 `SHA256SUMS.txt` 和 `release-manifest.json`（记录 gitCommit/gitBranch，线上任意一版可 `git show <commit>` 追回到确切源码，对齐 Work 的 `smc.work.release.v1`，去掉签名/publisher 字段）。
 - `npm run release:publish`：用上面那组 `SMC_RELEASE_*` 连发布机，scp 到 `staging`，跑 `promote-autotask-release.sh`，再 GET `latest.yml`、HEAD 安装包。promote 脚本若有改动，先更新服务器 `$ROOT/autotask/promote-autotask-release.sh`。
 - 发布机登录用 **SSH 公钥免密**（`ssh-keygen` + 公钥追加到服务器 `~/.ssh/authorized_keys`，一人一把）。密码登录连续重试会被服务器掐断（`Connection closed`），不要依赖。
-- promote 流程与 Work 的 `promote-work-release.sh` 同构：同样的 `PROMOTION_FAILED: XXX` 错误码、`mkdir -p releases`、相对软链 `stable`。唯一差异是门禁：Work 验签名，AutoTask 验产物齐全 + `SHA256SUMS` + `latest.yml` sha512。`releases/<版本>` 已存在则拒绝（`RELEASE_ALREADY_EXISTS`），同版本不能重发。
+- promote 流程与 Work 的 `promote-work-release.sh` 同构：同样的 `PROMOTION_FAILED: XXX` 错误码、`mkdir -p releases`、相对软链 `stable`。唯一差异是门禁：Work 验签名，AutoTask 验产物齐全 + `SHA256SUMS` + `latest.yml` sha512 + `release-manifest.json` 版本/gitCommit（`MANIFEST_VERSION_MISMATCH` / `MANIFEST_NO_GIT_COMMIT`）。`releases/<版本>` 已存在则拒绝（`RELEASE_ALREADY_EXISTS`），同版本不能重发。
 - 不能直连时只跑 `release:build`。
 
 ---

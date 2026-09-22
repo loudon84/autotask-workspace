@@ -62,7 +62,7 @@
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 京东方发票箱单 | 一期已落地；09-10 体验：流水号可进详情、失败才显示重试、子任务抽屉、净重默认千克、WMS 地区未维护则停本阶段、删草稿 1.0.1。排重索引仅测库。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。**需重启测库 4520**。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
-| 在线更新 | **已通，0.1.26 已上 stable（2026-09-22）。** Feed `autotask/stable`。与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 校验，不验代码签名。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
+| 在线更新 | **已通，0.1.26 已上 stable（2026-09-22）。** Feed `autotask/stable`。与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 + `release-manifest.json` 校验，不验代码签名。`release:build` 拒绝脏工作区（`AUTOTASK_RELEASE_ALLOW_DIRTY=1` 可强制），manifest 记 gitCommit/gitBranch，线上版本可追回到确切提交（对齐 Work 的可追溯设计）。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题

@@ -33,6 +33,23 @@ if (-not (Test-Path $stage)) {
     throw "Missing stage dir $stage. Run release:build first."
 }
 
+# Traceability gate (aligned with Work): manifest must exist, version must match, gitCommit non-empty.
+# NOTE: keep this file pure ASCII - Windows PowerShell 5.1 misreads UTF-8-no-BOM Chinese and breaks parsing.
+$manifestPath = Join-Path $stage "release-manifest.json"
+if (-not (Test-Path -LiteralPath $manifestPath)) {
+    throw "Missing release-manifest.json in $stage. Run release:build first."
+}
+$manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+if ($manifest.version -ne $Version) {
+    throw "release-manifest.json version mismatch: $($manifest.version) != $Version"
+}
+if (-not $manifest.gitCommit) {
+    throw "release-manifest.json missing gitCommit"
+}
+if ($manifest.gitDirty -eq $true) {
+    Write-Warning "release-manifest.json gitDirty=true: this build contains uncommitted changes"
+}
+
 $stagingId = "$Version-$(Get-Date -Format yyyyMMddHHmmss)"
 $remote = "${user}@${sshHost}"
 $publicFeed = "https://release.superic.com/autotask/stable/"
