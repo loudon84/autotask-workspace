@@ -37,6 +37,8 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
         config: {
           appId: "com.smc.autotask",
           productName: "AutoTask",
+          // 安装包/卸载程序里显示的发布者取自 package.json 的 author（SMC）。
+          // electron-builder 的 win.publisherName 仅用于代码签名证书匹配，勿设。
           executableName: "AutoTaskStudio",
           // 在线更新：generic 静态源。地址打包时烧进 app-update.yml 并生成 latest.yml。
           // 可用 AUTOTASK_UPDATE_URL 覆盖（例如指向测试目录）。

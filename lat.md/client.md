@@ -49,8 +49,21 @@ Windows NSIS installs check; `npm start` does not.
   `https://release.superic.com/autotask/`). Artifact name carries the version.
   Shortcuts target `AutoTaskStudio.exe`; install dir stays
   `D:\Programs\SMC\AutoTask` (`allowToChangeInstallationDirectory: false`).
-- `npm run release:build` stages `app/release/autotask/<version>/`. Place that
-  directory under `/data/smc-release/autotask/` the same way as `work`.
+- `npm run release:build` stages `app/release/autotask/<version>/` (exe,
+  blockmap, `latest.yml`, `SHA256SUMS.txt` for all three). `release:publish`
+  scps into `staging`, then server `app/scripts/server/promote-autotask-release.sh`
+  moves to `releases/<version>` and flips `stable`. Ops uses `SMC_RELEASE_HOST` /
+  `SMC_RELEASE_USER` / `SMC_RELEASE_ROOT=/data/smc-release` (product dir
+  `autotask/`). Runtime and release read only `app/.env`. Git tracks blank
+  `app/.env.example`. `.env.development` / `.env.production` are local backups
+  and are not loaded. No Authenticode or publisher gate. Promote mirrors Work's
+  `promote-work-release.sh` (same `PROMOTION_FAILED: CODE` errors, relative
+  `stable` symlink, `mkdir -p releases`); the signing gate is replaced by
+  artifact + SHA256SUMS + latest.yml sha512 checks. `releases/<version>` is
+  immutable (`RELEASE_ALREADY_EXISTS`). Publishers use per-person SSH key auth;
+  password logins get throttled (`Connection closed`). Installer publisher
+  metadata is `SMC` via package.json `author` (`win.publisherName` is
+  signing-cert matching only, do not set).
 
 ### Staging outside the install directory
 

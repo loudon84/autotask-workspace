@@ -1,3 +1,6 @@
 # TanStack Router rewrites this file as LF. Pin LF so Windows autocrlf
 # does not mark it dirty and block git checkout.
 src/routeTree.gen.ts text eol=lf
+
+# Server-side shell scripts run on Linux; CRLF breaks bash (set: invalid option).
+*.sh text eol=lf
