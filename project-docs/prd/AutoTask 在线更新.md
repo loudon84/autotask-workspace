@@ -2,8 +2,8 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 版本 | v1.2（2026-09-21） |
-| 状态 | **已落地。** 与 SMC-Copilot 并列第二份目录 `autotask`。Feed：`https://release.superic.com/autotask/stable/` |
+| 版本 | v1.5（2026-09-21） |
+| 状态 | **已落地。** 与 SMC-Copilot 共用一台发布机、同一套 staging → releases → stable。Feed：`https://release.superic.com/autotask/stable/` |
 | 参考实现 | `smc-copilot` 的 `apps/work`（同一台 `release.superic.com`，目录是 `work`） |
 | 原则 | 打开 AutoTask 有新版就弹窗；用户点了才下载、装。开发模式不检查。 |
 
@@ -15,13 +15,22 @@
 
 发版不再靠每次把安装包发给用户手动装。客户端自己查 `latest.yml`，用户确认后下载并安装。
 
-发版结构抄 SMC：他是 1（`work`），我们是 2（`autotask`），目录和验证一样，只换名字和安装包文件名。
+发版结构抄 SMC：他是 1（`work`），我们是 2（`autotask`）。运维只配同一组主机/账号/数据根，产品只换目录名和安装包文件名。不做代码签名门、不要 Publisher。
 
 ---
 
 ## 2. release.superic.com
 
-静态 HTTPS（nginx，只读 GET/HEAD，无鉴权、无上传 API）。SMC-Copilot 用 `/work/stable/`，AutoTask 用 `/autotask/stable/`。
+静态 HTTPS（nginx，只读 GET/HEAD，无鉴权、无上传 API）。运维共用：
+
+| 项 | 值 |
+| --- | --- |
+| 主机 | `release.superic.com`（`SMC_RELEASE_HOST`） |
+| SSH 用户 | 与发 Work 相同（`SMC_RELEASE_USER`） |
+| 数据根 | `/data/smc-release`（`SMC_RELEASE_ROOT`） |
+| AutoTask 目录 | `$ROOT/autotask` |
+| Work 目录 | `$ROOT/work` |
+| 本机配置 | git 只提交空白 `app/.env.example`。程序只读 `app/.env`。`.env.development` / `.env.production` 仅个人备份，不读 |
 
 ```text
 /data/smc-release/
@@ -35,11 +44,13 @@
     └── stable -> releases/<版本>
 ```
 
+不要把包直接放到 `stable`。流程：本机 `release:build` → scp 进 `staging/<id>/` → 服务器 `promote-*.sh` 校验后移入 `releases/<版本>/`（不可覆盖）→ 原子切换 `stable`。
+
 客户端地址：`https://release.superic.com/autotask/stable/latest.yml`。
 
-安装包文件名：`AutoTask-Studio-<版本>-setup.exe`（不要解压 exe）。另有同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`。
+安装包文件名：`AutoTask-Studio-<版本>-setup.exe`（不要解压 exe）。另有同名 `.blockmap`、`latest.yml`、`SHA256SUMS.txt`（exe / blockmap / latest.yml 的 sha256）。
 
-验证：能打开 `latest.yml`，且 `version` / `path` / `sha512` 与 exe 一致。
+promote 校验：文件齐全、`sha256sum -c`、`latest.yml` 的 version/path/sha512 与 exe 一致。不验 Authenticode。
 
 ---
 
@@ -76,10 +87,12 @@
 ## 5. 打包与安装程序
 
 - 产物：`AutoTask-Studio-<version>-setup.exe`。
-- NSIS：`productName` AutoTask，`executableName` AutoTaskStudio，`perMachine`，不允许改安装目录（避免再拼一层 `AutoTaskStudio` 文件夹）。
-- `npm run release:build`：读取当时已保存的 `package.json` 版本，make，校验 `latest.yml` 的 version/sha512，拷到 `app/release/autotask/<版本>/`。
-- 把该目录放到 `/data/smc-release/autotask/`，操作方式与 `work` 相同，再把 `stable` 指到该版本。
-- `npm run release:publish` 需要本机 ssh/scp 能连发布服务器；不能直连时只跑 `release:build`。
+- NSIS：`productName` AutoTask，`executableName` AutoTaskStudio，`perMachine`，不允许改安装目录（避免再拼一层 `AutoTaskStudio` 文件夹）。发布者显示取自 `package.json` 的 `author: SMC`（electron-builder 的 `win.publisherName` 仅用于签名证书匹配，不设）。
+- `npm run release:build`：读取当时已保存的 `package.json` 版本，make，校验 `latest.yml` 的 version/sha512，拷到 `app/release/autotask/<版本>/`，写出完整 `SHA256SUMS.txt`。
+- `npm run release:publish`：用上面那组 `SMC_RELEASE_*` 连发布机，scp 到 `staging`，跑 `promote-autotask-release.sh`，再 GET `latest.yml`、HEAD 安装包。promote 脚本若有改动，先更新服务器 `$ROOT/autotask/promote-autotask-release.sh`。
+- 发布机登录用 **SSH 公钥免密**（`ssh-keygen` + 公钥追加到服务器 `~/.ssh/authorized_keys`，一人一把）。密码登录连续重试会被服务器掐断（`Connection closed`），不要依赖。
+- promote 流程与 Work 的 `promote-work-release.sh` 同构：同样的 `PROMOTION_FAILED: XXX` 错误码、`mkdir -p releases`、相对软链 `stable`。唯一差异是门禁：Work 验签名，AutoTask 验产物齐全 + `SHA256SUMS` + `latest.yml` sha512。`releases/<版本>` 已存在则拒绝（`RELEASE_ALREADY_EXISTS`），同版本不能重发。
+- 不能直连时只跑 `release:build`。
 
 ---
 
@@ -94,7 +107,7 @@
 
 ## 7. 签名
 
-electron-builder 打包时会调用 signtool。是否被 SmartScreen / 企业策略信任以现场为准。不另做一套发版签名流程。
+不做代码签名门、不要 `SMC_WORK_EXPECTED_PUBLISHER`、promote 不要求 `signed: true`。与 Work 共用发布机，不共用那道证书检查。SmartScreen 以现场为准。
 
 ---
 
@@ -108,6 +121,6 @@ electron-builder 打包时会调用 signtool。是否被 SmartScreen / 企业策
 | 弹窗 | `app/src/features/app-update/` |
 | 关于与检查更新 | `app/src/features/settings/about-pane.tsx` |
 | 打包 feed | `app/forge/maker-nsis-install-dir.ts` |
-| 发版脚本 | `app/scripts/build-release.ps1` |
+| 发版脚本 | `app/scripts/build-release.ps1`、`publish-release.ps1`、`server/promote-autotask-release.sh` |
 
 架构说明：`lat.md/client.md` Online Updates。

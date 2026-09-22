@@ -1,42 +1,66 @@
-# AutoTask 在线更新发版：上传暂存目录到 release.superic.com 并切换 stable 软链
-# 需要本机 ssh/scp 能连发布服务器。否则只跑 build-release.ps1。
-# 用法：powershell -File scripts/publish-release.ps1 [-Version 0.1.2]
-# 环境变量（默认值按 smc 服务器约定）：
-#   AUTOTASK_RELEASE_HOST    默认 release.superic.com
-#   AUTOTASK_RELEASE_USER    默认 $env:USERNAME
-#   AUTOTASK_RELEASE_ROOT    默认 /data/smc-release/autotask
-# 前置：先跑 build-release.ps1；本机有 ssh/scp 且对目标主机免密。
+# AutoTask release publish: scp to staging, server promote, flip stable.
+# Usage: powershell -File scripts/publish-release.ps1 [-Version 0.1.2]
+# Reads app/.env only. ssh/scp may prompt for password.
 param([string]$Version = "")
 $ErrorActionPreference = "Stop"
 
 $appRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "lib\import-dotenv.ps1")
+Import-ReleaseDotEnv $appRoot
 if (-not $Version) {
     $Version = (Get-Content (Join-Path $appRoot "package.json") -Raw | ConvertFrom-Json).version
 }
 
-$host_ = if ($env:AUTOTASK_RELEASE_HOST) { $env:AUTOTASK_RELEASE_HOST } else { "release.superic.com" }
-$user = if ($env:AUTOTASK_RELEASE_USER) { $env:AUTOTASK_RELEASE_USER } else { $env:USERNAME }
-$root = if ($env:AUTOTASK_RELEASE_ROOT) { $env:AUTOTASK_RELEASE_ROOT } else { "/data/smc-release/autotask" }
+function Get-FirstEnv([string[]]$Names) {
+    foreach ($name in $Names) {
+        $value = [Environment]::GetEnvironmentVariable($name)
+        if ($value) { return $value }
+    }
+    return $null
+}
+
+$sshHost = Get-FirstEnv @("SMC_RELEASE_HOST", "AUTOTASK_RELEASE_HOST", "SMC_WORK_RELEASE_HOST")
+if (-not $sshHost) { $sshHost = "release.superic.com" }
+$user = Get-FirstEnv @("SMC_RELEASE_USER", "AUTOTASK_RELEASE_USER", "SMC_WORK_RELEASE_USER")
+if (-not $user) { $user = $env:USERNAME }
+$dataRoot = Get-FirstEnv @("SMC_RELEASE_ROOT")
+if (-not $dataRoot) { $dataRoot = "/data/smc-release" }
+$root = Get-FirstEnv @("AUTOTASK_RELEASE_ROOT")
+if (-not $root) { $root = "$dataRoot/autotask" }
 
 $stage = Join-Path $appRoot "release\autotask\$Version"
-if (-not (Test-Path $stage)) { throw "未找到暂存目录 $stage，先跑 build-release.ps1" }
+if (-not (Test-Path $stage)) {
+    throw "Missing stage dir $stage. Run release:build first."
+}
 
 $stagingId = "$Version-$(Get-Date -Format yyyyMMddHHmmss)"
-$remote = "${user}@${host_}"
+$remote = "${user}@${sshHost}"
+$publicFeed = "https://release.superic.com/autotask/stable/"
+$installerName = "AutoTask-Studio-$Version-setup.exe"
+$remoteStaging = "${remote}:${root}/staging/${stagingId}/"
 
-Write-Host "==> 上传 $Version 到 ${remote}:$root/staging/$stagingId"
+Write-Host "==> upload $Version to $remoteStaging"
 ssh $remote "mkdir -p $root/staging/$stagingId"
-if ($LASTEXITCODE -ne 0) { throw "ssh 建目录失败" }
-scp -q "$stage\*" "${remote}:$root/staging/$stagingId/"
-if ($LASTEXITCODE -ne 0) { throw "scp 上传失败" }
+if ($LASTEXITCODE -ne 0) { throw "ssh mkdir failed" }
 
-Write-Host "==> 服务器 promote（移入 releases 并切 stable 软链）"
+$files = @(Get-ChildItem -LiteralPath $stage -File | ForEach-Object { $_.FullName })
+if ($files.Count -eq 0) { throw "No files in $stage" }
+& scp.exe -q @files $remoteStaging
+if ($LASTEXITCODE -ne 0) { throw "scp failed" }
+
+Write-Host "==> promote staging to releases and flip stable"
 ssh $remote "bash $root/promote-autotask-release.sh '$Version' '$stagingId'"
-if ($LASTEXITCODE -ne 0) { throw "promote 失败" }
+if ($LASTEXITCODE -ne 0) { throw "promote failed" }
 
-Write-Host "==> 验证线上 latest.yml"
-$latest = curl.exe -s "https://release.superic.com/autotask/stable/latest.yml"
-if ($latest -notmatch "version:\s*$([regex]::Escape($Version))") { throw "线上 latest.yml 版本不对：`n$latest" }
+Write-Host "==> verify live latest.yml and installer"
+$latest = (curl.exe -s "${publicFeed}latest.yml" | Out-String)
+if ($latest -notmatch "version:\s*$([regex]::Escape($Version))") {
+    throw "live latest.yml version mismatch:`n$latest"
+}
+$head = (curl.exe -sI "${publicFeed}$installerName" | Out-String)
+if ($head -notmatch "(?m)^HTTP/.*\s200\s") {
+    throw "installer HEAD is not 200:`n$head"
+}
 
 Write-Host ""
-Write-Host "==> 发布完成：AutoTask $Version 已上线 stable。客户端最迟 6 小时内会看到更新。"
+Write-Host "==> published AutoTask $Version to stable"

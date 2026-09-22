@@ -57,9 +57,11 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# 除空白 .env.example 外，所有 dotenv 都不入库
 .env
-.env.test
+.env.*
+!.env.example
+.vite-env/
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

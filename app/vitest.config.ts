@@ -1,8 +1,10 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { isolateDotEnvDir } from "./vite.env.mts";
 
 export default defineConfig({
+  envDir: isolateDotEnvDir(),
   plugins: [react()],
   resolve: {
     alias: {

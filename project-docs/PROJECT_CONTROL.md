@@ -35,8 +35,8 @@
 7. 可以准备 DDL；未口头授权不建库、不执行迁移。**正式库不得 `upgrade` 到京东方/v3 测库 head**（测库已有门户 JSONB `extra`、BOE 地区表、箱单排重索引）。
 8. **正式门户演练与上线共用同一份 Flow。** 样例单号、`treatAsPending`、`dryRun` 进 Binding。天地伟业 SOP：`project-docs/prd/tiandy/` 下 v4.1 / 正式上线清单。
 9. 换人/换门户不改 Task `.env` 和 Flow 源码：密码在门户；ERP/SDMS 基址在 Task 配置。
-10. 调度中心用独立 `timers` / `timer_runs`，进程只留 `TimerScheduler`（2026-09-09 清场）。天地伟业入口默认**停用**；打开即对着已绑门户跑，正式站会写真实 SRM。
-11. **Client 在线更新抄 SMC `work`，只加第二份目录 `autotask`。** Feed：`https://release.superic.com/autotask/stable/`。安装包落在 `D:\Programs\SMC\updates\AutoTask`（不在 `$INSTDIR`）。产物放到 `/data/smc-release/autotask/`，结构同 `work`。规格：`project-docs/prd/AutoTask 在线更新.md`。
+10. 调度中心用独立 `timers` / `timer_runs`，不再靠 Binding 循环开火。天地伟业入口默认**停用**；打开即对着已绑门户跑，正式站会写真实 SRM。
+11. **Client 在线更新与 Work 共用 `release.superic.com` / `/data/smc-release`，只换目录 `autotask`。** 发版：`staging` → promote → `releases` → `stable`。程序只读 `app/.env`；git 只提交空白 `.env.example`。不做代码签名门。安装包落在 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。
 
 ## 4. 环境对照
 
@@ -62,7 +62,7 @@
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 京东方发票箱单 | 一期已落地；09-10 体验：流水号可进详情、失败才显示重试、子任务抽屉、净重默认千克、WMS 地区未维护则停本阶段、删草稿 1.0.1。排重索引仅测库。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。**需重启测库 4520**。 |
 | 填交期 / 签章正式包 | 仍未绑。 |
-| 在线更新 | **已通。** Feed `autotask/stable`。安装包目录 `D:\Programs\SMC\updates\AutoTask`。系统设置「关于」可看版本、检查更新。源码以 `app/package.json` 为准。规格已与实现对齐：`project-docs/prd/AutoTask 在线更新.md`。 |
+| 在线更新 | **已通，0.1.26 已上 stable（2026-09-22）。** Feed `autotask/stable`。与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 校验，不验代码签名。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题
