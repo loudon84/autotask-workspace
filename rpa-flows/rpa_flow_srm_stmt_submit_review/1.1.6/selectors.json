@@ -1,0 +1,20 @@
+{
+  "username": "input[placeholder='账号或手机号码']:visible",
+  "password": "input[type='password']:visible",
+  "captcha": "input[placeholder='验证码']:visible",
+  "captcha_image": ".el-form-item:has(input[placeholder='验证码']) img:visible",
+  "agreement": ".userAgree .el-checkbox:visible .el-checkbox__inner, .userAgree .el-checkbox:visible",
+  "login_button": "button:has-text('登录'):visible",
+  "login_error": ".el-message--error",
+  "login_success": ".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible",
+  "statement_page": ".el-table:visible",
+  "search_button": "button:has-text('查询'):visible",
+  "next_page": ".el-pagination .btn-next",
+  "payable_page": "button:has-text('提交审核'):visible, button:has-text('扫描发票'):visible",
+  "scan_button": "button:has-text('扫描发票信息'):visible, button:has-text('扫描发票'):visible",
+  "file_input": ".el-dialog:visible input[type='file'], input[type='file']",
+  "upload_confirm": ".el-dialog:visible .el-dialog__footer button:has-text('确定'):visible, .el-dialog:visible button.el-button--primary:has-text('确定'):visible, .el-message-box:visible button:has-text('确定'):visible, .el-dialog:visible button:has-text('确认'):visible",
+  "submit_button": "button:has-text('提交审核'):visible",
+  "success_toast": ".el-message--success",
+  "loading_mask": ".el-loading-mask:visible"
+}

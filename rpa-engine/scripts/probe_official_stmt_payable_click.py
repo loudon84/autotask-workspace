@@ -136,8 +136,11 @@ async def screenshot(page, name: str) -> None:
 
 async def logged_in(page) -> bool:
     try:
-        loc = page.locator(".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible")
-        return await loc.count() > 0
+        loc = page.locator(
+            ".el-menu-item:has-text('订单'):visible, span:has-text('订单'):visible"
+        ).first
+        await loc.wait_for(state="visible", timeout=8000)
+        return True
     except Exception:
         return False
 
