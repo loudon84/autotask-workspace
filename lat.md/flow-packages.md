@@ -52,6 +52,12 @@ from the list into the output. See
 and
 [[rpa-flows/rpa_flow_srm_stmt_submit_review/1.1.7/flow.py#StatementSubmitAdapter#read_statement_status]].
 
+Official sign `1.1.5` fills AutoTask `order_lines` into 供方交期 inside the
+订单详情 pane only (list tab fixed-right is 「详情」; prefer fixed-right date
+cell, else main-row date editor), then clicks 签章. Binding `dryRun: true`
+still fills dates and locates the button, but does not click 签章. Demo portals
+keep `1.0.3`. See [[rpa-flows/rpa_flow_srm_sign_order/1.1.5/flow.py#run]].
+
 ## Tooling
 
 Build and local run helpers import Engine validators/runtime from sibling

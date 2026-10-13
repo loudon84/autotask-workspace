@@ -63,7 +63,7 @@
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
 | 京东方发票箱单 | 一期已落地；09-10 体验：流水号可进详情、失败才显示重试、子任务抽屉、净重默认千克、WMS 地区未维护则停本阶段、删草稿 1.0.1。排重索引仅测库。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。**需重启测库 4520**。 |
 | 上传发票 / 提交送审正式包 | **1.1.3 / 1.1.7 已发正式 Engine（247:4610）并切 Binding**（2026-10-10）。两层根因：① 上传发票后门户全屏 `el-loading-mask` 盖住「确定」，旧版只等 400ms 就点 → `STMT_INVOICE_OCR_EMPTY`（1.1.6 修：等遮罩消失再点）。② **假 SUCCESS**：点「提交审核」后只等泛化 `.el-message--success`，残留「上传成功」toast 被误判为提交成功，输出状态还是硬编码的——10-10 三次 SUCCESS 空跑，SRM 侧始终未对账/未上传（已用前端 chunk 源码 + 拦截探测证实：提交成功会 `$router.push` 回列表，校验拦截只弹 warning toast）。1.1.7 修：点前清残留 toast、成功判定改为路由跳回列表/新成功 toast、warning 抛 `SRM_STMT_SUBMIT_BLOCKED`、输出改从列表回读真实状态。账单 16224e09 已回滚到生成后状态（UNCHECKED/NOT_UPLOADED、实例 STMT_PENDING_INVOICE ACTIVE），可重跑。 |
-| 填交期 / 签章正式包 | 仍未绑。 |
+| 填交期 / 签章正式包 | **交期改本地保存（2026-10-13）**：测库演练绑本机 4610 签章 **1.1.5**（`dryRun=true`）。正式 Engine **247:4610** 已发签章 **1.1.5**（vid `545736ec-…`），正式库「天地伟业-芯云」已绑、**无 dryRun**（真点签章）。正式库已补 `srm_sign_order` 模板。**签章防连点**在 Task/Client。演示站仍用 1.0.3。正式 Task/Client 部署仍待发。 |
 | 在线更新 | **已通，0.1.26 已上 stable（2026-09-22）。** Feed `autotask/stable`。与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 + `release-manifest.json` 校验，不验代码签名。`release:build` 拒绝脏工作区（`AUTOTASK_RELEASE_ALLOW_DIRTY=1` 可强制），manifest 记 gitCommit/gitBranch，线上版本可追回到确切提交（对齐 Work 的可追溯设计）。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
@@ -77,7 +77,7 @@
 6. `.env` 的 `SKIP_AUTO_MIGRATE=1` 若只写在文件里、启动逻辑只看进程环境，重启仍可能跑 Alembic。
 7. 演示验证码 OCR 达不到无人值守，必须留 `WAITING_HUMAN`。
 8. ERP 订单没有稳定幂等键；Worker 在提交后崩溃时结果不确定。
-9. 填交期/签章正式包未绑；正式链路这两步仍缺。
+9. 交期本地保存 + 演练签章 1.1.5（dryRun）已就绪；正式签章 Flow/Binding 已切 1.1.5（无 dryRun）。正式 Task + Client 仍待部署后才能给业务真点。
 10. 桌面登录：247 **4510 Auth 未监听**；4520 Task、4610 Engine 正常。登录只打 Auth `/account-login`，需把 Auth 服务拉起来。
 11. 正式 SRM 登录自 10-08 起一直骑 session 缓存，真实验证码登录路径近期未在正式被密集验证；`login_official_srm` 在 storage_state 过期瞬间可能短暂渲染工作台或弹「无效的会话」toast，存在误判/竞态风险，值得一次加固。高频探测登录也可能触发门户风控，避免短时间反复试。
 
@@ -87,10 +87,10 @@
 2. **待用户验证**：在正式对 2026-10-09 那笔 3,354,661.32 重跑提交送审（已绑 1.1.7）。这次 SUCCESS 必须是真提交（路由跳回列表才算）；若 SRM 前端校验拦截会报 `SRM_STMT_SUBMIT_BLOCKED` 并带门户原话。注意这是真写正式 SRM。
 3. 金额确认：打新 Client 安装包，并部署对应 Task；不要只发一端。
 4. 未明确要跑定时扫单/回签前，不要打开正式定时器。
-5. 需要填交期/签章时再发正式包并切 Binding。
+5. 正式签章 Flow 已绑；下一步发正式 Task + Client，再给业务真点「签章」。
 6. 租约续期或提高 TTL，避免 RUNNING 被打回 QUEUED。
 7. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
-8. 京东方测库 4520 重启后验收箱单一期体验改动。
+8. 京东方测库 4520 重启后验收箱单一期界面改动。
 9. `login_official_srm` 过期会话竞态加固 + 正式验证码登录路径一次演练（低频，避开风控）。
 
 ## 8. 记录维护规则

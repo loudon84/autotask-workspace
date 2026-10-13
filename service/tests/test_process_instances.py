@@ -173,6 +173,54 @@ async def test_submit_line_date_line_not_found() -> None:
 
 
 @pytest.mark.asyncio
+async def test_submit_line_date_saves_locally_without_rpa(monkeypatch: pytest.MonkeyPatch) -> None:
+    """交期只落 AutoTask：不创建填交期 RPA 子任务，行直接 WRITTEN。"""
+    instance = _instance(stage=ProcessStage.SDMS_CREATED.value, line_total=2, line_done=0)
+    line10 = _line("10", ProcessLineStatus.PENDING.value)
+    line20 = _line("20", ProcessLineStatus.PENDING.value)
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(instance), _scalar_result(line10)])
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    create_sub = AsyncMock()
+    monkeypatch.setattr(svc, "_create_sub_task", create_sub)
+    monkeypatch.setattr(svc, "list_line_items", AsyncMock(return_value=[line10, line20]))
+
+    result = await svc.submit_line_date(db, "tenant-1", "inst-1", "10", "2026-11-28", _user())
+
+    assert result is line10
+    assert line10.expected_delivery_date == "2026-11-28"
+    assert line10.line_status == ProcessLineStatus.WRITTEN.value
+    assert line10.sub_task_id is None
+    assert instance.line_done == 1
+    assert instance.stage == ProcessStage.DATES_PARTIAL.value
+    create_sub.assert_not_awaited()
+    db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_submit_line_date_completes_when_all_written(monkeypatch: pytest.MonkeyPatch) -> None:
+    instance = _instance(stage=ProcessStage.DATES_PARTIAL.value, line_total=2, line_done=1)
+    line10 = _line("10", ProcessLineStatus.WRITTEN.value)
+    line10.expected_delivery_date = "2026-11-20"
+    line20 = _line("20", ProcessLineStatus.PENDING.value)
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(instance), _scalar_result(line20)])
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "_create_sub_task", AsyncMock())
+    monkeypatch.setattr(svc, "list_line_items", AsyncMock(return_value=[line10, line20]))
+
+    await svc.submit_line_date(db, "tenant-1", "inst-1", "20", "2026-11-28", _user())
+
+    assert line20.line_status == ProcessLineStatus.WRITTEN.value
+    assert instance.line_done == 2
+    assert instance.stage == ProcessStage.DATES_COMPLETE.value
+
+
+@pytest.mark.asyncio
 async def test_request_sign_requires_dates_complete() -> None:
     instance = _instance(stage=ProcessStage.DATES_PARTIAL.value)
     db = MagicMock()
@@ -182,8 +230,25 @@ async def test_request_sign_requires_dates_complete() -> None:
 
 
 @pytest.mark.asyncio
-async def test_request_sign_passes_temp_e2e_backfill_payload(monkeypatch: pytest.MonkeyPatch) -> None:
-    """TEMP_E2E_ONLY: 签章子任务需带 AutoTask 已写交期，供 Flow 签章前回填。联调后删除本测。"""
+async def test_request_sign_rejects_when_sign_in_flight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """排队/执行中的签章子任务存在时拒重入，避免业务连点重复建任务。"""
+    instance = _instance(stage=ProcessStage.DATES_COMPLETE.value)
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=_scalar_result(instance))
+    monkeypatch.setattr(svc, "_has_sign_in_flight", AsyncMock(return_value=True))
+    create = AsyncMock()
+    monkeypatch.setattr(svc, "_create_sub_task", create)
+    with pytest.raises(BadRequestError) as exc_info:
+        await svc.request_sign(db, "tenant-1", "inst-1", _user())
+    assert "进行中" in str(exc_info.value.message)
+    create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_request_sign_passes_order_lines_for_official(monkeypatch: pytest.MonkeyPatch) -> None:
+    """正式站签章也要带 AutoTask 已写交期（填供方交期后点签章）。"""
     instance = _instance(stage=ProcessStage.DATES_COMPLETE.value)
     lines = [
         ProcessLineItem(
@@ -216,7 +281,57 @@ async def test_request_sign_passes_temp_e2e_backfill_payload(monkeypatch: pytest
         return task
 
     monkeypatch.setattr(svc, "_create_sub_task", _fake_create_sub_task)
+    monkeypatch.setattr(svc, "_has_sign_in_flight", AsyncMock(return_value=False))
+    monkeypatch.setattr(svc, "_is_demo_portal", AsyncMock(return_value=False))
+    monkeypatch.setattr(svc, "list_line_items", AsyncMock(return_value=lines))
+    await svc.request_sign(db, "tenant-1", "inst-1", _user())
+    assert captured["template_code"] == svc.SIGN_TEMPLATE_CODE
+    assert captured["task_input"]["po_no"] == "PO-001"
+    assert "temp_e2e_backfill_dates" not in captured["task_input"]
+    assert captured["task_input"]["order_lines"] == [
+        {"line_number": "10", "expected_delivery_date": "2026-09-15"},
+        {"line_number": "20", "expected_delivery_date": "2026-09-20"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_request_sign_passes_temp_e2e_backfill_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """演示站仍带 temp_e2e_backfill_dates，供旧签章 Flow 回填。"""
+    instance = _instance(stage=ProcessStage.DATES_COMPLETE.value)
+    lines = [
+        ProcessLineItem(
+            id="line-10",
+            instance_id="inst-1",
+            line_number="10",
+            material_number="MAT-001",
+            line_status=ProcessLineStatus.WRITTEN.value,
+            expected_delivery_date="2026-09-15",
+        ),
+        ProcessLineItem(
+            id="line-20",
+            instance_id="inst-1",
+            line_number="20",
+            material_number="MAT-002",
+            line_status=ProcessLineStatus.WRITTEN.value,
+            expected_delivery_date="2026-09-20",
+        ),
+    ]
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_scalar_result(instance), _scalars_result(lines)])
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    captured: dict = {}
+
+    async def _fake_create_sub_task(db_arg, inst, **kwargs):  # noqa: ANN001
+        captured.update(kwargs)
+        task = MagicMock()
+        task.id = "task-sign-1"
+        return task
+
+    monkeypatch.setattr(svc, "_create_sub_task", _fake_create_sub_task)
+    monkeypatch.setattr(svc, "_has_sign_in_flight", AsyncMock(return_value=False))
     monkeypatch.setattr(svc, "_is_demo_portal", AsyncMock(return_value=True))
+    monkeypatch.setattr(svc, "list_line_items", AsyncMock(return_value=lines))
     await svc.request_sign(db, "tenant-1", "inst-1", _user())
     assert captured["template_code"] == svc.SIGN_TEMPLATE_CODE
     assert captured["task_input"]["po_no"] == "PO-001"
@@ -255,9 +370,14 @@ async def test_request_sign_skips_temp_e2e_backfill_on_official_portal(
         return task
 
     monkeypatch.setattr(svc, "_create_sub_task", _fake_create_sub_task)
+    monkeypatch.setattr(svc, "_has_sign_in_flight", AsyncMock(return_value=False))
     monkeypatch.setattr(svc, "_is_demo_portal", AsyncMock(return_value=False))
     await svc.request_sign(db, "tenant-1", "inst-1", _user())
-    assert captured["task_input"] == {"po_no": "PO-001"}
+    assert captured["task_input"] == {
+        "po_no": "PO-001",
+        "order_lines": [{"line_number": "10", "expected_delivery_date": "2026-09-15"}],
+    }
+    assert "temp_e2e_backfill_dates" not in captured["task_input"]
 
 
 @pytest.mark.asyncio
@@ -534,6 +654,25 @@ async def test_sign_success_moves_to_sign_requested() -> None:
     assert instance.stage == ProcessStage.SIGN_REQUESTED.value
     assert instance.last_error_code is None
     assert instance.last_error_message is None
+
+
+@pytest.mark.asyncio
+async def test_sign_dry_run_success_stays_dates_complete() -> None:
+    """dryRun 成功不得推进到待回签，否则演练后无法再点签章。"""
+    instance = _instance(stage=ProcessStage.DATES_COMPLETE.value)
+    run = RpaRun(
+        id="run-dry-sign",
+        task_id="task-sign-dry",
+        rpa_flow_id="flow-1",
+        status=RunStatus.SUCCESS,
+        output={"dryRun": True, "signed": False, "filledSupplierDates": True},
+    )
+    db = MagicMock()
+    db.add = MagicMock()
+
+    await svc._handle_sign_finished(db, instance, run, succeeded=True)
+
+    assert instance.stage == ProcessStage.DATES_COMPLETE.value
 
 
 @pytest.mark.asyncio

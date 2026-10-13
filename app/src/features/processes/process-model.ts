@@ -21,7 +21,7 @@ export const STAGE_DEFINITIONS: StageMeta[] = [
   { id: "CREATING_SDMS", name: "建单中", button: null },
   { id: "SDMS_CREATED", name: "待填写交期", button: "填写交货日期" },
   { id: "DATES_PARTIAL", name: "交期填写中", button: "填写交货日期" },
-  { id: "DATES_COMPLETE", name: "待签章", button: "去签章" },
+  { id: "DATES_COMPLETE", name: "待签章", button: "签章" },
   { id: "SIGN_REQUESTED", name: "待回签", button: null },
   { id: "SIGNED", name: "已回签", button: "手动触发签章合同下载" },
   { id: "ARCHIVED", name: "已完成", button: null },
@@ -39,6 +39,9 @@ export const MAIN_STAGES: ProcessStage[] = [
 
 const BLOCKING_TASK_STATUSES = new Set(["FAILED", "WAITING_HUMAN"]);
 
+/** 签章子任务排队/执行中：详情「签章」按钮应禁用，防业务连点。 */
+const SIGN_IN_FLIGHT_STATUSES = new Set(["QUEUED", "RUNNING"]);
+
 const TASK_TYPE_NODE_LABEL: Record<string, string> = {
   srm_prepare_erp_order: "建单",
   srm_fill_line_delivery_date: "填写交期",
@@ -47,6 +50,14 @@ const TASK_TYPE_NODE_LABEL: Record<string, string> = {
   srm_check_reply_status: "回签探测",
   srm_scan_pending_orders: "扫单",
 };
+
+export function hasSignInFlight(subTasks: ProcessSubTask[] | undefined): boolean {
+  return (subTasks ?? []).some(
+    (task) =>
+      task.taskType === "srm_sign_order" &&
+      SIGN_IN_FLIGHT_STATUSES.has(task.status)
+  );
+}
 
 export interface ProcessBlocker {
   title: string;
@@ -105,7 +116,7 @@ export function lineStatusLabel(status: ProcessLineStatus): string {
     case "SUBMITTING":
       return "写入中";
     case "WRITTEN":
-      return "已写入";
+      return "已保存";
     case "WRITE_FAILED":
       return "写入失败";
     default:

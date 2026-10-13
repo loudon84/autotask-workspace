@@ -27,6 +27,7 @@ import { useProcessInstance } from "@/features/processes/api/use-process-instanc
 import {
   MAIN_STAGES,
   formatProcessError,
+  hasSignInFlight,
   resolveProcessBlocker,
   stageName,
   stageProgressIndex,
@@ -128,7 +129,7 @@ function StageActions({
       )}
       {detail.stage === "DATES_COMPLETE" && (
         <Button
-          disabled={acting}
+          disabled={acting || hasSignInFlight(detail.subTasks)}
           onClick={() =>
             run(
               () => autotaskApi.processInstances.sign(detail.id),
@@ -138,7 +139,9 @@ function StageActions({
           type="button"
         >
           <FileSignature className="mr-1 h-4 w-4" />
-          去签章
+          {acting || hasSignInFlight(detail.subTasks)
+            ? "签章进行中…"
+            : "签章"}
         </Button>
       )}
       {detail.stage === "SIGNED" && (
@@ -291,7 +294,7 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">订单行</CardTitle>
             <span className="text-muted-foreground text-sm">
-              已写入 {detail.lineDone}/{detail.lineTotal}
+              已保存 {detail.lineDone}/{detail.lineTotal}
             </span>
           </div>
           {(detail.stage === "SDMS_CREATED" ||

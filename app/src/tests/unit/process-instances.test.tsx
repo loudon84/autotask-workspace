@@ -269,7 +269,7 @@ describe("ProcessDetailPage", () => {
       screen.getAllByRole("link", { name: /填写交货日期/ }).length
     ).toBeGreaterThanOrEqual(1);
     expect(
-      screen.queryByRole("button", { name: /去签章/ })
+      screen.queryByRole("button", { name: /^签章$/ })
     ).not.toBeInTheDocument();
     expect(screen.getByText("客户订单：POJS2607130002")).toBeInTheDocument();
     expect(screen.getByText("客户：天地伟业技术有限公司")).toBeInTheDocument();
@@ -313,11 +313,36 @@ describe("ProcessDetailPage", () => {
     mockGet.mockResolvedValue(makeDetail({ stage: "DATES_COMPLETE", lineDone: 2 }));
     renderWithQuery(<ProcessDetailPage instanceId="inst-1" />);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /去签章/ })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /^签章$/ })).toBeInTheDocument()
     );
     expect(
       screen.queryByRole("link", { name: /^填写交货日期$/ })
     ).not.toBeInTheDocument();
+  });
+
+  it("disables sign button while sign subtask is queued or running", async () => {
+    mockGet.mockResolvedValue(
+      makeDetail({
+        stage: "DATES_COMPLETE",
+        lineDone: 2,
+        subTasks: [
+          {
+            id: "t-sign-running",
+            title: "3. 发起签章 - POJS2607130002",
+            taskType: "srm_sign_order",
+            status: "RUNNING",
+            createdAt: "2026-08-13T10:00:00Z",
+            updatedAt: "2026-08-13T10:01:00Z",
+          },
+        ],
+      })
+    );
+    renderWithQuery(<ProcessDetailPage instanceId="inst-1" />);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /签章进行中/ })
+      ).toBeDisabled()
+    );
   });
 
   it("hides archive button at SIGN_REQUESTED stage", async () => {
