@@ -1,0 +1,9 @@
+{
+  "rpaFlowId": "rpa_flow_srm_sign_order",
+  "rpaFlowVersion": "1.1.1",
+  "rpaFlowVersionId": "dadda96d-f4fa-43ff-9206-dde6d7d5eb5a",
+  "packageChecksum": "sha256:d413991803b9d4d8fcaeb2717304aa04636aaeab47b6c70e23ba8416b04a4cd4",
+  "status": "PUBLISHED",
+  "workflowCode": "srm_sign_order",
+  "engine": "http://127.0.0.1:4610"
+}

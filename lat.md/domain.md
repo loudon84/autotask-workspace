@@ -74,6 +74,21 @@ create → fill dates → sign → archive).
 Sub-work is AutomationTasks linked by `process_instance_id`. Finish hooks advance
 stages via Task process services.
 
+### Delivery Dates Local Save
+
+Official SRM has no separate save-date action; dates persist only with 签章.
+
+AutoTask stores line dates locally as `WRITTEN` (no fill RPA). `request_sign`
+always passes `order_lines`. Official sign Flow `1.1.5` fills 供方交期 in the
+订单详情 pane (not the list tab's fixed 「详情」column) then clicks 签章;
+rehearsal Binding uses `dryRun: true`. Demo portals keep sign `1.0.3` plus
+`temp_e2e_backfill_dates`. While a sign task is `QUEUED`/`RUNNING`, Task rejects
+repeat `request_sign` and Client disables 「签章」. See
+[[service/app/services/process_instance_service.py#submit_line_date]],
+[[service/app/services/process_instance_service.py#request_sign]],
+[[app/src/features/processes/process-model.ts#hasSignInFlight]], and
+[[rpa-flows/rpa_flow_srm_sign_order/1.1.5/flow.py#run]].
+
 ## StatementBill
 
 A StatementBill is the 天地伟业 statement head (check date/amount and related

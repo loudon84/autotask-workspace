@@ -142,7 +142,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
     setSavingLine(lineNumber);
     try {
       await submitLine(lineNumber, date);
-      toast.success(`第 ${lineNumber} 行交货日期已提交写入`);
+      toast.success(`第 ${lineNumber} 行交货日期已保存到 AutoTask`);
       onRefresh();
     } catch (error) {
       toast.error(errorMessage(error, "提交交货日期失败"));
@@ -171,7 +171,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
         }
       }
       if (successCount > 0) {
-        toast.success(`已提交 ${successCount} 行交货日期写入`);
+        toast.success(`已保存 ${successCount} 行交货日期到 AutoTask`);
         onRefresh();
       }
       if (failures.length > 0) {
@@ -185,7 +185,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
   return (
     <div className="space-y-4">
       <PageHeader
-        description={`客户订单 ${detail.bizKey}：可逐行保存，也可一次保存多行；每行保存都会触发一次门户写入`}
+        description={`客户订单 ${detail.bizKey}：可逐行保存，也可一次保存多行；交期先存 AutoTask，去签章时再一并写入门户`}
         title="填写交货日期"
       >
         <Button asChild variant="outline">
@@ -202,7 +202,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
             <CardTitle className="text-base">预计交货日期</CardTitle>
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-muted-foreground text-sm">
-                已写入 {detail.lineDone}/{detail.lineTotal}
+                已保存 {detail.lineDone}/{detail.lineTotal}
               </span>
               {stageEditable && (
                 <Button
@@ -238,7 +238,7 @@ export function ProcessDatesPage({ instanceId }: { instanceId: string }) {
           )}
           {stageEditable && (
             <p className="text-muted-foreground text-sm">
-              可先填多行，再点「保存全部」一次提交；也可点行内「保存」只提交该行。
+              可先填多行，再点「保存全部」；也可点行内「保存」只存该行。全部保存后即可去签章。
             </p>
           )}
           <ProcessOrderLinesTable

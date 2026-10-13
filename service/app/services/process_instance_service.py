@@ -76,6 +76,11 @@ _CHECK_REPLY_IN_FLIGHT = {
     TaskStatus.RUNNING.value,
     TaskStatus.WAITING_HUMAN.value,
 }
+# 签章进行中：仅排队/执行中拒重入；失败或待人工后允许业务再点「签章」。
+_SIGN_IN_FLIGHT = {
+    TaskStatus.QUEUED.value,
+    TaskStatus.RUNNING.value,
+}
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -553,6 +558,7 @@ async def submit_line_date(
     if line is None:
         raise NotFoundError(message="订单行不存在", message_key="errors.autotask.process_line_not_found")
     if line.line_status == ProcessLineStatus.SUBMITTING.value:
+        # 兼容历史「交期走 RPA」残留的 SUBMITTING 行；本地保存路径不再新开填交期子任务。
         raise BadRequestError(
             message="该行正在写入中，请稍候",
             message_key="errors.autotask.process_line_submitting",
@@ -560,24 +566,26 @@ async def submit_line_date(
     if line.line_status == ProcessLineStatus.WRITTEN.value and line.expected_delivery_date == expected_date:
         return line
 
+    # 正式 SRM 无单独「保存交期」：交期先落 AutoTask；去签章时再一并写入门户。
     line.expected_delivery_date = expected_date
-    line.line_status = ProcessLineStatus.SUBMITTING.value
+    line.line_status = ProcessLineStatus.WRITTEN.value
     line.last_error_code = None
     line.last_error_message = None
-    task = await _create_sub_task(
-        db,
-        instance,
-        template_code=FILL_LINE_DATE_TEMPLATE_CODE,
-        title=f"2. 填写交货日期(行{line_number}) - {instance.biz_key}",
-        task_input={
-            "po_no": instance.biz_key,
-            "line_number": line_number,
-            "expected_delivery_date": expected_date,
-        },
-        actor=user.user_id,
-    )
-    line.sub_task_id = task.id
-    if instance.stage == ProcessStage.SDMS_CREATED.value:
+    line.sub_task_id = None
+    await db.flush()
+    lines = await list_line_items(db, instance.id)
+    instance.line_total = len(lines)
+    instance.line_done = sum(1 for item in lines if item.line_status == ProcessLineStatus.WRITTEN.value)
+    if instance.line_total > 0 and instance.line_done == instance.line_total:
+        _clear_instance_error(instance)
+        _change_stage(
+            db,
+            instance,
+            ProcessStage.DATES_COMPLETE,
+            actor=user.user_id,
+            note="全部行交期已保存到 AutoTask",
+        )
+    elif instance.stage == ProcessStage.SDMS_CREATED.value or instance.stage == ProcessStage.DATES_COMPLETE.value:
         _change_stage(db, instance, ProcessStage.DATES_PARTIAL, actor=user.user_id)
     await db.commit()
     await db.refresh(line)
@@ -591,8 +599,13 @@ async def request_sign(db: AsyncSession, tenant_id: str, instance_id: str, user:
             message="全部行交期写入完成后才能发起签章",
             message_key="errors.autotask.process_sign_not_ready",
         )
-    # TEMP_E2E_ONLY: 演示门户不落库时，把 AutoTask 已写交期传给签章 Flow 做签章前回填。
-    # 只给演示站。正式站没有交期框/签章，不得回填。门户保存持久化后删除本段。
+    if await _has_sign_in_flight(db, instance.id):
+        raise BadRequestError(
+            message="签章任务进行中，请勿重复点击",
+            message_key="errors.autotask.process_sign_in_flight",
+        )
+    # 交期已只存 AutoTask：签章 Flow 必须带上全部已写行，正式站填「供方交期」后点签章一并提交。
+    # 演示站仍用 temp_e2e_backfill_dates（演示门户不落库时的回填开关）。
     lines = await list_line_items(db, instance.id)
     written_lines = [
         {
@@ -602,10 +615,9 @@ async def request_sign(db: AsyncSession, tenant_id: str, instance_id: str, user:
         for item in lines
         if item.line_status == ProcessLineStatus.WRITTEN.value and item.expected_delivery_date
     ]
-    task_input: dict = {"po_no": instance.biz_key}
+    task_input: dict = {"po_no": instance.biz_key, "order_lines": written_lines}
     if written_lines and await _is_demo_portal(db, instance.portal_account_id):
         task_input["temp_e2e_backfill_dates"] = True
-        task_input["order_lines"] = written_lines
     await _create_sub_task(
         db,
         instance,
@@ -682,6 +694,11 @@ async def _has_archive_in_progress_or_success(db: AsyncSession, instance_id: str
 async def _has_check_reply_in_flight(db: AsyncSession, instance_id: str) -> bool:
     tasks = await _list_instance_tasks_by_type(db, instance_id, CHECK_REPLY_TEMPLATE_CODE)
     return any(task.status in _CHECK_REPLY_IN_FLIGHT for task in tasks)
+
+
+async def _has_sign_in_flight(db: AsyncSession, instance_id: str) -> bool:
+    tasks = await _list_instance_tasks_by_type(db, instance_id, SIGN_TEMPLATE_CODE)
+    return any(task.status in _SIGN_IN_FLIGHT for task in tasks)
 
 
 def _summary_sdms_username(instance: ProcessInstance) -> str:
@@ -1096,6 +1113,19 @@ async def _handle_sign_finished(
     succeeded: bool,
 ) -> None:
     if succeeded:
+        output = run.output if isinstance(run.output, dict) else loads_json(run.output, {})
+        # dryRun 只演练填交期+定位签章，未真点门户；不得推进到待回签。
+        if bool(output.get("dryRun") or output.get("dry_run")):
+            _clear_instance_error(instance)
+            if instance.stage != ProcessStage.DATES_COMPLETE.value:
+                _change_stage(
+                    db,
+                    instance,
+                    ProcessStage.DATES_COMPLETE,
+                    actor="system",
+                    note="签章 dryRun 完成（未真点签章）",
+                )
+            return
         # 签章成功后清除历史失败文案，避免「已待回签/已完成」仍显示旧错误误导客服。
         # 正式路径：一律停在 SIGN_REQUESTED，由 30 分钟回签轮询（或人工兜底）再归档。
         # 演示门户签章瞬间常闪「已回签」但不落库，不可据此立即触发节点4。
