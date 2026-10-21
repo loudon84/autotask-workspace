@@ -19,9 +19,6 @@ export interface StageMeta {
 /** 节点定义与 v2.02 §6.3 中文名对齐；按钮文案仍为动作 */
 export const STAGE_DEFINITIONS: StageMeta[] = [
   { id: "CREATING_SDMS", name: "建单中", button: null },
-  { id: "SDMS_CREATED", name: "待填写交期", button: "填写交货日期" },
-  { id: "DATES_PARTIAL", name: "交期填写中", button: "填写交货日期" },
-  { id: "DATES_COMPLETE", name: "待签章", button: "签章" },
   { id: "SIGN_REQUESTED", name: "待回签", button: null },
   { id: "SIGNED", name: "已回签", button: "手动触发签章合同下载" },
   { id: "ARCHIVED", name: "已完成", button: null },
@@ -31,8 +28,6 @@ export const STAGE_DEFINITIONS: StageMeta[] = [
 /** 主流程节点（不含失败态），用于详情页进度条 */
 export const MAIN_STAGES: ProcessStage[] = [
   "CREATING_SDMS",
-  "SDMS_CREATED",
-  "DATES_COMPLETE",
   "SIGN_REQUESTED",
   "ARCHIVED",
 ];
@@ -65,8 +60,29 @@ export interface ProcessBlocker {
   errorCode?: string | null;
 }
 
+/** 门户订单详情。供方在此页填交期并签章。 */
+export function srmOrderDetailUrl(portalUrl: string, poNo: string): string | null {
+  const base = portalUrl.trim().replace(/\/+$/, "").replace(/#.*$/, "");
+  const po = poNo.trim();
+  if (!base || !po) {
+    return null;
+  }
+  return `${base}/#/order/list/detail/${encodeURIComponent(po)}`;
+}
+
+/** 旧阶段不再出现在页签和进度条上，仅用于历史数据的中文名。 */
+const RETIRED_STAGE_NAMES: Partial<Record<ProcessStage, string>> = {
+  SDMS_CREATED: "待填写交期",
+  DATES_PARTIAL: "交期填写中",
+  DATES_COMPLETE: "待签章",
+};
+
 export function stageName(stage: ProcessStage): string {
-  return STAGE_DEFINITIONS.find((item) => item.id === stage)?.name ?? stage;
+  return (
+    STAGE_DEFINITIONS.find((item) => item.id === stage)?.name ??
+    RETIRED_STAGE_NAMES[stage] ??
+    stage
+  );
 }
 
 export function stageButton(stage: ProcessStage): string | null {
@@ -84,10 +100,12 @@ export function stageActionPath(
 }
 
 export function stageProgressIndex(stage: ProcessStage): number {
-  if (stage === "DATES_PARTIAL") {
-    return MAIN_STAGES.indexOf("SDMS_CREATED");
-  }
-  if (stage === "SIGNED") {
+  if (
+    stage === "SDMS_CREATED" ||
+    stage === "DATES_PARTIAL" ||
+    stage === "DATES_COMPLETE" ||
+    stage === "SIGNED"
+  ) {
     return MAIN_STAGES.indexOf("SIGN_REQUESTED");
   }
   const index = MAIN_STAGES.indexOf(stage);

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw, ScanSearch, TimerReset } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -13,6 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProcessInstances } from "@/features/processes/api/use-process-instances";
+import {
+  canOpenSrmSign,
+  openSrmOrderSign,
+} from "@/features/processes/open-srm-sign";
+import { usePortalAccounts } from "@/features/srm-portals/api/use-portal-accounts";
 import {
   CUSTOMER_ORDER_PROCESS_CODE,
   formatProcessError,
@@ -34,9 +39,6 @@ import { formatBeijingDateTime } from "@/utils/date-time";
 const stageTabs: { value: string; label: string }[] = [
   { value: "all", label: "全部" },
   { value: "CREATING_SDMS", label: "建单中" },
-  { value: "SDMS_CREATED", label: "待填写交期" },
-  { value: "DATES_PARTIAL", label: "交期填写中" },
-  { value: "DATES_COMPLETE", label: "待签章" },
   { value: "SIGN_REQUESTED", label: "待回签" },
   { value: "SIGNED", label: "已回签" },
   { value: "ARCHIVED", label: "已完成" },
@@ -64,7 +66,9 @@ export function ProcessesListPage() {
   const [keyword, setKeyword] = useState("");
   const [scanning, setScanning] = useState(false);
   const [polling, setPolling] = useState(false);
+  const navigate = useNavigate();
   const portalNameMap = usePortalNameMap();
+  const { data: portals = [] } = usePortalAccounts();
 
   const { data: instances = [], isLoading } = useProcessInstances(
     stageTab === "all" ? undefined : { stage: stageTab }
@@ -224,23 +228,57 @@ export function ProcessesListPage() {
         meta: { sticky: "right" },
         cell: ({ row }) => {
           const button = stageButton(row.original.stage);
-          if (!button) {
+          const portal = portals.find(
+            (item) => item.id === row.original.portalAccountId
+          );
+          const showSrm = canOpenSrmSign(row.original.stage);
+          if (!button && !showSrm) {
             return null;
           }
           return (
-            <Button asChild size="sm" variant="outline">
-              <Link
-                params={{ instanceId: row.original.id }}
-                to={stageActionPath(row.original.stage)}
-              >
-                {button}
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              {button && (
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    params={{ instanceId: row.original.id }}
+                    to={stageActionPath(row.original.stage)}
+                  >
+                    {button}
+                  </Link>
+                </Button>
+              )}
+              {showSrm && (
+                <Button
+                  onClick={() => {
+                    void openSrmOrderSign(portal, row.original.bizKey)
+                      .then((where) => {
+                        toast.success(
+                          where === "external"
+                            ? "已在浏览器打开 SRM 订单"
+                            : "已打开 SRM 订单"
+                        );
+                        if (where === "workspace") {
+                          navigate({ to: "/web-workspace" });
+                        }
+                      })
+                      .catch((error: unknown) => {
+                        toast.error(
+                          error instanceof Error ? error.message : "打开 SRM 失败"
+                        );
+                      });
+                  }}
+                  size="sm"
+                  type="button"
+                >
+                  去 SRM 签章
+                </Button>
+              )}
+            </div>
           );
         },
       },
     ],
-    [portalNameMap]
+    [navigate, portalNameMap, portals]
   );
 
   if (isLoading) {
