@@ -74,15 +74,21 @@ step; Task then resumes or marks manual success.
 
 ## ProcessInstance
 
-A ProcessInstance is a multi-stage business process (for example scan → SDMS
-create → fill dates → sign → archive).
+A ProcessInstance is a multi-stage business process. New orders go from SDMS
+create straight to 待回签; the user signs on the SRM page.
 
 Sub-work is AutomationTasks linked by `process_instance_id`. Finish hooks advance
 stages via Task process services.
 
+### Manual SRM Sign
+
+After SDMS create succeeds, the instance enters 待回签. Stage tabs and progress are 建单中, 待回签, then 已完成. 「去 SRM 签章」opens the portal order so a person fills 供方交期 and signs. Reply polling still waits for 已回签.
+
+See [[service/app/services/process_instance_service.py#_handle_create_sdms_finished]] and [[app/src/features/processes/process-model.ts#srmOrderDetailUrl]].
+
 ### Delivery Dates Local Save
 
-Official SRM has no separate save-date action; dates persist only with 签章.
+Official SRM has no separate save-date action; dates persist only with 签章. The date page and sign RPA remain in code, but those stages are off the tabs and progress bar.
 
 AutoTask stores line dates locally as `WRITTEN` (no fill RPA). `request_sign`
 always passes `order_lines`. Official sign Flow `1.1.5` fills 供方交期 in the

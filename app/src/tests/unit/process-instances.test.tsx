@@ -12,6 +12,9 @@ const {
   mockArchive,
   mockRetry,
   mockCancel,
+  mockOpenPortal,
+  mockOpenExternal,
+  mockNavigate,
 } = vi.hoisted(() => ({
   mockList: vi.fn(),
   mockGet: vi.fn(),
@@ -20,6 +23,9 @@ const {
   mockArchive: vi.fn(),
   mockRetry: vi.fn(),
   mockCancel: vi.fn(),
+  mockOpenPortal: vi.fn(),
+  mockOpenExternal: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@/services/autotask-api", () => ({
@@ -44,6 +50,9 @@ vi.mock("@/services/autotask-api", () => ({
           id: "portal-1",
           portalName: "天地伟业技术有限公司",
           businessEntity: "深圳市芯云信息科技有限公司",
+          portalUrl: "https://supplier.tiandy.com",
+          clientOpenMode: "webcontents",
+          clientSessionPartition: "persist:portal-1",
           status: "ENABLED",
           category: "TIANDI",
         },
@@ -71,6 +80,12 @@ vi.mock("@tanstack/react-router", () => ({
     ...props
   }: React.PropsWithChildren<Record<string, unknown>>) =>
     React.createElement("a", { href: "#" }, children),
+  useNavigate: () => mockNavigate,
+}));
+
+vi.mock("@/actions/web-workspace", () => ({
+  openPortal: mockOpenPortal,
+  openExternal: mockOpenExternal,
 }));
 
 import { ProcessesListPage } from "@/features/processes/processes-list";
@@ -181,10 +196,10 @@ describe("ProcessesListPage", () => {
         bizKey: "POJS2607130002",
         title: "客户订单处理 - POJS2607130002",
         portalAccountId: "portal-1",
-        stage: "SDMS_CREATED",
+        stage: "SIGN_REQUESTED",
         status: "ACTIVE",
         lineTotal: 2,
-        lineDone: 1,
+        lineDone: 0,
         createdAt: "2026-08-13T00:00:00Z",
         updatedAt: "2026-08-13T00:00:00Z",
       },
@@ -203,13 +218,12 @@ describe("ProcessesListPage", () => {
     );
     expect(screen.getByRole("heading", { name: "客户订单" })).toBeInTheDocument();
     expect(screen.getByText("天地伟业技术有限公司")).toBeInTheDocument();
-    expect(
-      screen.getAllByText("待填写交期").length
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByText("填写交货日期").length
-    ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "待填写交期" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "待签章" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "待回签" })).toBeInTheDocument();
+    expect(screen.getAllByText("待回签").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "去 SRM 签章" })).toBeInTheDocument();
+    expect(screen.getByText("0/2")).toBeInTheDocument();
     expect(screen.getByText("进行中")).toBeInTheDocument();
   });
 
@@ -266,8 +280,8 @@ describe("ProcessDetailPage", () => {
       expect(screen.getByText("流程进度")).toBeInTheDocument()
     );
     expect(
-      screen.getAllByRole("link", { name: /填写交货日期/ }).length
-    ).toBeGreaterThanOrEqual(1);
+      screen.queryByRole("link", { name: /^填写交货日期$/ })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^签章$/ })
     ).not.toBeInTheDocument();
@@ -309,40 +323,19 @@ describe("ProcessDetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows sign button only at DATES_COMPLETE stage", async () => {
+  it("does not offer auto sign at the retired DATES_COMPLETE stage", async () => {
     mockGet.mockResolvedValue(makeDetail({ stage: "DATES_COMPLETE", lineDone: 2 }));
     renderWithQuery(<ProcessDetailPage instanceId="inst-1" />);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /^签章$/ })).toBeInTheDocument()
+      expect(screen.getByText("阶段：待签章")).toBeInTheDocument()
     );
+    expect(
+      screen.queryByRole("button", { name: /^签章$/ })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /^填写交货日期$/ })
     ).not.toBeInTheDocument();
-  });
-
-  it("disables sign button while sign subtask is queued or running", async () => {
-    mockGet.mockResolvedValue(
-      makeDetail({
-        stage: "DATES_COMPLETE",
-        lineDone: 2,
-        subTasks: [
-          {
-            id: "t-sign-running",
-            title: "3. 发起签章 - POJS2607130002",
-            taskType: "srm_sign_order",
-            status: "RUNNING",
-            createdAt: "2026-08-13T10:00:00Z",
-            updatedAt: "2026-08-13T10:01:00Z",
-          },
-        ],
-      })
-    );
-    renderWithQuery(<ProcessDetailPage instanceId="inst-1" />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /签章进行中/ })
-      ).toBeDisabled()
-    );
+    expect(screen.getByText("待回签")).toBeInTheDocument();
   });
 
   it("hides archive button at SIGN_REQUESTED stage", async () => {
@@ -354,7 +347,26 @@ describe("ProcessDetailPage", () => {
     expect(
       screen.queryByRole("button", { name: /手动触发签章合同下载/ })
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/双方盖章进行中/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "去 SRM 签章" })).toBeInTheDocument();
+    expect(screen.getByText(/请点「去 SRM 签章」/)).toBeInTheDocument();
+  });
+
+  it("opens the SRM order detail from 待回签", async () => {
+    mockOpenPortal.mockResolvedValue({ id: "tab-1" });
+    mockGet.mockResolvedValue(makeDetail({ stage: "SIGN_REQUESTED" }));
+    renderWithQuery(<ProcessDetailPage instanceId="inst-1" />);
+    const button = await screen.findByRole("button", { name: "去 SRM 签章" });
+    await userEvent.click(button);
+    await waitFor(() =>
+      expect(mockOpenPortal).toHaveBeenCalledWith({
+        portalId: "portal-1",
+        url: "https://supplier.tiandy.com/#/order/list/detail/POJS2607130002",
+        title: "天地伟业技术有限公司 POJS2607130002",
+        sessionPartition: "persist:portal-1",
+        openMode: "webcontents",
+      })
+    );
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/web-workspace" });
   });
 
   it("shows archive button at SIGNED stage", async () => {

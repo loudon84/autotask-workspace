@@ -99,10 +99,7 @@ def _optional_str(value: object) -> str | None:
 STAGE_DEFINITIONS: dict[str, list[dict]] = {
     PROCESS_CODE_SRM_CUSTOMER_ORDER: [
         {"id": ProcessStage.CREATING_SDMS.value, "name": "建单中", "button": None},
-        {"id": ProcessStage.SDMS_CREATED.value, "name": "待填写交期", "button": "填写交货日期"},
-        {"id": ProcessStage.DATES_PARTIAL.value, "name": "交期填写中", "button": "填写交货日期"},
-        {"id": ProcessStage.DATES_COMPLETE.value, "name": "待签章", "button": "去签章"},
-        {"id": ProcessStage.SIGN_REQUESTED.value, "name": "待回签", "button": None},
+        {"id": ProcessStage.SIGN_REQUESTED.value, "name": "待回签", "button": "去 SRM 签章"},
         {"id": ProcessStage.SIGNED.value, "name": "已回签", "button": "手动触发签章合同下载"},
         {"id": ProcessStage.ARCHIVED.value, "name": "已完成", "button": None},
         {"id": ProcessStage.FAILED.value, "name": "失败", "button": "重试"},
@@ -1072,7 +1069,14 @@ async def _handle_create_sdms_finished(
         }
     )
     _clear_instance_error(instance)
-    _change_stage(db, instance, ProcessStage.SDMS_CREATED, actor="system", note="SDMS 销售订单已创建")
+    # 交期和签章在 SRM 由人完成（含 e签宝拖章）。建单成功后直接待回签，沿用回签轮询。
+    _change_stage(
+        db,
+        instance,
+        ProcessStage.SIGN_REQUESTED,
+        actor="system",
+        note="SDMS 销售订单已创建，请在 SRM 填写交期并签章",
+    )
 
 
 async def _handle_fill_line_finished(

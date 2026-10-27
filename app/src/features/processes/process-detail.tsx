@@ -1,11 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Archive,
   Ban,
-  Calendar,
   Check,
-  FileSignature,
+  ExternalLink,
   RotateCcw,
 } from "lucide-react";
 import { useState } from "react";
@@ -25,9 +24,12 @@ import {
 } from "@/components/ui/table";
 import { useProcessInstance } from "@/features/processes/api/use-process-instances";
 import {
+  canOpenSrmSign,
+  openSrmOrderSign,
+} from "@/features/processes/open-srm-sign";
+import {
   MAIN_STAGES,
   formatProcessError,
-  hasSignInFlight,
   resolveProcessBlocker,
   stageName,
   stageProgressIndex,
@@ -42,6 +44,7 @@ import {
   usePortalBusinessEntityMap,
   usePortalNameMap,
 } from "@/features/processes/use-portal-name-map";
+import { usePortalAccounts } from "@/features/srm-portals/api/use-portal-accounts";
 import { autotaskApi } from "@/services/autotask-api";
 import { queryKeys } from "@/services/query-keys";
 import type { ProcessInstanceDetail } from "@/types/process-instance";
@@ -96,6 +99,27 @@ function StageActions({
   onUpdated: () => void;
 }) {
   const [acting, setActing] = useState(false);
+  const [openingSrm, setOpeningSrm] = useState(false);
+  const navigate = useNavigate();
+  const { data: portals = [] } = usePortalAccounts();
+  const portal = portals.find((item) => item.id === detail.portalAccountId);
+
+  const openSrmSign = async () => {
+    setOpeningSrm(true);
+    try {
+      const where = await openSrmOrderSign(portal, detail.bizKey);
+      toast.success(
+        where === "external" ? "已在浏览器打开 SRM 订单" : "已打开 SRM 订单"
+      );
+      if (where === "workspace") {
+        navigate({ to: "/web-workspace" });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "打开 SRM 失败");
+    } finally {
+      setOpeningSrm(false);
+    }
+  };
 
   const run = async (action: () => Promise<unknown>, successMessage: string) => {
     setActing(true);
@@ -116,32 +140,14 @@ function StageActions({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {(detail.stage === "SDMS_CREATED" || detail.stage === "DATES_PARTIAL") && (
-        <Button asChild>
-          <Link
-            params={{ instanceId: detail.id }}
-            to="/processes/$instanceId/dates"
-          >
-            <Calendar className="mr-1 h-4 w-4" />
-            填写交货日期
-          </Link>
-        </Button>
-      )}
-      {detail.stage === "DATES_COMPLETE" && (
+      {canOpenSrmSign(detail.stage) && detail.status === "ACTIVE" && (
         <Button
-          disabled={acting || hasSignInFlight(detail.subTasks)}
-          onClick={() =>
-            run(
-              () => autotaskApi.processInstances.sign(detail.id),
-              "已发起签章子任务"
-            )
-          }
+          disabled={openingSrm}
+          onClick={() => void openSrmSign()}
           type="button"
         >
-          <FileSignature className="mr-1 h-4 w-4" />
-          {acting || hasSignInFlight(detail.subTasks)
-            ? "签章进行中…"
-            : "签章"}
+          <ExternalLink className="mr-1 h-4 w-4" />
+          {openingSrm ? "正在打开…" : "去 SRM 签章"}
         </Button>
       )}
       {detail.stage === "SIGNED" && (
@@ -263,13 +269,8 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
           <StageProgress detail={detail} />
           {detail.stage === "SIGN_REQUESTED" && detail.status === "ACTIVE" && (
             <p className="text-muted-foreground text-sm">
-              双方盖章进行中（客户→我司），阶段保持「待回签」。系统轮询 SRM
-              变为「已回签」后再自动下载双方签章合同上传；也可在列表点「立即回签轮询」。此阶段不提供合同下载。
-            </p>
-          )}
-          {detail.stage === "DATES_COMPLETE" && detail.status === "ACTIVE" && (
-            <p className="text-muted-foreground text-sm">
-              演示 TEMP：若门户该单已是「已回签」，可在列表点「立即回签轮询」探测并自动归档。
+              请点「去 SRM 签章」，在门户订单里填写供方交期并完成签章。完成后阶段保持「待回签」。系统轮询
+              SRM 变为「已回签」后再自动下载双方签章合同；也可在列表点「立即回签轮询」。此阶段不提供合同下载。
             </p>
           )}
           {detail.stage === "SIGNED" && detail.status === "ACTIVE" && (
@@ -297,13 +298,6 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
               已保存 {detail.lineDone}/{detail.lineTotal}
             </span>
           </div>
-          {(detail.stage === "SDMS_CREATED" ||
-            detail.stage === "DATES_PARTIAL") &&
-            detail.status === "ACTIVE" && (
-              <p className="text-muted-foreground text-sm">
-                本页订单行为只读预览。请点击右上角「填写交货日期」进入编辑页，逐行填写并保存。
-              </p>
-            )}
         </CardHeader>
         <CardContent>
           <ProcessOrderLinesTable lines={detail.lines} mode="readonly" />
@@ -338,8 +332,14 @@ export function ProcessDetailPage({ instanceId }: { instanceId: string }) {
               {detail.stageHistory.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{formatBeijingDateTime(item.createdAt)}</TableCell>
-                  <TableCell>{item.fromStage ?? "—"}</TableCell>
-                  <TableCell>{item.toStage}</TableCell>
+                  <TableCell>
+                    {item.fromStage
+                      ? stageName(item.fromStage as ProcessInstanceDetail["stage"])
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    {stageName(item.toStage as ProcessInstanceDetail["stage"])}
+                  </TableCell>
                   <TableCell>{item.actor}</TableCell>
                   <TableCell>{item.note ?? ""}</TableCell>
                 </TableRow>

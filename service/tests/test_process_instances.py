@@ -78,7 +78,13 @@ def test_stage_definitions_cover_all_stages() -> None:
         for stages in svc.STAGE_DEFINITIONS.values()
         for item in stages
     }
-    assert defined == {stage.value for stage in ProcessStage}
+    retired = {
+        ProcessStage.SDMS_CREATED.value,
+        ProcessStage.DATES_PARTIAL.value,
+        ProcessStage.DATES_COMPLETE.value,
+    }
+    assert retired.isdisjoint(defined)
+    assert defined == {stage.value for stage in ProcessStage} - retired
 
 
 @pytest.mark.asyncio
@@ -552,7 +558,7 @@ async def test_create_sdms_success_creates_lines_and_advances() -> None:
     assert lines[0].unit_selling_price == "1.5"
     assert lines[0].remarks == "备注一"
     assert all(line.line_status == ProcessLineStatus.PENDING.value for line in lines)
-    assert instance.stage == ProcessStage.SDMS_CREATED.value
+    assert instance.stage == ProcessStage.SIGN_REQUESTED.value
     assert instance.status == ProcessInstanceStatus.ACTIVE.value
 
 
