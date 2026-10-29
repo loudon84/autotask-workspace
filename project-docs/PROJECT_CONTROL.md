@@ -61,10 +61,10 @@
 | 天地伟业定时器 | `tiandy.scan_pending`（`0 8 * * *`）/ `tiandy.sign_poll`（`*/30 * * * *`）默认停用。测库已登记。未授权不要在正式打开。 |
 | 对账单生成 | **1.1.3** 已发正式 Engine 并绑「天地伟业-芯云」（无 dryRun）。测库「天地伟业-芯云-正式演练」已绑本机 4610 的 **1.1.3**（`dryRun=true`）。同 ZIP、不同 `versionId`。本机 Engine 现为发包装包模式（Worker 关，因 4520 未起）；要本地真跑需先起本机 Task，再开 Worker 重启 Engine。 |
 | 对账单金额不一致 | 可确认后继续生成（`confirmAmountMismatch`）。Client 与 Task 必须一起发；旧 Client 没有确认框。随下一版安装包发出。 |
-| 京东方发票箱单 | 一期已落地；09-10 体验：流水号可进详情、失败才显示重试、子任务抽屉、净重默认千克、WMS 地区未维护则停本阶段、删草稿 1.0.1。排重索引仅测库。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。**需重启测库 4520**。 |
+| 京东方发票箱单 | **2026-10-29 正式代码与库已到 `f8c2e91b4a70`，Flow 已发 247:4610。** 正式库还没有分类为京东方的门户，Binding 未建。提交 Binding 仍是 `dryRun`。定时器先不要开。设计：`prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`。 |
 | 上传发票 / 提交送审正式包 | **1.1.3 / 1.1.7 已发正式 Engine（247:4610）并切 Binding**（2026-10-10）。两层根因：① 上传发票后门户全屏 `el-loading-mask` 盖住「确定」，旧版只等 400ms 就点 → `STMT_INVOICE_OCR_EMPTY`（1.1.6 修：等遮罩消失再点）。② **假 SUCCESS**：点「提交审核」后只等泛化 `.el-message--success`，残留「上传成功」toast 被误判为提交成功，输出状态还是硬编码的——10-10 三次 SUCCESS 空跑，SRM 侧始终未对账/未上传（已用前端 chunk 源码 + 拦截探测证实：提交成功会 `$router.push` 回列表，校验拦截只弹 warning toast）。1.1.7 修：点前清残留 toast、成功判定改为路由跳回列表/新成功 toast、warning 抛 `SRM_STMT_SUBMIT_BLOCKED`、输出改从列表回读真实状态。账单 16224e09 已回滚到生成后状态（UNCHECKED/NOT_UPLOADED、实例 STMT_PENDING_INVOICE ACTIVE），可重跑。 |
 | 填交期 / 签章 | **已上正式（2026-10-27）。** 247 的 Task/Engine 已用 `dev.sh` 重启，代码 `a72b736`。新单建完即待回签，桌面端 `0.1.33` 有「去 SRM 签章」。签章 Flow 不发包。**POJS2610210007 不要重跑。** |
-| 在线更新 | **0.1.33 已上 stable（2026-10-27，提交 `5a42571`）。** Feed `autotask/stable`。与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 + `release-manifest.json` 校验，不验代码签名。`release:build` 拒绝脏工作区（`AUTOTASK_RELEASE_ALLOW_DIRTY=1` 可强制），manifest 记 gitCommit/gitBranch，线上版本可追回到确切提交（对齐 Work 的可追溯设计）。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
+| 在线更新 | **0.1.34 已上 stable（2026-10-29，提交 `5a6a84e`）。** Feed `autotask/stable`。 |与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 + `release-manifest.json` 校验，不验代码签名。`release:build` 拒绝脏工作区（`AUTOTASK_RELEASE_ALLOW_DIRTY=1` 可强制），manifest 记 gitCommit/gitBranch，线上版本可追回到确切提交（对齐 Work 的可追溯设计）。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
 
 ## 6. 未决问题
