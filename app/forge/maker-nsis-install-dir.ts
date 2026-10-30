@@ -21,7 +21,7 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
 
     const updateUrl =
       process.env.AUTOTASK_UPDATE_URL ??
-      "https://release.superic.com/autotask/stable/";
+      "http://192.168.99.68/autotask/stable/";
     const resourcesDir = path.join(dir, "resources");
     await mkdir(resourcesDir, { recursive: true });
     await writeFile(
@@ -46,7 +46,7 @@ export class MakerNsisInstallDir extends MakerBase<Record<string, never>> {
             provider: "generic",
             url:
               process.env.AUTOTASK_UPDATE_URL ??
-              "https://release.superic.com/autotask/stable/",
+              "http://192.168.99.68/autotask/stable/",
             channel: "latest",
           },
           forceCodeSigning: false,

@@ -7,14 +7,18 @@ export interface AutoTaskEndpointConfig {
   taskPrefix: string;
 }
 
+const AUTH_BACKEND_URL = "http://192.168.102.247:4510";
+const TASK_BACKEND_URL = "http://192.168.99.68:4520";
+const ENGINE_BACKEND_URL = "http://192.168.99.68:4610";
+
 export const defaultAutoTaskEndpointConfig: AutoTaskEndpointConfig = {
   authBackendUrl:
-    import.meta.env.VITE_AUTOTASK_AUTH_BACKEND_URL ?? "http://127.0.0.1:4510",
+    import.meta.env.VITE_AUTOTASK_AUTH_BACKEND_URL ?? AUTH_BACKEND_URL,
   authPrefix: "/api/v1/auth",
   rpaEngineUrl:
-    import.meta.env.VITE_AUTOTASK_RPA_ENGINE_URL ?? "http://127.0.0.1:4610",
+    import.meta.env.VITE_AUTOTASK_RPA_ENGINE_URL ?? ENGINE_BACKEND_URL,
   taskBackendUrl:
-    import.meta.env.VITE_AUTOTASK_TASK_BACKEND_URL ?? "http://127.0.0.1:4520",
+    import.meta.env.VITE_AUTOTASK_TASK_BACKEND_URL ?? TASK_BACKEND_URL,
   taskPrefix: "/api/v1/autotask",
   aiosHomeUrl: "http://127.0.0.1:4517",
 };
@@ -33,23 +37,43 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
   return candidate;
 }
 
+function preferNewServer(url: string): string {
+  const bare = url.replace(TRAILING_SLASHES_PATTERN, "");
+  if (bare === "http://127.0.0.1:4510" || bare === "http://localhost:4510") {
+    return AUTH_BACKEND_URL;
+  }
+  if (bare === "http://127.0.0.1:4520" || bare === "http://localhost:4520") {
+    return TASK_BACKEND_URL;
+  }
+  if (bare === "http://127.0.0.1:4610" || bare === "http://localhost:4610") {
+    return ENGINE_BACKEND_URL;
+  }
+  return url;
+}
+
 export function normalizeAutoTaskEndpointConfig(
   config: Partial<AutoTaskEndpointConfig>
 ): AutoTaskEndpointConfig {
   const merged = { ...defaultAutoTaskEndpointConfig, ...config };
   return {
-    authBackendUrl: normalizeBaseUrl(
-      merged.authBackendUrl,
-      defaultAutoTaskEndpointConfig.authBackendUrl
+    authBackendUrl: preferNewServer(
+      normalizeBaseUrl(
+        merged.authBackendUrl,
+        defaultAutoTaskEndpointConfig.authBackendUrl
+      )
     ),
     authPrefix: merged.authPrefix,
-    rpaEngineUrl: normalizeBaseUrl(
-      merged.rpaEngineUrl,
-      defaultAutoTaskEndpointConfig.rpaEngineUrl
+    rpaEngineUrl: preferNewServer(
+      normalizeBaseUrl(
+        merged.rpaEngineUrl,
+        defaultAutoTaskEndpointConfig.rpaEngineUrl
+      )
     ),
-    taskBackendUrl: normalizeBaseUrl(
-      merged.taskBackendUrl,
-      defaultAutoTaskEndpointConfig.taskBackendUrl
+    taskBackendUrl: preferNewServer(
+      normalizeBaseUrl(
+        merged.taskBackendUrl,
+        defaultAutoTaskEndpointConfig.taskBackendUrl
+      )
     ),
     taskPrefix: merged.taskPrefix,
     aiosHomeUrl: merged.aiosHomeUrl,

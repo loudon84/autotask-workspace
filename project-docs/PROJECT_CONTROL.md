@@ -1,6 +1,6 @@
 # AutoTask 开发总控
 
-最后更新：2026-10-21
+最后更新：2026-10-29
 
 ## 1. 用途
 
@@ -21,6 +21,7 @@
 | RPA Flow | `rpa-flows/` | 允许扫描的代码根 |
 | RPA authoring | `rpa-authoring/` | 登录演示已完成 |
 | Auth | `http://192.168.102.247:4510` | 测试服务器；**当前 4510 端口未监听**（桌面登录会失败）。不在本工作区代码扫描根内 |
+| 新机测试栈 | `192.168.99.68` | 2026-10-30：测库 `nodeskclaw_task_test`，MinIO `192.168.99.68:9010` 桶 `rpa-flow-packages`。桌面发版目录在 `/data/smc-release/autotask`，nginx 已提供 `/autotask/stable/`（当前 `0.1.34`）。域名 `releases.superic.com` 尚未解析，也还没有证书。Task / Engine 已停。正式库和正式桶未导入。247 与 `release.superic.com` 继续对外 |
 
 天地伟业线：`develop/v2.0` / `master`。京东方线：`develop/v3.0`。两边共用这份活页；合分支时只同步仍有效的状态，不要把 [`PROJECT_CONTROL_HISTORY.md`](./PROJECT_CONTROL_HISTORY.md) 全文并回来。
 
@@ -43,6 +44,7 @@
 | | 测库 | 正式库 |
 | --- | --- | --- |
 | 数据库 | `nodeskclaw_task` | `rpa_autotask` |
+| 新机（2026-10-29） | `192.168.99.68` Postgres 测库 `nodeskclaw_task_test`。MinIO 也在这台：`192.168.99.68:9010`，桶 `rpa-flow-packages`（191 个对象）。Task / Engine 已停。Auth 仍是 247:4510 | 正式库和正式桶还没导入。测通后只改连接和 `.env`。247 不要停 |
 | Task Alembic | **v3 测库 head `f8c2e91b4a70`**（含 extra / 地区表 / 箱单排重索引） | **`d4b2f7a91e05`**（2026-09-10：category、分类文档、`timers`、`timer_runs`）。**未迁** extra / 地区表 / 排重索引 |
 | Task 配置 | `.env` | `.env.product`（`SKIP_AUTO_MIGRATE=1`） |
 | 天地伟业门户 | 天地伟业-芯云-正式演练 | 天地伟业-芯云（`https://supplier.tiandy.com`），`category=TIANDI` |
@@ -66,6 +68,7 @@
 | 填交期 / 签章 | **已上正式（2026-10-27）。** 247 的 Task/Engine 已用 `dev.sh` 重启，代码 `a72b736`。新单建完即待回签，桌面端 `0.1.33` 有「去 SRM 签章」。签章 Flow 不发包。**POJS2610210007 不要重跑。** |
 | 在线更新 | **0.1.34 已上 stable（2026-10-29，提交 `5a6a84e`）。** Feed `autotask/stable`。 |与 Work 同一台机、同一套 staging/releases/stable；promote 脚本与 Work 同构（`PROMOTION_FAILED` 错误码），门禁换成 SHA256/sha512 + `release-manifest.json` 校验，不验代码签名。`release:build` 拒绝脏工作区（`AUTOTASK_RELEASE_ALLOW_DIRTY=1` 可强制），manifest 记 gitCommit/gitBranch，线上版本可追回到确切提交（对齐 Work 的可追溯设计）。发布机用 SSH 公钥免密（密码登录会被限流掐断）。安装包发布者 `SMC`，落 `D:\Programs\SMC\updates\AutoTask`。规格：`project-docs/prd/AutoTask 在线更新.md`。 |
 | 租约死循环 | 未改代码。Worker 不续租 + `WORKER_LEASE_TTL_SECONDS=60` 会把 RUNNING 打回 QUEUED，同一 Run 从头再跑。 |
+| 新机测试环境 | **2026-10-30。** `192.168.99.68` 测库 `nodeskclaw_task_test`（门户 28），MinIO 测试桶 `rpa-flow-packages`（191 个对象）。桌面发版目录已在本机 nginx：`/autotask/stable/` 当前 `0.1.34`。域名 `releases.superic.com` 还没解析。Task 和 Engine 仍关闭。正式库和正式桶未拷。247 与 `release.superic.com` 仍是线上。 |
 
 ## 6. 未决问题
 
@@ -92,6 +95,7 @@
 7. 修正 `SKIP_AUTO_MIGRATE` 从 `.env` 读入启动逻辑。
 8. 京东方测库 4520 重启后验收箱单一期界面改动。
 9. `login_official_srm` 过期会话竞态加固 + 正式验证码登录路径一次演练（低频，避开风控）。
+10. 新机测试通过后，再导入正式库和正式桶，然后只改数据连接和 `.env`。现在不要停 247。
 
 ## 8. 记录维护规则
 

@@ -15,7 +15,7 @@ import {
 import { nsisUpdateStartCommand, NSIS_UPDATE_ARGS } from "@/main/delayed-setup-launch";
 
 /** 与 NSIS maker / app-update.yml 同一地址；打包后 yml 缺失时仍能检查更新 */
-const UPDATE_FEED_URL = "https://release.superic.com/autotask/stable/";
+const UPDATE_FEED_URL = "http://192.168.99.68/autotask/stable/";
 
 function logUpdate(message: string, error?: unknown): void {
   const text = error == null ? message : `${message} ${String(error)}`;

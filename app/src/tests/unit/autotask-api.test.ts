@@ -24,7 +24,7 @@ describe("getApiMode", () => {
 });
 
 describe("default endpoint config", () => {
-  it("targets the local development services", async () => {
+  it("targets the new server and keeps Auth on 4510", async () => {
     const {
       buildAuthUrl,
       buildRpaEngineUrl,
@@ -33,16 +33,16 @@ describe("default endpoint config", () => {
     } = await import("@/types/endpoint-config");
 
     expect(buildAuthUrl(defaultAutoTaskEndpointConfig, "/me")).toBe(
-      "http://127.0.0.1:4510/api/v1/auth/me"
+      "http://192.168.102.247:4510/api/v1/auth/me"
     );
     expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/tasks")).toBe(
-      "http://127.0.0.1:4520/api/v1/autotask/tasks"
+      "http://192.168.99.68:4520/api/v1/autotask/tasks"
     );
     expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/session/sync")).toBe(
-      "http://127.0.0.1:4520/api/v1/autotask/session/sync"
+      "http://192.168.99.68:4520/api/v1/autotask/session/sync"
     );
     expect(buildRpaEngineUrl(defaultAutoTaskEndpointConfig, "/flows")).toBe(
-      "http://127.0.0.1:4610/api/v1/flows"
+      "http://192.168.99.68:4610/api/v1/flows"
     );
   });
 
@@ -57,9 +57,9 @@ describe("default endpoint config", () => {
       taskBackendUrl: "localhost:4520/",
     });
 
-    expect(config.authBackendUrl).toBe("http://127.0.0.1:4510");
-    expect(config.taskBackendUrl).toBe("http://localhost:4520");
-    expect(config.rpaEngineUrl).toBe("http://localhost:4610");
+    expect(config.authBackendUrl).toBe("http://192.168.102.247:4510");
+    expect(config.taskBackendUrl).toBe("http://192.168.99.68:4520");
+    expect(config.rpaEngineUrl).toBe("http://192.168.99.68:4610");
     expect(config.authPrefix).toBe("/api/v1/auth");
     expect(config.taskPrefix).toBe("/api/v1/autotask");
     expect("sdmsWebBaseUrl" in config).toBe(false);

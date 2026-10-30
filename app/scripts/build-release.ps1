@@ -1,6 +1,6 @@
 ﻿# AutoTask 在线更新发版：打包 → 校验 → 暂存到 release/autotask/<版本>/
 # 用法：powershell -File scripts/build-release.ps1
-# 可选环境变量：AUTOTASK_UPDATE_URL（覆盖烧进安装包的更新地址，默认 https://release.superic.com/autotask/stable/）
+# 可选环境变量：AUTOTASK_UPDATE_URL（覆盖烧进安装包的更新地址，默认 http://192.168.99.68/autotask/stable/）
 #               AUTOTASK_RELEASE_ALLOW_DIRTY=1（允许带未提交改动打包，仅调试用，正式发版不要用）
 # 不做代码签名门、不写 Publisher。产出与 work 同一套文件：exe、blockmap、latest.yml、SHA256SUMS.txt、release-manifest.json
 # release-manifest.json 记录 gitCommit/gitBranch，线上任意一版可追回到确切源码提交（对齐 Work）
@@ -12,7 +12,7 @@ Import-ReleaseDotEnv $appRoot
 Set-Location $appRoot
 
 $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-$updateUrl = if ($env:AUTOTASK_UPDATE_URL) { $env:AUTOTASK_UPDATE_URL } else { "https://release.superic.com/autotask/stable/" }
+$updateUrl = if ($env:AUTOTASK_UPDATE_URL) { $env:AUTOTASK_UPDATE_URL } else { "http://192.168.99.68/autotask/stable/" }
 Write-Host "版本: $version"
 Write-Host "更新地址: $updateUrl"
 
@@ -27,8 +27,8 @@ if ($gitDirty -and $env:AUTOTASK_RELEASE_ALLOW_DIRTY -ne "1") {
 if ($gitDirty) { Write-Warning "AUTOTASK_RELEASE_ALLOW_DIRTY=1：本次构建含未提交改动，gitCommit 不代表完整源码状态" }
 Write-Host "git: $gitBranch @ $gitCommit$(if ($gitDirty) { ' (dirty)' })"
 
-if ($updateUrl -notmatch "^https://release\.superic\.com/autotask/") {
-    throw "AUTOTASK_UPDATE_URL 必须是 https://release.superic.com/autotask/ 下的路径，当前: $updateUrl"
+if ($updateUrl -notmatch "^https?://(192\.168\.99\.68|release\.superic\.com)/autotask/") {
+    throw "AUTOTASK_UPDATE_URL 必须是新发版机或 release.superic.com 的 /autotask/ 路径，当前: $updateUrl"
 }
 
 Write-Host "==> electron-forge make (nsis)"

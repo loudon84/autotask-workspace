@@ -229,10 +229,9 @@ run serially so two Get-Code clicks do not overlap. See
 
 ## Windows Online Update Feed
 
-AutoTask is the second product on `release.superic.com` beside SMC-Copilot `work`.
+This test package checks updates at `http://192.168.99.68/autotask/stable/`. `release.superic.com` stays with the other products.
 
-The feed is `https://release.superic.com/autotask/stable/`. The running setup.exe
-must stay outside `$INSTDIR` (`D:\Programs\SMC\updates\AutoTask`). See
+The running setup.exe must stay outside `$INSTDIR` (`D:\Programs\SMC\updates\AutoTask`). See
 [[client#Online Updates]].
 
 ## Database Hold Point
