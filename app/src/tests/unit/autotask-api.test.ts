@@ -65,6 +65,22 @@ describe("default endpoint config", () => {
     expect("sdmsWebBaseUrl" in config).toBe(false);
   });
 
+  it("moves a saved 247 task and engine address to the new server", async () => {
+    const { normalizeAutoTaskEndpointConfig } = await import(
+      "@/types/endpoint-config"
+    );
+
+    const config = normalizeAutoTaskEndpointConfig({
+      authBackendUrl: "http://192.168.102.247:4510",
+      taskBackendUrl: "http://192.168.102.247:4520",
+      rpaEngineUrl: "http://192.168.102.247:4610/",
+    });
+
+    expect(config.authBackendUrl).toBe("http://192.168.102.247:4510");
+    expect(config.taskBackendUrl).toBe("http://192.168.99.68:4520");
+    expect(config.rpaEngineUrl).toBe("http://192.168.99.68:4610");
+  });
+
     it("does not invent a default SDMS web URL", async () => {
     const { buildSdmsOmViewUrl, buildSdmsCheckViewUrl, buildSdmsDpViewUrl } =
       await import("@/types/endpoint-config");

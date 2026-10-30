@@ -39,13 +39,24 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 
 function preferNewServer(url: string): string {
   const bare = url.replace(TRAILING_SLASHES_PATTERN, "");
-  if (bare === "http://127.0.0.1:4510" || bare === "http://localhost:4510") {
+  if (
+    bare === "http://127.0.0.1:4510" ||
+    bare === "http://localhost:4510"
+  ) {
     return AUTH_BACKEND_URL;
   }
-  if (bare === "http://127.0.0.1:4520" || bare === "http://localhost:4520") {
+  if (
+    bare === "http://127.0.0.1:4520" ||
+    bare === "http://localhost:4520" ||
+    bare === "http://192.168.102.247:4520"
+  ) {
     return TASK_BACKEND_URL;
   }
-  if (bare === "http://127.0.0.1:4610" || bare === "http://localhost:4610") {
+  if (
+    bare === "http://127.0.0.1:4610" ||
+    bare === "http://localhost:4610" ||
+    bare === "http://192.168.102.247:4610"
+  ) {
     return ENGINE_BACKEND_URL;
   }
   return url;
