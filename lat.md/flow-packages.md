@@ -160,7 +160,8 @@ search → wait for that 流水号 text button → click it. Do not scan every
 list `tr` with Playwright `inner_text()` (hidden rows time out 30s).
 1.0.21 uploads attachments in SRM order: rows 1–3 are 箱单/发票/提运单
 (fixed; never 新增); each 双签 PDF clicks 新增 then uploads. save_draft
-already deleted the empty dual-sign row.
+already deleted the empty dual-sign row. The PDF path is the file on the
+Task host, written when CS picks the attachment, not a path on the operator PC.
 1.0.22 clicks the frozen-right 「上传文件」 `a.elBtnA` (影刀) and feeds
 the FileChooser; it does not `set_input_files` on an unbound hidden
 input. Row locators use `.el-table__fixed-body-wrapper`.

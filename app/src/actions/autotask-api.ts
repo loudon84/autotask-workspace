@@ -79,6 +79,20 @@ export async function uploadStatementInvoiceFiles<T>(input: {
   }
 }
 
+export async function uploadBoePackingAttachment<T>(input: {
+  instanceId: string;
+  attachmentId: string;
+  type: string;
+  filePath: string;
+}): Promise<T> {
+  try {
+    const response = await ipc.client.autotaskApi.uploadBoeAttachment(input);
+    return unwrapApiResponse<T>(response);
+  } catch (err) {
+    throw toApiClientError(err);
+  }
+}
+
 export async function uploadCategoryDocuments<T>(input: {
   category: string;
   filePaths: string[];

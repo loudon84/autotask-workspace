@@ -142,7 +142,7 @@ field and a manual attachment table: 箱单 filename contains `pl` (any case;
 `PL-{invoice}.pdf` is only a convention), 发票=`{invoice}.pdf`,
 提运单 any PDF, 双签 one file per unique PO named `{po}.pdf`. 箱单/发票/提运单
 match SRM default rows (delete disabled) so the Client hides delete for them;
-only 双签 can be added or removed. Submit Binding uses
+only 双签 can be added or removed. Choosing a PDF uploads the bytes to the Task host under `ARTIFACT_LOCAL_DIR/boe-packing/{instanceId}/{attachmentId}/`, keeping the original filename. Summary `filePath` is that server path; save and submit reject a path that exists only on the operator PC. The submit Flow opens the server file and sends it to SRM. Submit Binding uses
 `dryRun: true` (fail-closed if missing): Flow uploads attachments and
 saves the draft, then stops — it never clicks 提交. Draft:
 `project-docs/prd/boe/AutoTask-BOE v1.0 设计-发票箱单SOP.md`.

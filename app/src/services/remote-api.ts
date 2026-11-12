@@ -1,5 +1,6 @@
 import {
   requestAutotaskApi,
+  uploadBoePackingAttachment,
   uploadCategoryDocuments as ipcUploadCategoryDocuments,
   uploadStatementInvoiceFiles,
   downloadCategoryDocument as ipcDownloadCategoryDocument,
@@ -685,6 +686,28 @@ export const remoteApi = {
       path: `/boe-packing/${id}/submit`,
     });
     return mapItemResponse<BoePackDetail>(data);
+  },
+
+  uploadBoePackingAttachment: async (input: {
+    instanceId: string;
+    attachmentId: string;
+    type: string;
+    filePath: string;
+  }): Promise<{ id: string; type: string; fileName: string; filePath: string }> => {
+    const data = await uploadBoePackingAttachment<unknown>(input);
+    return mapItemResponse(data);
+  },
+
+  deleteBoePackingAttachment: async (input: {
+    instanceId: string;
+    filePath: string;
+  }): Promise<{ deleted: boolean }> => {
+    const data = await requestAutotaskApi<unknown>({
+      method: "DELETE",
+      path: `/boe-packing/${input.instanceId}/attachments`,
+      query: { filePath: input.filePath },
+    });
+    return mapItemResponse(data);
   },
 
   listRegionMaps: async (): Promise<RegionCodeMap[]> => {

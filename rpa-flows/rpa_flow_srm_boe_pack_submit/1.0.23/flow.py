@@ -160,7 +160,7 @@ def packing_from_input(payload: Mapping) -> dict:
 
 
 def attachments_from_summary(summary: Mapping) -> list[dict]:
-    """客服核验页选的本地 PDF：type + 绝对路径，提交 Run 真传到 SRM。"""
+    """任务服务本机上的 PDF：type + 绝对路径。选文件时已上传到 Task，提交 Run 再传到 SRM。"""
     rows = []
     for item in summary.get("attachments") or []:
         if not isinstance(item, dict):

@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import shutil
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.domain.boe_packing import (
+    ATTACH_PDF_SUFFIXES,
+    ATTACH_TYPE_BL,
+    ATTACH_TYPES,
     EDITABLE_STAGES,
     ENRICH_TEMPLATE_CODE,
     EXPECTED_ORG_CODE,
@@ -902,6 +908,237 @@ def _editable_line(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+MAX_BOE_ATTACHMENT_BYTES = 20 * 1024 * 1024
+_NOT_ON_SERVER = "附件不在任务服务本机，请重新选择后上传"
+_NOT_ON_SERVER_KEY = "errors.autotask.boe_pack.attachment_not_on_server"
+
+
+def _path_component(value: str, *, invalid_message: str) -> str:
+    raw = str(value or "").strip()
+    name = Path(raw).name
+    if not raw or name != raw or name in {".", ".."}:
+        raise BadRequestError(
+            message=invalid_message,
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    return name
+
+
+def attachment_root(instance_id: str) -> Path:
+    name = _path_component(instance_id, invalid_message="附件路径无效")
+    return (Path(settings.ARTIFACT_LOCAL_DIR) / "boe-packing" / name).resolve()
+
+
+def _inside(root: Path, path: Path) -> bool:
+    try:
+        path.resolve().relative_to(root)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def _pdf_filename(filename: str) -> str:
+    name = _path_component(filename, invalid_message="附件文件名无效")
+    if Path(name).suffix.lower() not in ATTACH_PDF_SUFFIXES:
+        raise BadRequestError(
+            message="附件必须是 PDF",
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    return name
+
+
+def _normalize_attach_type(file_type: str) -> str:
+    kind = str(file_type or "").strip()
+    if kind == "提单":
+        kind = ATTACH_TYPE_BL
+    if kind not in ATTACH_TYPES:
+        raise BadRequestError(
+            message=f"不支持的附件类型：{kind or '空'}",
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    return kind
+
+
+def _require_editable(instance: ProcessInstance) -> None:
+    if instance.stage not in EDITABLE_STAGES:
+        raise BadRequestError(
+            message="当前阶段不能改单",
+            message_key="errors.autotask.boe_pack.patch_invalid",
+        )
+
+
+def save_attachment_upload(
+    instance_id: str,
+    attachment_id: str,
+    filename: str,
+    content: bytes,
+) -> tuple[str, str]:
+    """把客服选中的 PDF 写到 Task 本机，保留原文件名，供 Worker 按绝对路径打开。"""
+    if not content:
+        raise BadRequestError(
+            message="附件是空文件",
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    if len(content) > MAX_BOE_ATTACHMENT_BYTES:
+        raise BadRequestError(
+            message="单个附件不能超过 20M",
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    safe_name = _pdf_filename(filename)
+    slot_name = _path_component(attachment_id, invalid_message="附件行无效")
+    root = attachment_root(instance_id)
+    slot = (root / slot_name).resolve()
+    if not _inside(root, slot):
+        raise BadRequestError(
+            message="附件路径无效",
+            message_key="errors.autotask.boe_pack.attachment_invalid",
+        )
+    if slot.exists():
+        shutil.rmtree(slot)
+    slot.mkdir(parents=True)
+    target = slot / safe_name
+    target.write_bytes(content)
+    return safe_name, str(target.resolve())
+
+
+def delete_saved_attachment(instance_id: str, file_path: str) -> bool:
+    """只删除落在该箱单目录内的文件。用户电脑路径直接忽略。"""
+    raw = str(file_path or "").strip()
+    if not raw:
+        return False
+    root = attachment_root(instance_id)
+    try:
+        resolved = Path(raw).resolve()
+    except OSError:
+        return False
+    if not _inside(root, resolved) or not resolved.is_file():
+        return False
+    resolved.unlink()
+    parent = resolved.parent
+    if parent != root and parent.is_dir() and not any(parent.iterdir()):
+        parent.rmdir()
+    return True
+
+
+def require_attachments_on_server(instance_id: str, attachments: list) -> None:
+    """已选文件必须是 Task 本机上的那份，不能是客服电脑上的路径。"""
+    root = attachment_root(instance_id)
+    for row in normalize_attachments(attachments):
+        file_name = row["fileName"]
+        file_path = row["filePath"]
+        if not file_name and not file_path:
+            continue
+        if not file_path:
+            raise BadRequestError(message=_NOT_ON_SERVER, message_key=_NOT_ON_SERVER_KEY)
+        try:
+            resolved = Path(file_path).resolve()
+        except OSError as exc:
+            raise BadRequestError(message=_NOT_ON_SERVER, message_key=_NOT_ON_SERVER_KEY) from exc
+        if (
+            not _inside(root, resolved)
+            or not resolved.is_file()
+            or (file_name and resolved.name != file_name)
+        ):
+            raise BadRequestError(message=_NOT_ON_SERVER, message_key=_NOT_ON_SERVER_KEY)
+
+
+def _upsert_saved_attachment(
+    instance: ProcessInstance,
+    *,
+    attachment_id: str,
+    kind: str,
+    file_name: str,
+    file_path: str,
+) -> None:
+    summary = _summary(instance)
+    rows = normalize_attachments(summary.get("attachments") or [])
+    found = False
+    for row in rows:
+        if row["id"] == attachment_id:
+            row["type"] = kind
+            row["fileName"] = file_name
+            row["filePath"] = file_path
+            found = True
+            break
+    if not found:
+        rows.append(
+            {
+                "id": attachment_id,
+                "type": kind,
+                "fileName": file_name,
+                "filePath": file_path,
+            }
+        )
+    summary["attachments"] = rows
+    _save_summary(instance, summary)
+
+
+def _drop_saved_attachment(instance: ProcessInstance, file_path: str) -> None:
+    summary = _summary(instance)
+    try:
+        target = str(Path(file_path).resolve())
+    except OSError:
+        target = str(file_path or "").strip()
+    kept = []
+    for row in normalize_attachments(summary.get("attachments") or []):
+        current = row["filePath"]
+        try:
+            same = bool(current) and str(Path(current).resolve()) == target
+        except OSError:
+            same = current == file_path
+        if not same:
+            kept.append(row)
+    summary["attachments"] = kept
+    _save_summary(instance, summary)
+
+
+async def upload_attachment_bytes(
+    db: AsyncSession,
+    tenant_id: str,
+    instance_id: str,
+    *,
+    attachment_id: str,
+    file_type: str,
+    filename: str,
+    content: bytes,
+) -> dict[str, str]:
+    instance = await get_packing_instance(db, tenant_id, instance_id)
+    _require_editable(instance)
+    kind = _normalize_attach_type(file_type)
+    slot_id = str(attachment_id or "").strip()
+    file_name, file_path = save_attachment_upload(instance_id, slot_id, filename, content)
+    _upsert_saved_attachment(
+        instance,
+        attachment_id=slot_id,
+        kind=kind,
+        file_name=file_name,
+        file_path=file_path,
+    )
+    await db.commit()
+    return {
+        "id": slot_id,
+        "type": kind,
+        "file_name": file_name,
+        "file_path": file_path,
+    }
+
+
+async def remove_attachment_file(
+    db: AsyncSession,
+    tenant_id: str,
+    instance_id: str,
+    *,
+    file_path: str,
+) -> bool:
+    instance = await get_packing_instance(db, tenant_id, instance_id)
+    _require_editable(instance)
+    deleted = delete_saved_attachment(instance_id, file_path)
+    if deleted:
+        _drop_saved_attachment(instance, file_path)
+        await db.commit()
+    return deleted
+
+
 async def patch_instance(
     db: AsyncSession,
     tenant_id: str,
@@ -931,6 +1168,7 @@ async def patch_instance(
         summary["attachments"] = normalize_attachments(
             body.get("attachments") if isinstance(body.get("attachments"), list) else []
         )
+        require_attachments_on_server(instance_id, summary["attachments"])
     required_errors = review_required_errors(
         summary.get("header") or {}, summary.get("lines") or []
     )
@@ -982,6 +1220,7 @@ async def submit_instance(
             message="；".join(attach_errors[:6]),
             message_key="errors.autotask.boe_pack.attachment_invalid",
         )
+    require_attachments_on_server(instance_id, summary.get("attachments") or [])
     actor = user.user_id
     _change_stage(
         db,

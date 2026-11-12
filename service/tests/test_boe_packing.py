@@ -1,6 +1,7 @@
 """京东方发票箱单匹配 / 数量闸门。"""
 
 from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -572,3 +573,75 @@ async def test_fetch_wms_unmapped_region_stays_and_does_not_enrich(
     assert result.stage == ProcessStage.BOE_PACK_FETCH_WMS.value
     assert result.last_error_code == "BOE_WMS_REGION_UNMAPPED"
     enqueue.assert_not_awaited()
+
+
+def test_save_attachment_keeps_original_name_on_server(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    name, stored = svc.save_attachment_upload(
+        "inst-1", "att-invoice", "101SJH202609195.pdf", b"%PDF-1.4"
+    )
+    assert name == "101SJH202609195.pdf"
+    assert stored.endswith("boe-packing\\inst-1\\att-invoice\\101SJH202609195.pdf") or stored.endswith(
+        "boe-packing/inst-1/att-invoice/101SJH202609195.pdf"
+    )
+    assert svc.require_attachments_on_server(
+        "inst-1",
+        [{"type": "发票", "fileName": name, "filePath": stored}],
+    ) is None
+    replaced, replaced_path = svc.save_attachment_upload(
+        "inst-1", "att-invoice", "101SJH202609195.pdf", b"%PDF-2"
+    )
+    assert replaced == name
+    assert Path(stored).read_bytes() == b"%PDF-2" or Path(replaced_path).read_bytes() == b"%PDF-2"
+
+
+def test_require_attachments_rejects_operator_pc_path(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    with pytest.raises(BadRequestError) as exc_info:
+        svc.require_attachments_on_server(
+            "inst-1",
+            [{"type": "发票", "fileName": "a.pdf", "filePath": r"D:\Users\cs\a.pdf"}],
+        )
+    assert exc_info.value.message_key == "errors.autotask.boe_pack.attachment_not_on_server"
+
+
+def test_delete_attachment_ignores_path_outside_instance_dir(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(svc.settings, "ARTIFACT_LOCAL_DIR", str(tmp_path))
+    outside = tmp_path / "elsewhere.pdf"
+    outside.write_bytes(b"%PDF")
+    assert svc.delete_saved_attachment("inst-1", str(outside)) is False
+    assert outside.is_file()
+    _, stored = svc.save_attachment_upload("inst-1", "att-bl", "bl.pdf", b"%PDF")
+    assert svc.delete_saved_attachment("inst-1", stored) is True
+    assert not Path(stored).is_file()
+
+
+@pytest.mark.asyncio
+async def test_submit_rejects_operator_pc_attachment_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    instance = ProcessInstance(
+        id="inst-path",
+        tenant_id="tenant-1",
+        process_code=PROCESS_CODE,
+        biz_key="101SJH202609195",
+        title="发票箱单",
+        portal_account_id="portal-1",
+        stage=ProcessStage.BOE_PACK_REVIEW.value,
+        status=ProcessInstanceStatus.ACTIVE.value,
+        summary=(
+            '{"qtyMismatch": false, "header": {"invoiceNo": "101SJH202609195",'
+            '"factory": "1200", "invoiceDate": "2026-09-07", "etd": "2026-09-07",'
+            '"consignArrivalDate": "2026-09-12", "totalVol": "0.1"},'
+            '"lines": [{"poNum": "9100069442", "deliveryQty": "1",'
+            '"netWeight": "1", "regionSrmName": "中国台湾"}],'
+            '"attachments": ['
+            '{"type": "箱单", "fileName": "PL-101SJH202609195.pdf", "filePath": "D:\\\\pc\\\\PL-101SJH202609195.pdf"},'
+            '{"type": "发票", "fileName": "101SJH202609195.pdf", "filePath": "D:\\\\pc\\\\101SJH202609195.pdf"},'
+            '{"type": "双签PO/协议", "fileName": "9100069442.pdf", "filePath": "D:\\\\pc\\\\9100069442.pdf"}'
+            "]}"
+        ),
+        created_by="user-1",
+    )
+    monkeypatch.setattr(svc, "get_packing_instance", AsyncMock(return_value=instance))
+    with pytest.raises(BadRequestError) as exc_info:
+        await svc.submit_instance(MagicMock(), "tenant-1", "inst-path", _user())
+    assert exc_info.value.message_key == "errors.autotask.boe_pack.attachment_not_on_server"
