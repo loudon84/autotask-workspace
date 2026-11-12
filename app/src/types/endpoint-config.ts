@@ -8,8 +8,8 @@ export interface AutoTaskEndpointConfig {
 }
 
 const AUTH_BACKEND_URL = "http://192.168.102.247:4510";
-const TASK_BACKEND_URL = "http://192.168.99.68:4520";
-const ENGINE_BACKEND_URL = "http://192.168.99.68:4610";
+const TASK_BACKEND_URL = "http://192.168.102.247:4520";
+const ENGINE_BACKEND_URL = "http://192.168.102.247:4610";
 
 export const defaultAutoTaskEndpointConfig: AutoTaskEndpointConfig = {
   authBackendUrl:
@@ -48,14 +48,14 @@ function preferNewServer(url: string): string {
   if (
     bare === "http://127.0.0.1:4520" ||
     bare === "http://localhost:4520" ||
-    bare === "http://192.168.102.247:4520"
+    bare === "http://192.168.99.68:4520"
   ) {
     return TASK_BACKEND_URL;
   }
   if (
     bare === "http://127.0.0.1:4610" ||
     bare === "http://localhost:4610" ||
-    bare === "http://192.168.102.247:4610"
+    bare === "http://192.168.99.68:4610"
   ) {
     return ENGINE_BACKEND_URL;
   }

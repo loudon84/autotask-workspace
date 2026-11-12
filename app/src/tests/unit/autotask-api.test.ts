@@ -36,13 +36,13 @@ describe("default endpoint config", () => {
       "http://192.168.102.247:4510/api/v1/auth/me"
     );
     expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/tasks")).toBe(
-      "http://192.168.99.68:4520/api/v1/autotask/tasks"
+      "http://192.168.102.247:4520/api/v1/autotask/tasks"
     );
     expect(buildTaskUrl(defaultAutoTaskEndpointConfig, "/session/sync")).toBe(
-      "http://192.168.99.68:4520/api/v1/autotask/session/sync"
+      "http://192.168.102.247:4520/api/v1/autotask/session/sync"
     );
     expect(buildRpaEngineUrl(defaultAutoTaskEndpointConfig, "/flows")).toBe(
-      "http://192.168.99.68:4610/api/v1/flows"
+      "http://192.168.102.247:4610/api/v1/flows"
     );
   });
 
@@ -58,27 +58,27 @@ describe("default endpoint config", () => {
     });
 
     expect(config.authBackendUrl).toBe("http://192.168.102.247:4510");
-    expect(config.taskBackendUrl).toBe("http://192.168.99.68:4520");
-    expect(config.rpaEngineUrl).toBe("http://192.168.99.68:4610");
+    expect(config.taskBackendUrl).toBe("http://192.168.102.247:4520");
+    expect(config.rpaEngineUrl).toBe("http://192.168.102.247:4610");
     expect(config.authPrefix).toBe("/api/v1/auth");
     expect(config.taskPrefix).toBe("/api/v1/autotask");
     expect("sdmsWebBaseUrl" in config).toBe(false);
   });
 
-  it("moves a saved 247 task and engine address to the new server", async () => {
+  it("moves a saved 99.68 task and engine address to 247", async () => {
     const { normalizeAutoTaskEndpointConfig } = await import(
       "@/types/endpoint-config"
     );
 
     const config = normalizeAutoTaskEndpointConfig({
       authBackendUrl: "http://192.168.102.247:4510",
-      taskBackendUrl: "http://192.168.102.247:4520",
-      rpaEngineUrl: "http://192.168.102.247:4610/",
+      taskBackendUrl: "http://192.168.99.68:4520",
+      rpaEngineUrl: "http://192.168.99.68:4610/",
     });
 
     expect(config.authBackendUrl).toBe("http://192.168.102.247:4510");
-    expect(config.taskBackendUrl).toBe("http://192.168.99.68:4520");
-    expect(config.rpaEngineUrl).toBe("http://192.168.99.68:4610");
+    expect(config.taskBackendUrl).toBe("http://192.168.102.247:4520");
+    expect(config.rpaEngineUrl).toBe("http://192.168.102.247:4610");
   });
 
     it("does not invent a default SDMS web URL", async () => {
