@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +10,13 @@ from app.models.base import not_deleted
 from app.models.enums import PortalPermission
 from app.models.portal_account import PortalAccount
 from app.models.user_cache import UserCache
-from app.schemas.boe_packing import BoeMatchResponse, BoePackingListItem, BoePackingPatchRequest
+from app.schemas.boe_packing import (
+    BoeAttachmentDeleteResult,
+    BoeMatchResponse,
+    BoePackingAttachmentStored,
+    BoePackingListItem,
+    BoePackingPatchRequest,
+)
 from app.schemas.common import ApiResponse
 from app.services import boe_packing_service as svc
 from app.services.permission_service import list_accessible_portal_ids
@@ -129,6 +137,53 @@ async def cancel_boe_packing(
     instance = await svc.cancel_instance(db, tenant_id, instance_id, user)
     portals = await _portals_by_id(db, {instance.portal_account_id})
     return ApiResponse(data=await svc.to_detail(db, instance, portals[instance.portal_account_id]))
+
+
+@router.post(
+    "/{instance_id}/attachments",
+    response_model=ApiResponse[BoePackingAttachmentStored],
+)
+async def upload_boe_attachment(
+    instance_id: str,
+    attachment_id: Annotated[str, Form(alias="attachmentId")],
+    file_type: Annotated[str, Form(alias="type")],
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: UserCache = Depends(get_current_user),
+):
+    tenant_id = require_tenant_access(user)
+    instance = await svc.get_packing_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
+    content = await file.read()
+    saved = await svc.upload_attachment_bytes(
+        db,
+        tenant_id,
+        instance_id,
+        attachment_id=attachment_id,
+        file_type=file_type,
+        filename=file.filename or "",
+        content=content,
+    )
+    return ApiResponse(data=BoePackingAttachmentStored.model_validate(saved))
+
+
+@router.delete(
+    "/{instance_id}/attachments",
+    response_model=ApiResponse[BoeAttachmentDeleteResult],
+)
+async def delete_boe_attachment(
+    instance_id: str,
+    file_path: str = Query(..., alias="filePath"),
+    db: AsyncSession = Depends(get_db),
+    user: UserCache = Depends(get_current_user),
+):
+    tenant_id = require_tenant_access(user)
+    instance = await svc.get_packing_instance(db, tenant_id, instance_id)
+    await require_portal_visible(db, user, instance.portal_account_id)
+    deleted = await svc.remove_attachment_file(
+        db, tenant_id, instance_id, file_path=file_path
+    )
+    return ApiResponse(data=BoeAttachmentDeleteResult(deleted=deleted))
 
 
 @router.post("/{instance_id}/submit")

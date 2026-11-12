@@ -199,6 +199,74 @@ async function uploadInvoiceFiles(
   return (await res.json()) as unknown;
 }
 
+export async function uploadBoePackingAttachment(input: {
+  instanceId: string;
+  attachmentId: string;
+  type: string;
+  filePath: string;
+}): Promise<unknown> {
+  return uploadBoeAttachment(input, false);
+}
+
+async function uploadBoeAttachment(
+  input: {
+    instanceId: string;
+    attachmentId: string;
+    type: string;
+    filePath: string;
+  },
+  retried: boolean
+): Promise<unknown> {
+  const session = await getValidSession();
+  if (!session) {
+    throw new AutotaskApiError("未登录", 401);
+  }
+
+  const config = getEndpointConfig();
+  const url = buildUrl(
+    config,
+    `/boe-packing/${encodeURIComponent(input.instanceId)}/attachments`
+  );
+  const headers = { ...buildAuthHeaders(session) };
+  delete headers["Content-Type"];
+
+  const bytes = await fs.readFile(input.filePath);
+  const form = new FormData();
+  form.append("attachmentId", input.attachmentId);
+  form.append("type", input.type);
+  form.append("file", new Blob([new Uint8Array(bytes)]), path.basename(input.filePath));
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  if (res.status === 401 && !retried) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      setMemorySession(refreshed);
+      return uploadBoeAttachment(input, true);
+    }
+    throw new AutotaskApiError("登录已过期", 401);
+  }
+  if (res.status === 403) {
+    throw new AutotaskApiError("用户无权限!", 403);
+  }
+  if (!res.ok) {
+    let message = `API request failed: ${res.status}`;
+    let body: unknown;
+    try {
+      body = await res.json();
+      message = formatApiErrorMessage(body, message);
+    } catch {
+      // ignore
+    }
+    throw new AutotaskApiError(message, res.status, body);
+  }
+  return (await res.json()) as unknown;
+}
+
 export async function uploadCategoryDocumentFiles(
   input: { category: string; filePaths: string[] },
   retried = false

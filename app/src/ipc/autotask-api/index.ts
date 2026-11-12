@@ -1,6 +1,7 @@
 import {
   downloadCategoryDocument,
   request,
+  uploadBoeAttachment,
   uploadCategoryDocuments,
   uploadInvoiceFiles,
 } from "./handlers";
@@ -8,6 +9,7 @@ import {
 export const autotaskApi = {
   request,
   uploadInvoiceFiles,
+  uploadBoeAttachment,
   uploadCategoryDocuments,
   downloadCategoryDocument,
 };

@@ -7,12 +7,14 @@ import {
   AutotaskApiError,
   fetchCategoryDocumentBytes,
   requestAutotaskApi,
+  uploadBoePackingAttachment,
   uploadCategoryDocumentFiles,
   uploadStatementInvoiceFiles,
 } from "@/main/autotask-api/autotask-api-client";
 import {
   autotaskApiRequestSchema,
   downloadCategoryDocumentInputSchema,
+  uploadBoeAttachmentInputSchema,
   uploadCategoryDocumentsInputSchema,
   uploadInvoiceFilesInputSchema,
 } from "./schemas";
@@ -43,6 +45,16 @@ export const uploadInvoiceFiles = os
   .handler(async ({ input }) => {
     try {
       return await uploadStatementInvoiceFiles(input);
+    } catch (err) {
+      toOrpcError(err);
+    }
+  });
+
+export const uploadBoeAttachment = os
+  .input(uploadBoeAttachmentInputSchema)
+  .handler(async ({ input }) => {
+    try {
+      return await uploadBoePackingAttachment(input);
     } catch (err) {
       toOrpcError(err);
     }

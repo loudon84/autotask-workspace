@@ -506,7 +506,7 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-muted-foreground text-xs">
-            前三行固定为箱单、发票、提运单（与 SRM 一致，不能删、不能换序）。双签在保存草稿时已从 SRM 删掉，核验按 PO 份数新增行再传。箱单建议 PL-发票号.pdf，硬限制是文件名包含 pl；发票：发票号.pdf；提运单可不传；双签每个采购订单号一份，文件名为 PO 号。
+            前三行固定为箱单、发票、提运单（与 SRM 一致，不能删、不能换序）。双签在保存草稿时已从 SRM 删掉，核验按 PO 份数新增行再传。选择文件后先上传到任务服务器，保存和提交用的是服务器上的路径。箱单建议 PL-发票号.pdf，硬限制是文件名包含 pl；发票：发票号.pdf；提运单可不传；双签每个采购订单号一份，文件名为 PO 号。
           </p>
           <div className="overflow-x-auto">
             <Table>
@@ -553,6 +553,7 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
                             variant="outline"
                             onClick={() => {
                               void (async () => {
+                                setActing(true);
                                 try {
                                   const result = await selectInvoiceFiles();
                                   if (result.cancelled || result.files.length === 0) {
@@ -563,17 +564,27 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
                                     toast.error("附件必须是 PDF");
                                     return;
                                   }
+                                  const uploaded = await autotaskApi.boePacking.uploadAttachment({
+                                    instanceId,
+                                    attachmentId: row.id || `att-${Date.now()}`,
+                                    type: row.type || "双签PO/协议",
+                                    filePath: file.path,
+                                  });
                                   const next = [...attachments];
                                   next[index] = {
                                     ...row,
-                                    fileName: file.name,
-                                    filePath: file.path,
+                                    id: uploaded.id || row.id,
+                                    type: uploaded.type || row.type,
+                                    fileName: uploaded.fileName,
+                                    filePath: uploaded.filePath,
                                   };
                                   setAttachments(next);
                                 } catch (error) {
                                   toast.error(
-                                    error instanceof Error ? error.message : "选择文件失败"
+                                    error instanceof Error ? error.message : "上传附件失败"
                                   );
+                                } finally {
+                                  setActing(false);
                                 }
                               })();
                             }}
@@ -584,11 +595,28 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() =>
-                                setAttachments(
-                                  attachments.filter((_, idx) => idx !== index)
-                                )
-                              }
+                              onClick={() => {
+                                void (async () => {
+                                  setActing(true);
+                                  try {
+                                    if (row.filePath) {
+                                      await autotaskApi.boePacking.deleteAttachment({
+                                        instanceId,
+                                        filePath: row.filePath,
+                                      });
+                                    }
+                                    setAttachments(
+                                      attachments.filter((_, idx) => idx !== index)
+                                    );
+                                  } catch (error) {
+                                    toast.error(
+                                      error instanceof Error ? error.message : "删除附件失败"
+                                    );
+                                  } finally {
+                                    setActing(false);
+                                  }
+                                })();
+                              }}
                             >
                               删除
                             </Button>

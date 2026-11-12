@@ -62,6 +62,17 @@ class BoePackingAttachmentPatch(CamelModel):
     file_path: str | None = Field(None, alias="filePath")
 
 
+class BoePackingAttachmentStored(CamelModel):
+    id: str
+    type: str
+    file_name: str = Field(serialization_alias="fileName")
+    file_path: str = Field(serialization_alias="filePath")
+
+
+class BoeAttachmentDeleteResult(CamelModel):
+    deleted: bool
+
+
 class BoePackingPatchRequest(CamelModel):
     header: BoePackingHeaderPatch | None = None
     lines: list[BoePackingLinePatch] | None = None

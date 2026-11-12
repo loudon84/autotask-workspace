@@ -720,6 +720,34 @@ export const autotaskApi = {
       }
       throw new Error("当前模式不支持提交");
     },
+    uploadAttachment: (input: {
+      instanceId: string;
+      attachmentId: string;
+      type: string;
+      filePath: string;
+    }): Promise<{ id: string; type: string; fileName: string; filePath: string }> => {
+      const api = pickApi();
+      if (
+        "uploadBoePackingAttachment" in api &&
+        typeof api.uploadBoePackingAttachment === "function"
+      ) {
+        return api.uploadBoePackingAttachment(input);
+      }
+      throw new Error("当前模式不支持上传附件");
+    },
+    deleteAttachment: (input: {
+      instanceId: string;
+      filePath: string;
+    }): Promise<{ deleted: boolean }> => {
+      const api = pickApi();
+      if (
+        "deleteBoePackingAttachment" in api &&
+        typeof api.deleteBoePackingAttachment === "function"
+      ) {
+        return api.deleteBoePackingAttachment(input);
+      }
+      throw new Error("当前模式不支持删除附件");
+    },
   },
 
   auditLogs: {
