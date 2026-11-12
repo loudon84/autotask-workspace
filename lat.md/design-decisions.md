@@ -229,7 +229,7 @@ run serially so two Get-Code clicks do not overlap. See
 
 ## Windows Online Update Feed
 
-This test package checks updates at `http://192.168.99.68/autotask/stable/`. `release.superic.com` stays with the other products.
+Packaged clients check updates at `https://release.superic.com/autotask/stable/`. Same host as the other products, different directory.
 
 The running setup.exe must stay outside `$INSTDIR` (`D:\Programs\SMC\updates\AutoTask`). See
 [[client#Online Updates]].

@@ -23,11 +23,11 @@ HumanAction work.
 
 ## Online Updates
 
-Packaged Windows builds on this branch self-update from `http://192.168.99.68/autotask/stable/`
-via electron-updater (generic provider, no auth). `release.superic.com` stays for other products.
+Packaged Windows builds self-update from `https://release.superic.com/autotask/stable/`
+via electron-updater (generic provider, no auth).
 
 Product record: `project-docs/prd/AutoTask 在线更新.md`. SMC-Copilot stays on
-`release.superic.com` under `/work/stable/`. This branch's AutoTask feed is the new server.
+the same host under `/work/stable/`. AutoTask uses `/autotask/stable/`.
 
 ### Check and install
 
@@ -45,8 +45,8 @@ Windows NSIS installs check; `npm start` does not.
   `<userData>/logs/updater.log`.
 - Feed is baked into `resources/app-update.yml` by
   [[app/forge/maker-nsis-install-dir.ts#MakerNsisInstallDir]] and set at runtime.
-  Override with `AUTOTASK_UPDATE_URL` (this branch defaults to
-  `http://192.168.99.68/autotask/stable/`). Artifact name carries the version.
+  Override with `AUTOTASK_UPDATE_URL` (default
+  `https://release.superic.com/autotask/stable/`). Artifact name carries the version.
   Shortcuts target `AutoTaskStudio.exe`; install dir stays
   `D:\Programs\SMC\AutoTask` (`allowToChangeInstallationDirectory: false`).
 - `npm run release:build` refuses a dirty working tree (override
