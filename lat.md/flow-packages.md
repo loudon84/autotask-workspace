@@ -24,6 +24,12 @@ Demo portals often use `data-rpa=*`; official Element UI portals use Chinese
 text/CSS selectors and ship as separate versions. Formal drill and production
 share one official Flow; Binding carries sample PO / dryRun knobs.
 
+Official prepare-ERP `1.2.21` keeps the downloaded order xlsx when the evidence
+screenshot fails. A full-page capture of the long order detail hit Playwright's
+30s limit (`RUNTIME_TIMEOUT`) and retried the whole Flow, so the attachment was
+downloaded again. The shot is viewport-only and non-fatal. See
+[[rpa-flows/rpa_flow_supplier_portal_prepare_erp_order/1.2.21/flow.py#_capture_prepare_screenshot]].
+
 Official statement generate `1.1.3` sets page size to 100, clicks the header
 checkbox, and pages only when 「共 N 条」is over 100. It checks that total
 against Client `lines` length and does not tick rows. `dryRun` still skips
