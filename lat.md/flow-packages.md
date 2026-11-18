@@ -30,7 +30,7 @@ screenshot fails. A full-page capture of the long order detail hit Playwright's
 downloaded again. The shot is viewport-only and non-fatal. See
 [[rpa-flows/rpa_flow_supplier_portal_prepare_erp_order/1.2.21/flow.py#_capture_prepare_screenshot]].
 
-Official prepare-ERP `1.2.22` adds three ERP line fields from the just-downloaded xlsx, not from stored orders: `factoryLocation` is 料品名称, `custOrderLn` is 料品规格, and `lineComments` is 内码. The local rehearsal portal runs this build. The official portal stays on 1.2.21. See [[rpa-flows/rpa_flow_supplier_portal_prepare_erp_order/1.2.22/flow.py#build_erp_draft]].
+Official prepare-ERP `1.2.22` adds three ERP line fields from the just-downloaded xlsx, not from stored orders: `factoryLocation` is 料品名称, `custOrderLn` is 料品规格, and `lineComments` is 内码. Official portal 天地伟业-芯云 now runs this build. See [[rpa-flows/rpa_flow_supplier_portal_prepare_erp_order/1.2.22/flow.py#build_erp_draft]].
 
 Official statement generate `1.1.3` sets page size to 100, clicks the header
 checkbox, and pages only when 「共 N 条」is over 100. It checks that total
