@@ -25,6 +25,10 @@ describe("getApiMode", () => {
 
 describe("default endpoint config", () => {
   it("targets the new server and keeps Auth on 4510", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_AUTOTASK_AUTH_BACKEND_URL", "");
+    vi.stubEnv("VITE_AUTOTASK_TASK_BACKEND_URL", "");
+    vi.stubEnv("VITE_AUTOTASK_RPA_ENGINE_URL", "");
     const {
       buildAuthUrl,
       buildRpaEngineUrl,
@@ -44,6 +48,7 @@ describe("default endpoint config", () => {
     expect(buildRpaEngineUrl(defaultAutoTaskEndpointConfig, "/flows")).toBe(
       "http://192.168.102.247:4610/api/v1/flows"
     );
+    vi.unstubAllEnvs();
   });
 
   it("normalizes blank and scheme-less persisted endpoints", async () => {
@@ -58,11 +63,19 @@ describe("default endpoint config", () => {
     });
 
     expect(config.authBackendUrl).toBe("http://192.168.102.247:4510");
-    expect(config.taskBackendUrl).toBe("http://192.168.102.247:4520");
-    expect(config.rpaEngineUrl).toBe("http://192.168.102.247:4610");
+    expect(config.taskBackendUrl).toBe("http://localhost:4520");
+    expect(config.rpaEngineUrl).toBe("http://localhost:4610");
     expect(config.authPrefix).toBe("/api/v1/auth");
     expect(config.taskPrefix).toBe("/api/v1/autotask");
     expect("sdmsWebBaseUrl" in config).toBe(false);
+
+    const local = normalizeAutoTaskEndpointConfig({
+      authBackendUrl: "http://192.168.102.247:4510",
+      taskBackendUrl: "http://127.0.0.1:4520",
+      rpaEngineUrl: "http://127.0.0.1:4610",
+    });
+    expect(local.taskBackendUrl).toBe("http://127.0.0.1:4520");
+    expect(local.rpaEngineUrl).toBe("http://127.0.0.1:4610");
   });
 
   it("moves a saved 99.68 task and engine address to 247", async () => {

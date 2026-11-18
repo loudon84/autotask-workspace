@@ -11,14 +11,25 @@ const AUTH_BACKEND_URL = "http://192.168.102.247:4510";
 const TASK_BACKEND_URL = "http://192.168.102.247:4520";
 const ENGINE_BACKEND_URL = "http://192.168.102.247:4610";
 
+function envUrl(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
 export const defaultAutoTaskEndpointConfig: AutoTaskEndpointConfig = {
-  authBackendUrl:
-    import.meta.env.VITE_AUTOTASK_AUTH_BACKEND_URL ?? AUTH_BACKEND_URL,
+  authBackendUrl: envUrl(
+    import.meta.env.VITE_AUTOTASK_AUTH_BACKEND_URL,
+    AUTH_BACKEND_URL
+  ),
   authPrefix: "/api/v1/auth",
-  rpaEngineUrl:
-    import.meta.env.VITE_AUTOTASK_RPA_ENGINE_URL ?? ENGINE_BACKEND_URL,
-  taskBackendUrl:
-    import.meta.env.VITE_AUTOTASK_TASK_BACKEND_URL ?? TASK_BACKEND_URL,
+  rpaEngineUrl: envUrl(
+    import.meta.env.VITE_AUTOTASK_RPA_ENGINE_URL,
+    ENGINE_BACKEND_URL
+  ),
+  taskBackendUrl: envUrl(
+    import.meta.env.VITE_AUTOTASK_TASK_BACKEND_URL,
+    TASK_BACKEND_URL
+  ),
   taskPrefix: "/api/v1/autotask",
   aiosHomeUrl: "http://127.0.0.1:4517",
 };
@@ -39,24 +50,10 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 
 function preferNewServer(url: string): string {
   const bare = url.replace(TRAILING_SLASHES_PATTERN, "");
-  if (
-    bare === "http://127.0.0.1:4510" ||
-    bare === "http://localhost:4510"
-  ) {
-    return AUTH_BACKEND_URL;
-  }
-  if (
-    bare === "http://127.0.0.1:4520" ||
-    bare === "http://localhost:4520" ||
-    bare === "http://192.168.99.68:4520"
-  ) {
+  if (bare === "http://192.168.99.68:4520") {
     return TASK_BACKEND_URL;
   }
-  if (
-    bare === "http://127.0.0.1:4610" ||
-    bare === "http://localhost:4610" ||
-    bare === "http://192.168.99.68:4610"
-  ) {
+  if (bare === "http://192.168.99.68:4610") {
     return ENGINE_BACKEND_URL;
   }
   return url;

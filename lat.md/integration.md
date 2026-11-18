@@ -13,7 +13,7 @@ and managed-user scope.
 
 ## Client ↔ Task
 
-All Task HTTP uses JWT under `/api/v1/autotask` from Electron Main. Desktop builds default to Task `http://192.168.102.247:4520` and Engine `http://192.168.102.247:4610`. Auth stays `:4510` on the same host.
+All Task HTTP uses JWT under `/api/v1/autotask` from Electron Main. Desktop defaults are Task and Engine on `192.168.102.247`. A saved `127.0.0.1` address is kept; only `192.168.99.68` is rewritten to 247.
 
 URL builder: [[app/src/types/endpoint-config.ts#buildTaskUrl]]. Covers portals,
 bindings, tasks, process/statement SOP, human actions, artifacts, schedulers.
