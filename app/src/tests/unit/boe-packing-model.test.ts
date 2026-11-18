@@ -145,5 +145,11 @@ describe("boe packing labels", () => {
         { id: "p", type: "箱单", fileName: "pl.pdf", filePath: "c" },
       ]).map((row) => row.type)
     ).toEqual(["箱单", "发票", "提运单", "双签PO/协议"]);
+    expect(
+      normalizeBoePackAttachments([
+        { id: "o", type: "其他", fileName: "note.pdf", filePath: "d" },
+        { id: "d", type: "双签PO/协议", fileName: "P1.pdf", filePath: "a" },
+      ]).map((row) => row.type)
+    ).toEqual(["箱单", "发票", "提运单", "双签PO/协议", "其他"]);
   });
 });

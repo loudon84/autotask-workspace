@@ -338,6 +338,7 @@ export const BOE_PACK_ATTACH_TYPES: BoePackAttachType[] = [
   "发票",
   "提运单",
   "双签PO/协议",
+  "其他",
 ];
 
 /** SRM 默认行：箱单/发票/提运单删除 disabled，核验页也不提供删除。 */
@@ -414,6 +415,7 @@ export function boePackAttachmentErrors(
     发票: [],
     提运单: [],
     "双签PO/协议": [],
+    其他: [],
   };
   for (const row of attachments) {
     const kind = text(row.type) === "提单" ? "提运单" : text(row.type);
@@ -422,7 +424,7 @@ export function boePackAttachmentErrors(
       continue;
     }
     if (!text(row.fileName)) {
-      if (kind === "提运单") {
+      if (kind === "提运单" || kind === "其他") {
         continue;
       }
       errors.push(`${kind || "附件"}未选择文件`);
@@ -501,6 +503,7 @@ export function normalizeBoePackAttachments(
 ): BoePackAttachment[] {
   const byFixed: Partial<Record<"箱单" | "发票" | "提运单", BoePackAttachment>> = {};
   const dual: BoePackAttachment[] = [];
+  const other: BoePackAttachment[] = [];
   for (const row of rows) {
     const kind = text(row.type) === "提单" ? "提运单" : text(row.type);
     if (kind === "箱单" || kind === "发票" || kind === "提运单") {
@@ -509,6 +512,8 @@ export function normalizeBoePackAttachments(
       }
     } else if (kind === "双签PO/协议") {
       dual.push({ ...row, type: "双签PO/协议" });
+    } else if (kind === "其他") {
+      other.push({ ...row, type: "其他" });
     }
   }
   const ids = { 箱单: "att-packing", 发票: "att-invoice", 提运单: "att-bl" } as const;
@@ -521,5 +526,5 @@ export function normalizeBoePackAttachments(
         filePath: "",
       }
   );
-  return [...fixed, ...dual];
+  return [...fixed, ...dual, ...other];
 }

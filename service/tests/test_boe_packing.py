@@ -245,6 +245,12 @@ def test_review_required_and_attachment_rules() -> None:
         {"type": "双签PO/协议", "fileName": "9100069442.pdf"},
     ]
     assert attachment_rule_errors(header["invoiceNo"], lines, loose) == []
+    with_other = [
+        *good,
+        {"type": "其他", "fileName": "说明.pdf"},
+        {"type": "其他", "fileName": ""},
+    ]
+    assert attachment_rule_errors(header["invoiceNo"], lines, with_other) == []
     assert attachment_rule_errors(
         header["invoiceNo"],
         lines,

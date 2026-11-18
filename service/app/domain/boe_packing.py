@@ -83,11 +83,13 @@ ATTACH_TYPE_PACKING = "箱单"
 ATTACH_TYPE_INVOICE = "发票"
 ATTACH_TYPE_BL = "提运单"
 ATTACH_TYPE_DUAL = "双签PO/协议"
+ATTACH_TYPE_OTHER = "其他"
 ATTACH_TYPES = (
     ATTACH_TYPE_PACKING,
     ATTACH_TYPE_INVOICE,
     ATTACH_TYPE_BL,
     ATTACH_TYPE_DUAL,
+    ATTACH_TYPE_OTHER,
 )
 ATTACH_PDF_SUFFIXES = {".pdf"}
 
@@ -181,7 +183,7 @@ def attachment_rule_errors(invoice_no: str, lines: list, attachments: list) -> l
             errors.append(f"不支持的附件类型：{kind or '空'}")
             continue
         if not row["fileName"]:
-            if kind == ATTACH_TYPE_BL:
+            if kind in (ATTACH_TYPE_BL, ATTACH_TYPE_OTHER):
                 continue
             errors.append(f"{kind or '附件'}未选择文件")
             continue

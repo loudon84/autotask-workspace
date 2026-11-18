@@ -23,7 +23,7 @@ export type BoePackHeader = {
   volUnit?: string;
 };
 
-export type BoePackAttachType = "箱单" | "发票" | "提运单" | "双签PO/协议";
+export type BoePackAttachType = "箱单" | "发票" | "提运单" | "双签PO/协议" | "其他";
 
 export type BoePackAttachment = {
   id?: string;

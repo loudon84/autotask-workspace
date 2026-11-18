@@ -83,7 +83,7 @@ They must not open browsers or access Task/Engine databases directly. See
 
 Four packages enrich lines, save an SRM draft, submit a change-order, and
 delete a draft before CS cancel. Save-draft 1.0.24 keeps clicking 展开 until
-the 供应商发票号 search field is visible.
+the 供应商发票号 search field is visible. Review rows may use 其他 for an optional PDF.
 
 They live under `rpa-flows/rpa_flow_srm_boe_pack_*`. Delete-draft 1.0.1
 (`rpa_flow_srm_boe_pack_delete_draft`) searches by 发票箱单流水号. Empty list

@@ -506,7 +506,7 @@ export function BoePackingDetailPage({ instanceId }: { instanceId: string }) {
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-muted-foreground text-xs">
-            前三行固定为箱单、发票、提运单（与 SRM 一致，不能删、不能换序）。双签在保存草稿时已从 SRM 删掉，核验按 PO 份数新增行再传。选择文件后先上传到任务服务器，保存和提交用的是服务器上的路径。箱单建议 PL-发票号.pdf，硬限制是文件名包含 pl；发票：发票号.pdf；提运单可不传；双签每个采购订单号一份，文件名为 PO 号。
+            前三行固定为箱单、发票、提运单（与 SRM 一致，不能删、不能换序）。双签在保存草稿时已从 SRM 删掉，核验按 PO 份数新增行再传。选择文件后先上传到任务服务器，保存和提交用的是服务器上的路径。箱单建议 PL-发票号.pdf，硬限制是文件名包含 pl；发票：发票号.pdf；提运单可不传；双签每个采购订单号一份，文件名为 PO 号。类型选「其他」时文件名不限，仍须是 PDF。
           </p>
           <div className="overflow-x-auto">
             <Table>
